@@ -6,12 +6,18 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { customerService } from '../../config/firebase';
 
 const CustomerList = ({ navigation }) => {
   const [customers, setCustomers] = useState([]);
+  const [filteredCustomers, setFilteredCustomers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   useEffect(() => {
     loadCustomers();
@@ -22,6 +28,7 @@ const CustomerList = ({ navigation }) => {
       setLoading(true);
       const customerData = await customerService.getCustomers();
       setCustomers(customerData);
+      setFilteredCustomers(customerData);
     } catch (error) {
       console.error('Error loading customers:', error);
     } finally {
@@ -29,11 +36,51 @@ const CustomerList = ({ navigation }) => {
     }
   };
 
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    if (query.trim() === '') {
+      setFilteredCustomers(customers);
+    } else {
+      const filtered = customers.filter(customer => 
+        customer.msName?.toLowerCase().includes(query.toLowerCase()) ||
+        customer.phoneNo?.toLowerCase().includes(query.toLowerCase()) ||
+        customer.gstin?.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredCustomers(filtered);
+    }
+  };
+
+  const openMenu = (customer) => {
+    setSelectedCustomer(customer);
+    setMenuVisible(true);
+  };
+
+  const closeMenu = () => {
+    setMenuVisible(false);
+    setSelectedCustomer(null);
+  };
+
+  const handleEditCustomer = () => {
+    closeMenu();
+    navigation.navigate('EditCustomer', { customer: selectedCustomer });
+  };
+
   const renderCustomer = ({ item }) => (
     <View style={styles.customerCard}>
-      <Text style={styles.customerName}>{item.msName}</Text>
-      <Text style={styles.customerPhone}>{item.phoneNo}</Text>
-      <Text style={styles.customerGstin}>GSTIN: {item.gstin}</Text>
+      <View style={styles.customerContent}>
+        <View style={styles.customerInfo}>
+          <Text style={styles.customerName}>{item.msName}</Text>
+          <Text style={styles.customerPhone}>{item.phoneNo}</Text>
+          <Text style={styles.customerGstin}>GSTIN: {item.gstin}</Text>
+          <Text style={styles.customerGstin}>Address1: {item.address1}</Text>
+        </View>
+        <TouchableOpacity 
+          style={styles.menuButton}
+          onPress={() => openMenu(item)}
+        >
+          <Text style={styles.menuIcon}>⋮</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -50,6 +97,18 @@ const CustomerList = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by name, phone, or GSTIN..."
+          value={searchQuery}
+          onChangeText={handleSearch}
+          placeholderTextColor="#999"
+        />
+      </View>
+
       {/* Customer List */}
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -58,7 +117,7 @@ const CustomerList = ({ navigation }) => {
         </View>
       ) : (
         <FlatList
-          data={customers}
+          data={filteredCustomers}
           renderItem={renderCustomer}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
@@ -67,6 +126,37 @@ const CustomerList = ({ navigation }) => {
           onRefresh={loadCustomers}
         />
       )}
+
+      {/* Menu Modal */}
+      <Modal
+        visible={menuVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeMenu}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={closeMenu}
+        >
+          <View style={styles.menuContainer}>
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={handleEditCustomer}
+            >
+              <Text style={styles.menuItemIcon}>✏️</Text>
+              <Text style={styles.menuText}>Edit Customer</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={closeMenu}
+            >
+              <Text style={styles.menuItemIcon}>❌</Text>
+              <Text style={[styles.menuText, { color: '#666' }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -107,6 +197,30 @@ const styles = StyleSheet.create({
   listContainer: {
     padding: 20,
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    margin: 15,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 10,
+    color: '#666',
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#333',
+  },
   customerCard: {
     backgroundColor: '#fff',
     padding: 15,
@@ -117,6 +231,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+  },
+  customerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  customerInfo: {
+    flex: 1,
+  },
+  menuButton: {
+    padding: 5,
+  },
+  menuIcon: {
+    fontSize: 20,
+    color: '#666',
+    fontWeight: 'bold',
   },
   customerName: {
     fontSize: 18,
@@ -142,6 +272,37 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: '#666',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    minWidth: 200,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  menuItemIcon: {
+    fontSize: 16,
+    marginRight: 10,
+  },
+  menuText: {
+    fontSize: 16,
+    color: '#007AFF',
   },
 });
 

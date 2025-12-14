@@ -1,0 +1,156 @@
+import React, { useState, useEffect } from 'react';
+import { View, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { TextInput, Text, Card } from 'react-native-paper';
+import { useDebounce } from '../hooks/useDebounce';
+
+const AutoSuggestInput = ({
+  label,
+  value,
+  onChangeText,
+  onSuggestionSelect,
+  getSuggestions,
+  placeholder,
+  autoCapitalize = 'none',
+  style,
+  onBlur,
+  ...props
+}) => {
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  const debouncedValue = useDebounce(value);
+
+  // Fetch suggestions when debounced value changes
+  useEffect(() => {
+    if (debouncedValue && debouncedValue.length > 0 && debouncedValue !== lastSelectedValue) {
+      fetchSuggestions(debouncedValue);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [debouncedValue, lastSelectedValue]);
+
+  const fetchSuggestions = async (searchText) => {
+    console.log('🔍 AutoSuggestInput fetchSuggestions for:', searchText);
+    setLoading(true);
+    try {
+      const results = await getSuggestions(searchText);
+      console.log('✅ AutoSuggestInput got results:', results);
+      setSuggestions(results);
+      setShowSuggestions(results.length > 0);
+      console.log('📊 Setting showSuggestions to:', results.length > 0);
+    } catch (error) {
+      console.error('❌ AutoSuggestInput error:', error);
+      setSuggestions([]);
+      setShowSuggestions(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSuggestionPress = (suggestion) => {
+    const selectedValue = suggestion.vehicleNo || suggestion.name || suggestion.label;
+    setLastSelectedValue(selectedValue);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    onSuggestionSelect(suggestion);
+  };
+
+  const [lastSelectedValue, setLastSelectedValue] = useState('');
+
+  const handleTextChange = (text) => {
+    onChangeText(text);
+    if (!text.trim()) {
+      setShowSuggestions(false);
+      setSuggestions([]);
+      setLastSelectedValue('');
+    }
+  };
+
+  const renderSuggestion = ({ item }) => (
+    <TouchableOpacity 
+      onPress={() => handleSuggestionPress(item)}
+      activeOpacity={0.7}
+    >
+      <Card style={styles.suggestionItem}>
+        <Card.Content style={styles.suggestionContent}>
+          <Text style={styles.suggestionText}>
+            {item.vehicleNo || item.name || item.label}
+          </Text>
+        </Card.Content>
+      </Card>
+    </TouchableOpacity>
+  );
+
+  return (
+    <View style={style}>
+      <TextInput
+        label={label}
+        value={value}
+        onChangeText={handleTextChange}
+        placeholder={placeholder}
+        autoCapitalize={autoCapitalize}
+        mode="outlined"
+        onFocus={() => {
+          if (suggestions.length > 0) {
+            setShowSuggestions(true);
+          }
+        }}
+        onBlur={() => {
+          setTimeout(() => setShowSuggestions(false), 500);
+          if (onBlur) onBlur(value);
+        }}
+        {...props}
+      />
+      
+      {showSuggestions && suggestions.length > 0 && (
+        <View style={styles.suggestionsContainer}>
+          <View style={styles.suggestionsList}>
+            <FlatList
+              data={suggestions}
+              renderItem={renderSuggestion}
+              keyExtractor={(item) => item.id}
+              keyboardShouldPersistTaps="always"
+              nestedScrollEnabled={true}
+            />
+          </View>
+        </View>
+      )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  suggestionsContainer: {
+    position: 'absolute',
+    top: 56,
+    left: 0,
+    right: 0,
+    zIndex: 99999,
+    elevation: 20,
+  },
+  suggestionsList: {
+    maxHeight: 200,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  suggestionItem: {
+    marginVertical: 1,
+    elevation: 2,
+  },
+  suggestionContent: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  suggestionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+});
+
+export default AutoSuggestInput;

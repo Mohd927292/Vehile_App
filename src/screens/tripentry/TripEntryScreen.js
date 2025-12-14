@@ -15,10 +15,16 @@ import {
   Appbar,
   Provider as PaperProvider,
   IconButton,
+  Dialog,
+  Portal,
+  Paragraph,
 } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { tripService } from '../../config/firebase';
+import AutoSuggestInput from '../../components/AutoSuggestInput';
+import { getVehicleSuggestions, getCustomerSuggestions } from '../../services/firestoreService';
+import firestore from '@react-native-firebase/firestore';
 
 const TripEntryScreen = ({ navigation }) => {
   const [trips, setTrips] = useState([{
@@ -30,6 +36,7 @@ const TripEntryScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [datePickerState, setDatePickerState] = useState({ show: false, tripIndex: -1 });
   const [currentTripIndex, setCurrentTripIndex] = useState(0);
+  const [customerDialog, setCustomerDialog] = useState({ visible: false, field: '', tripIndex: -1, locationIndex: -1 });
 
   const formatDate = (date) => {
     return date.toLocaleDateString('en-GB');
@@ -87,6 +94,63 @@ const TripEntryScreen = ({ navigation }) => {
     const newTrips = [...trips];
     newTrips[tripIndex].locations[locationIndex][field] = value;
     setTrips(newTrips);
+  };
+
+  const handleVehicleSuggestion = (tripIndex, suggestion) => {
+    const value = suggestion.vehicleNo || suggestion.name || suggestion.label;
+    updateTrip(tripIndex, 'vehicleNo', value);
+  };
+
+  const handleLocationSuggestion = (tripIndex, locationIndex, field, suggestion) => {
+    const value = suggestion.label || suggestion.name || suggestion.vehicleNo;
+    updateLocation(tripIndex, locationIndex, field, value);
+  };
+
+  // Validate customer exists in Firestore
+  const validateCustomer = async (customerName) => {
+    try {
+      const snapshot = await firestore()
+        .collection('customers')
+        .where('msName', '==', customerName)
+        .limit(1)
+        .get();
+      return !snapshot.empty;
+    } catch (error) {
+      console.error('Error validating customer:', error);
+      return false;
+    }
+  };
+
+  // Handle location text change
+  const handleLocationChange = (tripIndex, locationIndex, field, value) => {
+    console.log(`📝 Location change - Trip:${tripIndex}, Location:${locationIndex}, Field:${field}, Value:${value}`);
+    updateLocation(tripIndex, locationIndex, field, value);
+  };
+
+  // Validate location on blur
+  const handleLocationBlur = async (tripIndex, locationIndex, field, value) => {
+    if (value.trim() && value.length > 0) {
+      const isValid = await validateCustomer(value);
+      if (!isValid) {
+        setCustomerDialog({
+          visible: true,
+          field,
+          tripIndex,
+          locationIndex,
+          customerName: value
+        });
+      }
+    }
+  };
+
+  // Handle customer not found dialog
+  const handleCustomerNotFound = () => {
+    setCustomerDialog({ visible: false, field: '', tripIndex: -1, locationIndex: -1 });
+  };
+
+  const navigateToAddCustomer = () => {
+    setCustomerDialog({ visible: false, field: '', tripIndex: -1, locationIndex: -1 });
+    navigation.navigate('AddCustomer');
   };
 
   const validateTrip = (trip, tripIndex) => {
@@ -231,14 +295,15 @@ const TripEntryScreen = ({ navigation }) => {
                   right={<TextInput.Icon icon="calendar" onPress={() => showDatePicker(tripIndex)} />}
                 />
 
-                <TextInput
+                <AutoSuggestInput
                   label="Vehicle Number *"
                   value={trip.vehicleNo}
                   onChangeText={(text) => updateTrip(tripIndex, 'vehicleNo', text)}
+                  onSuggestionSelect={(suggestion) => handleVehicleSuggestion(tripIndex, suggestion)}
+                  getSuggestions={getVehicleSuggestions}
                   placeholder="Enter vehicle number"
                   autoCapitalize="characters"
-                  mode="outlined"
-                  style={styles.input}
+                  style={[styles.input, { zIndex: 30 }]}
                 />
 
                 <TextInput
@@ -248,7 +313,7 @@ const TripEntryScreen = ({ navigation }) => {
                   placeholder="Enter driver name"
                   autoCapitalize="words"
                   mode="outlined"
-                  style={styles.input}
+                  style={[styles.input, { zIndex: 1 }]}
                 />
 
                 {trip.locations.map((location, locationIndex) => (
@@ -282,24 +347,28 @@ const TripEntryScreen = ({ navigation }) => {
                         </View>
                       </View>
                       
-                      <TextInput
+                      <AutoSuggestInput
                         label="From Location *"
                         value={location.from}
-                        onChangeText={(text) => updateLocation(tripIndex, locationIndex, 'from', text)}
+                        onChangeText={(text) => handleLocationChange(tripIndex, locationIndex, 'from', text)}
+                        onSuggestionSelect={(suggestion) => handleLocationSuggestion(tripIndex, locationIndex, 'from', suggestion)}
+                        onBlur={(value) => handleLocationBlur(tripIndex, locationIndex, 'from', value)}
+                        getSuggestions={getCustomerSuggestions}
                         placeholder="Enter from location"
                         autoCapitalize="words"
-                        mode="outlined"
-                        style={styles.input}
+                        style={[styles.input, { zIndex: 20 }]}
                       />
 
-                      <TextInput
+                      <AutoSuggestInput
                         label="To Location *"
                         value={location.to}
-                        onChangeText={(text) => updateLocation(tripIndex, locationIndex, 'to', text)}
+                        onChangeText={(text) => handleLocationChange(tripIndex, locationIndex, 'to', text)}
+                        onSuggestionSelect={(suggestion) => handleLocationSuggestion(tripIndex, locationIndex, 'to', suggestion)}
+                        onBlur={(value) => handleLocationBlur(tripIndex, locationIndex, 'to', value)}
+                        getSuggestions={getCustomerSuggestions}
                         placeholder="Enter to location"
                         autoCapitalize="words"
-                        mode="outlined"
-                        style={styles.input}
+                        style={[styles.input, { zIndex: 10 }]}
                       />
                     </Card.Content>
                   </Card>
@@ -333,6 +402,21 @@ const TripEntryScreen = ({ navigation }) => {
           onChange={onDateChange}
         />
       )}
+      
+      <Portal>
+        <Dialog visible={customerDialog.visible} onDismiss={handleCustomerNotFound}>
+          <Dialog.Title>Customer Not Found</Dialog.Title>
+          <Dialog.Content>
+            <Paragraph>
+              Customer "{customerDialog.customerName}" not found. Please add customer first.
+            </Paragraph>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={handleCustomerNotFound}>Cancel</Button>
+            <Button onPress={navigateToAddCustomer}>Add Customer</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
       </KeyboardAvoidingView>
     </PaperProvider>
   );
@@ -366,6 +450,8 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: 18,
     backgroundColor: '#fafafa',
+    position: 'relative',
+    zIndex: 10,
   },
   submitButton: {
     marginTop: 24,
@@ -381,13 +467,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     backgroundColor: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
     borderRadius: 16,
-    elevation: 4,
+    elevation: 2,
     shadowColor: '#64748b',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    zIndex: 5,
   },
   locationHeader: {
     flexDirection: 'row',

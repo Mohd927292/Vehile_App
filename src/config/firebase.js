@@ -15,6 +15,7 @@ const authInstance = getAuth();
 export const tripEntriesCollection = collection(db, 'tripEntries');
 export const vehiclesCollection = collection(db, 'vehicles');
 export const partiesCollection = collection(db, 'parties');
+export const customersCollection = collection(db, 'customers');
 
 // Trip service with batch operations
 const tripService = {
@@ -106,4 +107,16 @@ const tripService = {
   },
 };
 
-export { db, authInstance as auth, tripService };
+// Customer service
+const customerService = {
+  getCustomers: async () => {
+    try {
+      const querySnapshot = await getDocs(customersCollection);
+      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      throw error;
+    }
+  },
+};
+
+export { db, authInstance as auth, tripService, customerService };

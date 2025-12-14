@@ -17,6 +17,7 @@ import firestore from '@react-native-firebase/firestore';
 const AddCustomer = ({ navigation }) => {
   const [customerData, setCustomerData] = useState({
     msName: '',
+    msnamelower: '',
     address1: '',
     address2: '',
     gstin: '',
@@ -36,7 +37,7 @@ const AddCustomer = ({ navigation }) => {
     const gstinRegex = /^[0-9]/
     
     //{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-    //{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+  
     return gstinRegex.test(gstin);
   };
 
@@ -91,6 +92,7 @@ const AddCustomer = ({ navigation }) => {
       // Save customer data to Firestore
       const customerDataToSave = {
         msName: customerData.msName.trim(),
+        msnamelower: customerData.msName.trim().toLowerCase(),
         address1: customerData.address1.trim(),
         address2: customerData.address2?.trim() || '',
         gstin: customerData.gstin.trim(),
