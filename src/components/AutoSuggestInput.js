@@ -98,7 +98,7 @@ const AutoSuggestInput = ({
           }
         }}
         onBlur={() => {
-          setTimeout(() => setShowSuggestions(false), 500);
+          setTimeout(() => setShowSuggestions(false), 200);
           if (onBlur) onBlur(value);
         }}
         {...props}
@@ -113,6 +113,8 @@ const AutoSuggestInput = ({
               keyExtractor={(item) => item.id}
               keyboardShouldPersistTaps="always"
               nestedScrollEnabled={true}
+              showsVerticalScrollIndicator={false}
+              removeClippedSubviews={false}
             />
           </View>
         </View>
@@ -129,6 +131,7 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 99999,
     elevation: 20,
+    backgroundColor: 'transparent',
   },
   suggestionsList: {
     maxHeight: 200,

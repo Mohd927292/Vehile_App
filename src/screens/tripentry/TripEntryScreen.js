@@ -238,41 +238,54 @@ const TripEntryScreen = ({ navigation }) => {
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
       >
         <Appbar.Header>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
         <Appbar.Content title={`Trip ${currentTripIndex + 1} of ${trips.length}`} />
-        <Button 
-          mode="contained" 
-          compact 
-          onPress={addTrip}
-          buttonColor="#10b981"
-          textColor="#ffffff"
-          style={{ borderRadius: 12, elevation: 4 }}
-        >
-          +
-        </Button>
-        {trips.length > 1 && (
+        <View style={styles.headerButtons}>
           <Button 
             mode="contained" 
             compact 
-            onPress={() => removeTrip(trips.length - 1)}
-            buttonColor="#ef4444"
+            onPress={addTrip}
+            buttonColor="#1e40af"
             textColor="#ffffff"
-            style={{ borderRadius: 12, elevation: 4, marginLeft: 8 }}
+           // contentStyle={styles.headerButtonContent}
+            style={styles.headerAddButton}
+            labelStyle={styles.headerButtonLabel}
           >
-            -
+            +
           </Button>
-        )}
+          {trips.length > 1 && (
+            <Button 
+              mode="contained" 
+              compact 
+              onPress={() => removeTrip(trips.length - 1)}
+              buttonColor="#dc2626"
+              textColor="#ffffff"
+              contentStyle={styles.headerButtonContent}
+              style={styles.headerRemoveButton}
+              labelStyle={styles.headerButtonLabel}
+            >
+              −
+            </Button>
+          )}
+        </View>
       </Appbar.Header>
       
-      <ScrollView style={styles.container}>
+      <ScrollView 
+        style={styles.container}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ flexGrow: 1 }}
+        enableOnAndroid={true}
+      >
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
           pagingEnabled
           snapToInterval={344}
           decelerationRate="fast"
+          keyboardShouldPersistTaps="handled"
           onScroll={(event) => {
             const scrollX = event.nativeEvent.contentOffset.x;
             const index = Math.round(scrollX / 344);
@@ -326,9 +339,11 @@ const TripEntryScreen = ({ navigation }) => {
                             mode="contained" 
                             compact 
                             onPress={() => addLocationPair(tripIndex)}
-                            buttonColor="#3b82f6"
+                            buttonColor="#059669"
                             textColor="#ffffff"
-                            style={{ borderRadius: 20, minWidth: 36, height: 36 }}
+                            contentStyle={styles.locationButtonContent}
+                            style={styles.addLocationButton}
+                            labelStyle={styles.locationButtonLabel}
                           >
                             +
                           </Button>
@@ -337,9 +352,11 @@ const TripEntryScreen = ({ navigation }) => {
                               mode="contained" 
                               compact 
                               onPress={() => removeLocationPair(tripIndex, locationIndex)}
-                              buttonColor="#f59e0b"
+                              buttonColor="#b91c1c"
                               textColor="#ffffff"
-                              style={{ borderRadius: 20, minWidth: 36, height: 36 }}
+                              contentStyle={styles.locationButtonContent}
+                              style={styles.removeLocationButton}
+                              labelStyle={styles.locationButtonLabel}
                             >
                               -
                             </Button>
@@ -412,8 +429,22 @@ const TripEntryScreen = ({ navigation }) => {
             </Paragraph>
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={handleCustomerNotFound}>Cancel</Button>
-            <Button onPress={navigateToAddCustomer}>Add Customer</Button>
+            <Button 
+              onPress={handleCustomerNotFound}
+              textColor="#64748b"
+              style={styles.dialogCancelButton}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onPress={navigateToAddCustomer}
+              mode="contained"
+              buttonColor="#1e40af"
+              textColor="#ffffff"
+              style={styles.dialogActionButton}
+            >
+              Add Customer
+            </Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>
@@ -425,80 +456,177 @@ const TripEntryScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    backgroundColor: '#f8fafc',
   },
   tripsContainer: {
     flexDirection: 'row',
-    paddingVertical: 32,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
   },
   tripCard: {
     width: 320,
     marginHorizontal: 12,
-    elevation: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    borderRadius: 20,
+    elevation: 4,
+    shadowColor: '#334155',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    borderRadius: 12,
     backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   submitContainer: {
-    padding: 24,
+    padding: 16,
     paddingBottom: 32,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    elevation: 2,
+    shadowColor: '#334155',
+    shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   input: {
-    marginBottom: 18,
-    backgroundColor: '#fafafa',
+    marginBottom: 16,
+    backgroundColor: '#ffffff',
     position: 'relative',
     zIndex: 10,
   },
   submitButton: {
-    marginTop: 24,
-    paddingVertical: 12,
-    borderRadius: 16,
-    elevation: 8,
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    paddingVertical: 16,
+    borderRadius: 8,
+    elevation: 3,
+    shadowColor: '#1e40af',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    backgroundColor: '#1e40af',
   },
   locationCard: {
-    marginBottom: 20,
-    backgroundColor: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-    borderRadius: 16,
+    marginBottom: 16,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 8,
     elevation: 2,
-    shadowColor: '#64748b',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowColor: '#475569',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
     shadowRadius: 4,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#cbd5e1',
     zIndex: 5,
   },
   locationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 4,
+    marginBottom: 10,
+    paddingHorizontal: 2,
   },
   locationTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#1e293b',
-    backgroundColor: '#6366f1',
     color: '#ffffff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    backgroundColor: '#475569',
+    
+    borderRadius: 5,
     textAlign: 'center',
-    minWidth: 32,
+    minWidth: 28,
+    overflow: 'hidden',
   },
   locationActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+    gap: 10,
+  },
+  headerAddButton: {
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#1e40af',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    width: 44,
+    height: 32,
+  },
+  headerRemoveButton: {
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#dc2626',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    width: 44,
+    height: 32,
+  },
+  headerButtonContent: {
+    height: 32,
+    width: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerButtonLabel: {
+    fontSize: 25,
+    fontWeight: '600',
+    height:20,
+    height:20,
+    marginTop: 6,
+   
+ 
+   
+   
+  },
+  addLocationButton: {
+    borderRadius: 6,
+    elevation: 2,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    width: 32,
+    height: 28,
+  },
+  removeLocationButton: {
+    borderRadius: 6,
+    elevation: 2,
+    shadowColor: '#b91c1c',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    width: 32,
+    height: 28,
+  },
+  locationButtonContent: {
+    height: 28,
+    width: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  locationButtonLabel: {
+    fontSize: 20,
+    fontWeight: '600',
+   
+    paddingVertical: 0,
+    marginVertical: 0,
+  },
+  dialogCancelButton: {
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  dialogActionButton: {
+    borderRadius: 6,
+    elevation: 2,
+    shadowColor: '#1e40af',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
   },
 });
 
