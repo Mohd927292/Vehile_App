@@ -1,238 +1,417 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   Alert,
   ScrollView,
-  ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
+import {
+  TextInput,
+  Button,
+  Card,
+  Title,
+  Appbar,
+  Provider as PaperProvider,
+  IconButton,
+} from 'react-native-paper';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
 import { tripService } from '../../config/firebase';
 
 const TripEntryScreen = ({ navigation }) => {
-  const [formData, setFormData] = useState({
+  const [trips, setTrips] = useState([{
     vehicleNo: '',
     driverName: '',
-    from: '',
-    to: '',
-  });
+    locations: [{ from: '', to: '' }],
+    date: new Date(),
+  }]);
   const [loading, setLoading] = useState(false);
+  const [datePickerState, setDatePickerState] = useState({ show: false, tripIndex: -1 });
+  const [currentTripIndex, setCurrentTripIndex] = useState(0);
 
-  const getCurrentDate = () => {
-    const now = new Date();
-    return now.toLocaleDateString('en-GB'); // DD/MM/YYYY format
+  const formatDate = (date) => {
+    return date.toLocaleDateString('en-GB');
+  };
+
+  const showDatePicker = (tripIndex) => {
+    setDatePickerState({ show: true, tripIndex });
+  };
+
+  const onDateChange = (event, selectedDate) => {
+    setDatePickerState({ show: false, tripIndex: -1 });
+    if (selectedDate && datePickerState.tripIndex >= 0) {
+      const newTrips = [...trips];
+      newTrips[datePickerState.tripIndex].date = selectedDate;
+      setTrips(newTrips);
+    }
+  };
+
+  const addTrip = () => {
+    setTrips([...trips, {
+      vehicleNo: '',
+      driverName: '',
+      locations: [{ from: '', to: '' }],
+      date: new Date(),
+    }]);
+  };
+
+  const removeTrip = (tripIndex) => {
+    if (trips.length > 1) {
+      setTrips(trips.filter((_, i) => i !== tripIndex));
+    }
+  };
+
+  const updateTrip = (tripIndex, field, value) => {
+    const newTrips = [...trips];
+    newTrips[tripIndex][field] = value;
+    setTrips(newTrips);
+  };
+
+  const addLocationPair = (tripIndex) => {
+    const newTrips = [...trips];
+    newTrips[tripIndex].locations.push({ from: '', to: '' });
+    setTrips(newTrips);
+  };
+
+  const removeLocationPair = (tripIndex, locationIndex) => {
+    const newTrips = [...trips];
+    if (newTrips[tripIndex].locations.length > 1) {
+      newTrips[tripIndex].locations = newTrips[tripIndex].locations.filter((_, i) => i !== locationIndex);
+      setTrips(newTrips);
+    }
+  };
+
+  const updateLocation = (tripIndex, locationIndex, field, value) => {
+    const newTrips = [...trips];
+    newTrips[tripIndex].locations[locationIndex][field] = value;
+    setTrips(newTrips);
+  };
+
+  const validateTrip = (trip, tripIndex) => {
+    if (!trip.vehicleNo.trim()) {
+      return `Vehicle number is required for trip ${tripIndex + 1}`;
+    }
+    if (!trip.driverName.trim()) {
+      return `Driver name is required for trip ${tripIndex + 1}`;
+    }
+    for (let i = 0; i < trip.locations.length; i++) {
+      if (!trip.locations[i].from.trim()) {
+        return `From location is required for trip ${tripIndex + 1}, pair ${i + 1}`;
+      }
+      if (!trip.locations[i].to.trim()) {
+        return `To location is required for trip ${tripIndex + 1}, pair ${i + 1}`;
+      }
+    }
+    return null;
   };
 
   const handleSubmit = async () => {
-    // Validation
-    if (!formData.vehicleNo.trim()) {
-      Alert.alert('Error', 'Vehicle number is required');
-      return;
+    console.log('=== SUBMIT STARTED ===');
+    console.log('Total trips to submit:', trips.length);
+    
+    // Validate all trips
+    for (let i = 0; i < trips.length; i++) {
+      const error = validateTrip(trips[i], i);
+      if (error) {
+        console.log('Validation failed for trip', i + 1, ':', error);
+        Alert.alert('Validation Error', error);
+        return;
+      }
     }
-    if (!formData.driverName.trim()) {
-      Alert.alert('Error', 'Driver name is required');
-      return;
-    }
-    if (!formData.from.trim()) {
-      Alert.alert('Error', 'From location is required');
-      return;
-    }
-    if (!formData.to.trim()) {
-      Alert.alert('Error', 'To location is required');
-      return;
-    }
+    console.log('All trips validated successfully');
 
     setLoading(true);
-    try {
-      const tripData = {
-        ...formData,
-        vehicleNo: formData.vehicleNo.toUpperCase().trim(),
-        driverName: formData.driverName.trim(),
-        from: formData.from.trim(),
-        to: formData.to.trim(),
-        date: getCurrentDate(),
-      };
+    const results = { success: 0, failed: 0, errors: [] };
 
-      await tripService.addTrip(tripData);
-      
-      Alert.alert('Success', 'Trip added successfully!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            setFormData({ vehicleNo: '', driverName: '', from: '', to: '' });
-            navigation.goBack();
-          },
-        },
-      ]);
+    try {
+      for (let i = 0; i < trips.length; i++) {
+        try {
+          const tripData = {
+            vehicleNo: trips[i].vehicleNo.toUpperCase().trim(),
+            driverName: trips[i].driverName.trim(),
+            locations: trips[i].locations.map(loc => ({
+              from: loc.from.trim(),
+              to: loc.to.trim()
+            })),
+            date: formatDate(trips[i].date),
+          };
+
+          console.log(`Submitting trip ${i + 1}:`, JSON.stringify(tripData, null, 2));
+          await tripService.addTrip(tripData);
+          console.log(`Trip ${i + 1} saved successfully`);
+          results.success++;
+        } catch (error) {
+          console.error(`Trip ${i + 1} failed:`, error);
+          console.error('Error details:', error.message, error.code, error.stack);
+          results.failed++;
+          results.errors.push(`Trip ${i + 1}: ${error.message}`);
+        }
+      }
+
+      console.log('Final results:', results);
+      if (results.success === trips.length) {
+        Alert.alert('Success', `All ${results.success} trips added successfully!`, [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      } else {
+        const message = `${results.success} trips saved, ${results.failed} failed.\n${results.errors.join('\n')}`;
+        Alert.alert('Partial Success', message);
+      }
     } catch (error) {
-      console.error('Error adding trip:', error);
-      Alert.alert('Error', 'Failed to add trip. Please try again.');
+      console.error('Submit function error:', error);
+      console.error('Error details:', error.message, error.code, error.stack);
+      Alert.alert('Error', 'Failed to save trips. Please try again.');
     } finally {
       setLoading(false);
+      console.log('=== SUBMIT ENDED ===');
     }
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Trip</Text>
-        <View style={styles.headerRight} />
-      </View>
-
-      <View style={styles.form}>
-        <View style={styles.dateContainer}>
-          <Text style={styles.dateLabel}>Date:</Text>
-          <Text style={styles.dateValue}>{getCurrentDate()}</Text>
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Vehicle Number *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.vehicleNo}
-            onChangeText={(text) => setFormData({ ...formData, vehicleNo: text })}
-            placeholder="Enter vehicle number"
-            autoCapitalize="characters"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Driver Name *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.driverName}
-            onChangeText={(text) => setFormData({ ...formData, driverName: text })}
-            placeholder="Enter driver name"
-            autoCapitalize="words"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>From Location *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.from}
-            onChangeText={(text) => setFormData({ ...formData, from: text })}
-            placeholder="Enter from location"
-            autoCapitalize="words"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>To Location *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.to}
-            onChangeText={(text) => setFormData({ ...formData, to: text })}
-            placeholder="Enter to location"
-            autoCapitalize="words"
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
+    <PaperProvider>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <Appbar.Header>
+        <Appbar.BackAction onPress={() => navigation.goBack()} />
+        <Appbar.Content title={`Trip ${currentTripIndex + 1} of ${trips.length}`} />
+        <Button 
+          mode="contained" 
+          compact 
+          onPress={addTrip}
+          buttonColor="#10b981"
+          textColor="#ffffff"
+          style={{ borderRadius: 12, elevation: 4 }}
         >
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.submitButtonText}>Add Trip</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          +
+        </Button>
+        {trips.length > 1 && (
+          <Button 
+            mode="contained" 
+            compact 
+            onPress={() => removeTrip(trips.length - 1)}
+            buttonColor="#ef4444"
+            textColor="#ffffff"
+            style={{ borderRadius: 12, elevation: 4, marginLeft: 8 }}
+          >
+            -
+          </Button>
+        )}
+      </Appbar.Header>
+      
+      <ScrollView style={styles.container}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          pagingEnabled
+          snapToInterval={344}
+          decelerationRate="fast"
+          onScroll={(event) => {
+            const scrollX = event.nativeEvent.contentOffset.x;
+            const index = Math.round(scrollX / 344);
+            setCurrentTripIndex(Math.min(index, trips.length - 1));
+          }}
+          scrollEventThrottle={16}
+        >
+          <View style={styles.tripsContainer}>
+            {trips.map((trip, tripIndex) => (
+              <Card key={tripIndex} style={styles.tripCard}>
+              <Card.Content>
+
+
+                <TextInput
+                  label="Date *"
+                  value={formatDate(trip.date)}
+                  mode="outlined"
+                  style={styles.input}
+                  editable={false}
+                  right={<TextInput.Icon icon="calendar" onPress={() => showDatePicker(tripIndex)} />}
+                />
+
+                <TextInput
+                  label="Vehicle Number *"
+                  value={trip.vehicleNo}
+                  onChangeText={(text) => updateTrip(tripIndex, 'vehicleNo', text)}
+                  placeholder="Enter vehicle number"
+                  autoCapitalize="characters"
+                  mode="outlined"
+                  style={styles.input}
+                />
+
+                <TextInput
+                  label="Driver Name *"
+                  value={trip.driverName}
+                  onChangeText={(text) => updateTrip(tripIndex, 'driverName', text)}
+                  placeholder="Enter driver name"
+                  autoCapitalize="words"
+                  mode="outlined"
+                  style={styles.input}
+                />
+
+                {trip.locations.map((location, locationIndex) => (
+                  <Card key={locationIndex} style={styles.locationCard}>
+                    <Card.Content>
+                      <View style={styles.locationHeader}>
+                        <Title style={styles.locationTitle}>{locationIndex + 1}</Title>
+                        <View style={styles.locationActions}>
+                          <Button 
+                            mode="contained" 
+                            compact 
+                            onPress={() => addLocationPair(tripIndex)}
+                            buttonColor="#3b82f6"
+                            textColor="#ffffff"
+                            style={{ borderRadius: 20, minWidth: 36, height: 36 }}
+                          >
+                            +
+                          </Button>
+                          {trip.locations.length > 1 && (
+                            <Button 
+                              mode="contained" 
+                              compact 
+                              onPress={() => removeLocationPair(tripIndex, locationIndex)}
+                              buttonColor="#f59e0b"
+                              textColor="#ffffff"
+                              style={{ borderRadius: 20, minWidth: 36, height: 36 }}
+                            >
+                              -
+                            </Button>
+                          )}
+                        </View>
+                      </View>
+                      
+                      <TextInput
+                        label="From Location *"
+                        value={location.from}
+                        onChangeText={(text) => updateLocation(tripIndex, locationIndex, 'from', text)}
+                        placeholder="Enter from location"
+                        autoCapitalize="words"
+                        mode="outlined"
+                        style={styles.input}
+                      />
+
+                      <TextInput
+                        label="To Location *"
+                        value={location.to}
+                        onChangeText={(text) => updateLocation(tripIndex, locationIndex, 'to', text)}
+                        placeholder="Enter to location"
+                        autoCapitalize="words"
+                        mode="outlined"
+                        style={styles.input}
+                      />
+                    </Card.Content>
+                  </Card>
+                ))}
+
+
+              </Card.Content>
+            </Card>
+            ))}
+          </View>
+        </ScrollView>
+        
+        <View style={styles.submitContainer}>
+          <Button
+            mode="contained"
+            onPress={handleSubmit}
+            disabled={loading}
+            style={styles.submitButton}
+            loading={loading}
+          >
+            Submit All Trips
+          </Button>
+        </View>
+      </ScrollView>
+      
+      {datePickerState.show && (
+        <DateTimePicker
+          value={trips[datePickerState.tripIndex]?.date || new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onDateChange}
+        />
+      )}
+      </KeyboardAvoidingView>
+    </PaperProvider>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
   },
-  header: {
+  tripsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    paddingTop: 50,
-    backgroundColor: '#1976d2',
-    elevation: 4,
+    paddingVertical: 32,
+    paddingHorizontal: 12,
   },
-  headerRight: {
-    width: 60,
+  tripCard: {
+    width: 320,
+    marginHorizontal: 12,
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
   },
-  backButton: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  form: {
-    padding: 20,
-  },
-  dateContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 20,
-    elevation: 2,
-  },
-  dateLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  dateValue: {
-    fontSize: 16,
-    color: '#1976d2',
-    fontWeight: '500',
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 8,
+  submitContainer: {
+    padding: 24,
+    paddingBottom: 32,
   },
   input: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    marginBottom: 18,
+    backgroundColor: '#fafafa',
   },
   submitButton: {
-    backgroundColor: '#1976d2',
-    borderRadius: 8,
-    padding: 16,
+    marginTop: 24,
+    paddingVertical: 12,
+    borderRadius: 16,
+    elevation: 8,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  locationCard: {
+    marginBottom: 20,
+    backgroundColor: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
-    elevation: 3,
+    marginBottom: 12,
+    paddingHorizontal: 4,
   },
-  submitButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  submitButtonText: {
-    color: 'white',
+  locationTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: '#1e293b',
+    backgroundColor: '#6366f1',
+    color: '#ffffff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    textAlign: 'center',
+    minWidth: 32,
+  },
+  locationActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });
 

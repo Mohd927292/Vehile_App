@@ -21,7 +21,6 @@ const LoginScreen = ({ navigation }) => {
     try {
       const result = await auth().signInWithEmailAndPassword(email, password);
       console.log('Login successful:', result.user.uid);
-      navigation.replace('Home');
     } catch (error) {
       console.log('Login error:', error.code, error.message);
       Alert.alert('Login Failed', `${error.code}: ${error.message}`);
@@ -41,7 +40,6 @@ const LoginScreen = ({ navigation }) => {
     try {
       const result = await auth().createUserWithEmailAndPassword(email, password);
       console.log('SignUp successful:', result.user.uid);
-      navigation.replace('Home');
     } catch (error) {
       console.log('SignUp error:', error.code, error.message);
       Alert.alert('Sign Up Failed', `${error.code}: ${error.message}`);

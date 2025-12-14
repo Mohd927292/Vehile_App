@@ -1,52 +1,58 @@
-import { firebase } from '@react-native-firebase/app';
-import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import { getApps, initializeApp } from '@react-native-firebase/app';
+import firestore, { getFirestore, collection, doc, writeBatch, serverTimestamp, increment, getDocs, query, where, orderBy } from '@react-native-firebase/firestore';
+import auth, { getAuth } from '@react-native-firebase/auth';
 
 // Initialize Firebase if not already initialized
-if (!firebase.apps.length) {
-  firebase.initializeApp();
+if (getApps().length === 0) {
+  initializeApp();
 }
 
 // Get Firestore and Auth instances
-const db = firestore();
-const authInstance = auth();
+const db = getFirestore();
+const authInstance = getAuth();
 
 // Collection references
-export const tripEntriesCollection = db.collection('tripEntries');
-export const vehiclesCollection = db.collection('vehicles');
-export const partiesCollection = db.collection('parties');
+export const tripEntriesCollection = collection(db, 'tripEntries');
+export const vehiclesCollection = collection(db, 'vehicles');
+export const partiesCollection = collection(db, 'parties');
 
 // Trip service with batch operations
 const tripService = {
   // Add new trip with batch write for consistency
   addTrip: async (tripData) => {
-    const batch = db.batch();
+    const batch = writeBatch(db);
     
     try {
       // 1. Add to tripEntries
-      const tripRef = tripEntriesCollection.doc();
+      const tripRef = doc(tripEntriesCollection);
       const tripEntry = {
         ...tripData,
         timestamp: Date.now(),
-        createdAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: serverTimestamp(),
       };
       batch.set(tripRef, tripEntry);
       
       // 2. Update vehicles collection
-      const vehicleRef = vehiclesCollection.doc(tripData.vehicleNo);
+      const vehicleRef = doc(vehiclesCollection, tripData.vehicleNo);
       batch.set(vehicleRef, {
         vehicleNo: tripData.vehicleNo,
-        loadCount: firestore.FieldValue.increment(1),
-        lastTripAt: firestore.FieldValue.serverTimestamp(),
+        loadCount: increment(1),
+        lastTripAt: serverTimestamp(),
       }, { merge: true });
       
-      // 3. Update parties collection
-      const partyRef = partiesCollection.doc(tripData.from);
-      batch.set(partyRef, {
-        from: tripData.from,
-        loadCount: firestore.FieldValue.increment(1),
-        lastTripAt: firestore.FieldValue.serverTimestamp(),
-      }, { merge: true });
+      // 3. Update parties collection for each location
+      if (tripData.locations && tripData.locations.length > 0) {
+        for (const location of tripData.locations) {
+          if (location.from) {
+            const partyRef = doc(partiesCollection, location.from);
+            batch.set(partyRef, {
+              from: location.from,
+              loadCount: increment(1),
+              lastTripAt: serverTimestamp(),
+            }, { merge: true });
+          }
+        }
+      }
       
       await batch.commit();
       return tripRef.id;
@@ -58,10 +64,8 @@ const tripService = {
   // Get trips by vehicle
   getTripsByVehicle: async (vehicleNo) => {
     try {
-      const querySnapshot = await tripEntriesCollection
-        .where('vehicleNo', '==', vehicleNo)
-        .orderBy('createdAt', 'desc')
-        .get();
+      const q = query(tripEntriesCollection, where('vehicleNo', '==', vehicleNo), orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       throw error;
@@ -71,10 +75,8 @@ const tripService = {
   // Get trips by party (from location)
   getTripsByParty: async (from) => {
     try {
-      const querySnapshot = await tripEntriesCollection
-        .where('from', '==', from)
-        .orderBy('createdAt', 'desc')
-        .get();
+      const q = query(tripEntriesCollection, where('locations', 'array-contains-any', [{ from }]), orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       throw error;
@@ -84,9 +86,8 @@ const tripService = {
   // Get all vehicles
   getVehicles: async () => {
     try {
-      const querySnapshot = await vehiclesCollection
-        .orderBy('lastTripAt', 'desc')
-        .get();
+      const q = query(vehiclesCollection, orderBy('lastTripAt', 'desc'));
+      const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       throw error;
@@ -96,9 +97,8 @@ const tripService = {
   // Get all parties
   getParties: async () => {
     try {
-      const querySnapshot = await partiesCollection
-        .orderBy('lastTripAt', 'desc')
-        .get();
+      const q = query(partiesCollection, orderBy('lastTripAt', 'desc'));
+      const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       throw error;

@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   Alert,
 } from 'react-native';
+import {
+  TextInput,
+  Button,
+  Appbar,
+  Provider as PaperProvider,
+} from 'react-native-paper';
 import { db } from '../../config/firebase';
 import firestore from '@react-native-firebase/firestore';
 
@@ -117,94 +120,86 @@ const AddCustomer = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Customer</Text>
-        <View style={styles.placeholder} />
-      </View>
+    <PaperProvider>
+      <View style={styles.container}>
+        <Appbar.Header>
+          <Appbar.BackAction onPress={() => navigation.goBack()} />
+          <Appbar.Content title="Add Customer" />
+        </Appbar.Header>
 
-      {/* Form */}
-      <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>M/s Name *</Text>
+        <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
           <TextInput
-            style={styles.input}
+            label="M/s Name *"
             value={customerData.msName}
             onChangeText={(value) => handleInputChange('msName', value)}
             placeholder="Enter company name"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Address 1 *</Text>
-          <TextInput
+            mode="outlined"
             style={styles.input}
+          />
+
+          <TextInput
+            label="Address 1 *"
             value={customerData.address1}
             onChangeText={(value) => handleInputChange('address1', value)}
             placeholder="Enter address line 1"
             multiline
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Address 2</Text>
-          <TextInput
+            mode="outlined"
             style={styles.input}
+          />
+
+          <TextInput
+            label="Address 2"
             value={customerData.address2}
             onChangeText={(value) => handleInputChange('address2', value)}
             placeholder="Enter address line 2"
             multiline
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>GSTIN *</Text>
-          <TextInput
+            mode="outlined"
             style={styles.input}
+          />
+
+          <TextInput
+            label="GSTIN *"
             value={customerData.gstin}
             onChangeText={(value) => handleInputChange('gstin', value)}
             placeholder="Enter GSTIN number"
             autoCapitalize="characters"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Phone No *</Text>
-          <TextInput
+            mode="outlined"
             style={styles.input}
+          />
+
+          <TextInput
+            label="Phone No *"
             value={customerData.phoneNo}
             onChangeText={(value) => handleInputChange('phoneNo', value)}
             placeholder="Enter phone number"
             keyboardType="phone-pad"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email (Optional)</Text>
-          <TextInput
+            mode="outlined"
             style={styles.input}
+          />
+
+          <TextInput
+            label="Email (Optional)"
             value={customerData.email}
             onChangeText={(value) => handleInputChange('email', value)}
             placeholder="Enter email address"
             keyboardType="email-address"
             autoCapitalize="none"
+            mode="outlined"
+            style={styles.input}
           />
-        </View>
-      </ScrollView>
+        </ScrollView>
 
-      {/* Save Button */}
-      <TouchableOpacity 
-        style={[styles.button, styles.saveButton, isSaving && styles.disabledButton]}
-        onPress={handleSaveCustomer}
-        disabled={isSaving}
-      >  
-        <Text style={styles.saveButtonText}>Save Customer</Text>
-      </TouchableOpacity>
-    </View>
+        <Button
+          mode="contained"
+          onPress={handleSaveCustomer}
+          disabled={isSaving}
+          loading={isSaving}
+          style={styles.saveButton}
+        >
+          Save Customer
+        </Button>
+      </View>
+    </PaperProvider>
   );
 };
 
@@ -213,71 +208,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 50,
-    backgroundColor: '#fff',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  backButton: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  placeholder: {
-    width: 50,
-  },
   form: {
     flex: 1,
     padding: 20,
   },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
   input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 15,
-    fontSize: 16,
-    color: '#333',
+    marginBottom: 16,
   },
   saveButton: {
-    backgroundColor: '#1976d2',
-  },
-  disabledButton: {
-    backgroundColor: '#9e9e9e',
-    opacity: 0.7,
-  },
-  button: {
     margin: 20,
-    padding: 18,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
 });
 
