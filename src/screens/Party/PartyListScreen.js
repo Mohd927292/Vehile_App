@@ -34,7 +34,7 @@ const PartyListScreen = ({ navigation }) => {
   const renderParty = ({ item }) => (
     <TouchableOpacity
       style={styles.partyCard}
-      onPress={() => navigation.navigate('PartyDetails', { from: item.from })}
+      onPress={() => navigation.navigate('PartyDetailsScreen', { from: item.from })}
     >
       <View style={styles.partyInfo}>
         <Text style={styles.partyName}>{item.from}</Text>

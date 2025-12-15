@@ -8,20 +8,20 @@ import {
 } from '@react-native-firebase/auth';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
-import Party_Section from './src/screens/Party/Party_Section';
+
 import VehicleList from './src/screens/Vehicle/VehicleList';
-import VehicleDetails from './src/screens/Vehicle/VechileDetails';
-import VehicleDetailScreen from './src/screens/Vehicle/VehicleDetailScreen';
+
+
 import EditTrip from './src/screens/Vehicle/EditTrip';
-import PartyList from './src/screens/Party/PartyList';
+
 import PartyListScreen from './src/screens/Party/PartyListScreen';
 import PartyDetailScreen from './src/screens/Party/PartyDetailScreen';
 import TripEntryScreen from './src/screens/tripentry/TripEntryScreen';
-import Details_updator from './src/screens/tripentry/Details_updator';
+
 import AddCustomer from './src/screens/Customer/AddCustomer';
 import CustomerList from './src/screens/Customer/CustomerList';
 import EditCustomer from './src/screens/Customer/EditCustomer';
-import TripList from './src/screens/Party/TripList';
+import TripList from './src/screens/Vehicle/TripList';
 
 const Stack = createNativeStackNavigator();
 
@@ -52,22 +52,20 @@ function App() {
         {user ? (
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
-
+            {/* 1. Entry Screen */}
             <Stack.Screen name="TripEntry" component={TripEntryScreen} />
-
+            {/* 2. Vehicle Screen */}
             <Stack.Screen name="VehicleList" component={VehicleList} />
-            <Stack.Screen name="VehicleDetails" component={VehicleDetailScreen} />
+            
+            {/* 3. Party Screen */}
+            <Stack.Screen name="PartyListScreen" component={PartyListScreen} />
+            <Stack.Screen name="PartyDetailsScreen" component={PartyDetailScreen} />
 
-            <Stack.Screen name="PartyList" component={PartyListScreen} />
-            <Stack.Screen name="PartyDetails" component={PartyDetailScreen} />
-            <Stack.Screen name="TripList" component={TripList} />
-            <Stack.Screen name="Vehicle" component={Details_updator} />
-
-            <Stack.Screen name="Party_Section" component={Party_Section} />
-            {/* <Stack.Screen name="VehicleDetailsOld" component={VehicleDetails} /> */}
-
+            {/* 4. All Trip List */}
+            <Stack.Screen name="TripList" component={TripList} />     
+            {/* Edit Trip List */}
             <Stack.Screen name="EditTrip" component={EditTrip} />
-            {/* <Stack.Screen name="PartyListOld" component={PartyList} /> */}
+
             <Stack.Screen name="AddCustomer" component={AddCustomer} />
             <Stack.Screen name="CustomerList" component={CustomerList} />
             <Stack.Screen name="EditCustomer" component={EditCustomer} />

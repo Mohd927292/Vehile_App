@@ -8,40 +8,39 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { tripService } from '../../config/firebase';
+import { vehicleTripService } from '../../config/firebase';
 
-const VehicleList = ({ navigation }) => {
-  const [vehicles, setVehicles] = useState([]);
+const TripList = ({ navigation }) => {
+  const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadVehicles();
+    loadTrips();
   }, []);
 
-  const loadVehicles = async () => {
+  const loadTrips = async () => {
     try {
       setLoading(true);
-      const vehiclesData = await tripService.getVehicles();
-      setVehicles(vehiclesData);
+      const mergedData = await vehicleTripService.getVehicleTripsData();
+      setTrips(mergedData);
     } catch (error) {
-      console.error('Error loading vehicles:', error);
-      Alert.alert('Error', 'Failed to load vehicles. Please try again.');
+      console.error('Error loading trips:', error);
+      Alert.alert('Error', 'Failed to load trips. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const renderVehicle = ({ item }) => (
-    <TouchableOpacity
-      style={styles.vehicleCard}
-      onPress={() => navigation.navigate('VehicleDetails', { vehicleNo: item.vehicleNo })}
-    >
-      <View style={styles.vehicleInfo}>
-        <Text style={styles.vehicleNumber}>{item.vehicleNo}</Text>
-        <Text style={styles.loadCount}>{item.loadCount || 0} loads</Text>
+  const renderTrip = ({ item }) => (
+    <View style={styles.tripCard}>
+      <View style={styles.tripHeader}>
+        <Text style={styles.tripVehicle}> {item.vehicleNo || 'N/A'}</Text>
+
       </View>
-      <Text style={styles.arrow}>→</Text>
-    </TouchableOpacity>
+    
+      <Text style={styles.tripDriver}>Load: {item.loadCount || 'N/A'}</Text>
+      <Text style={styles.tripDriver}>CreatedAt: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
+    </View>
   );
 
   if (loading) {
@@ -54,26 +53,27 @@ const VehicleList = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Vehicles</Text>
+        <Text style={styles.headerTitle}>Trip History</Text>
         <View style={styles.headerRight} />
       </View>
 
-      {vehicles.length === 0 ? (
+      {trips.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No vehicles found</Text>
+          <Text style={styles.emptyText}>No trips found</Text>
         </View>
       ) : (
         <FlatList
-          data={vehicles}
-          renderItem={renderVehicle}
+          data={trips}
+          renderItem={renderTrip}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
           refreshing={loading}
-          onRefresh={loadVehicles}
+          onRefresh={loadTrips}
         />
       )}
     </View>
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   headerRight: {
-    width: 60,
+    width: 60, // Same as back button for alignment
   },
   backButton: {
     color: 'white',
@@ -115,33 +115,47 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
   },
-  vehicleCard: {
+  tripCard: {
     backgroundColor: 'white',
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
     elevation: 2,
+  },
+  tripHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    marginBottom: 8,
   },
-  vehicleInfo: {
-    flex: 1,
-  },
-  vehicleNumber: {
-    fontSize: 18,
+  tripVehicle: {
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 4,
   },
-  loadCount: {
+  tripDate: {
     color: '#666',
     fontSize: 14,
   },
-  arrow: {
-    fontSize: 18,
-    color: '#1976d2',
+  tripDriver: {
+    color: '#555',
+    marginBottom: 8,
+  },
+  routesContainer: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 8,
+  },
+  routesTitle: {
     fontWeight: 'bold',
+    marginBottom: 4,
+    color: '#444',
+  },
+  routeItem: {
+    marginBottom: 4,
+  },
+  routeText: {
+    color: '#666',
   },
   emptyContainer: {
     flex: 1,
@@ -154,4 +168,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default VehicleList;
+export default TripList;

@@ -107,6 +107,45 @@ const tripService = {
   },
 };
 
+// Vehicle-Trip merged data service
+const vehicleTripService = {
+  getVehicleTripsData: async () => {
+    try {
+      // Fetch both collections in parallel
+      const [vehiclesSnapshot, tripsSnapshot] = await Promise.all([
+        getDocs(query(vehiclesCollection, orderBy('lastTripAt', 'desc'))),
+        getDocs(query(tripEntriesCollection, orderBy('createdAt', 'desc')))
+      ]);
+      
+      // Convert to maps for efficient lookup
+      const vehiclesMap = new Map();
+      vehiclesSnapshot.docs.forEach(doc => {
+        vehiclesMap.set(doc.data().vehicleNo, doc.data());
+      });
+      
+      // Merge trip data with vehicle data
+      const mergedData = tripsSnapshot.docs.map(doc => {
+        const tripData = doc.data();
+        const vehicleData = vehiclesMap.get(tripData.vehicleNo) || {};
+        
+        return {
+          id: doc.id,
+          vehicleNo: tripData.vehicleNo,
+          driverName: tripData.driverName,
+          date: tripData.date,
+          locations: tripData.locations,
+          createdAt: tripData.createdAt?.toDate() || null,
+          loadCount: vehicleData.loadCount || 0
+        };
+      });
+      
+      return mergedData;
+    } catch (error) {
+      throw error;
+    }
+  }
+};
+
 // Customer service
 const customerService = {
   getCustomers: async () => {
@@ -119,4 +158,4 @@ const customerService = {
   },
 };
 
-export { db, authInstance as auth, tripService, customerService };
+export { db, authInstance as auth, tripService, customerService, vehicleTripService };

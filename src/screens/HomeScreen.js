@@ -52,7 +52,7 @@ const HomeScreen = ({ navigation }) => {
           
           <TouchableOpacity 
             style={styles.menuButton}
-            onPress={() => navigation.navigate('PartyList')}
+            onPress={() => navigation.navigate('PartyListScreen')}
           >
             <Text style={styles.menuIcon}>🏢</Text>
             <Text style={styles.menuText}>Parties</Text>
