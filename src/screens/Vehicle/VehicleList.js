@@ -10,37 +10,53 @@ import {
 } from 'react-native';
 import { vehicleTripService } from '../../config/firebase';
 
-const TripList = ({ navigation }) => {
-  const [trips, setTrips] = useState([]);
+const VehicleList = ({ navigation }) => {
+  const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadTrips();
+    loadVehicles();
   }, []);
 
-  const loadTrips = async () => {
+  const loadVehicles = async () => {
     try {
       setLoading(true);
       const mergedData = await vehicleTripService.getVehicleTripsData();
-      setTrips(mergedData);
+      
+      // Group by vehicle and get unique vehicles
+      const vehicleMap = new Map();
+      mergedData.forEach(trip => {
+        if (!vehicleMap.has(trip.vehicleNo)) {
+          vehicleMap.set(trip.vehicleNo, {
+            vehicleNo: trip.vehicleNo,
+          
+            loadCount: trip.loadCount,
+            createdAt: trip.createdAt
+          });
+        }
+      });
+      
+      setVehicles(Array.from(vehicleMap.values()));
     } catch (error) {
-      console.error('Error loading trips:', error);
-      Alert.alert('Error', 'Failed to load trips. Please try again.');
+      console.error('Error loading vehicles:', error);
+      Alert.alert('Error', 'Failed to load vehicles. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const renderTrip = ({ item }) => (
-    <View style={styles.tripCard}>
-      <View style={styles.tripHeader}>
-        <Text style={styles.tripVehicle}> {item.vehicleNo || 'N/A'}</Text>
-
+  const renderVehicle = ({ item }) => (
+    <TouchableOpacity 
+      style={styles.vehicleCard}
+      onPress={() => navigation.navigate('Vehicle_list_Screen', { vehicleNo: item.vehicleNo })}
+    >
+      <View style={styles.vehicleHeader}>
+        <Text style={styles.vehicleNumber}>{item.vehicleNo || 'N/A'}</Text>
       </View>
-    
-      <Text style={styles.tripDriver}>Load: {item.loadCount || 'N/A'}</Text>
-      <Text style={styles.tripDriver}>CreatedAt: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
-    </View>
+      
+      <Text style={styles.vehicleInfo}>Load Count: {item.loadCount || 'N/A'}</Text>
+      <Text style={styles.vehicleInfo}>Last Trip: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -58,22 +74,22 @@ const TripList = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Trip History</Text>
+        <Text style={styles.headerTitle}>Vehicles</Text>
         <View style={styles.headerRight} />
       </View>
 
-      {trips.length === 0 ? (
+      {vehicles.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No trips found</Text>
+          <Text style={styles.emptyText}>No vehicles found</Text>
         </View>
       ) : (
         <FlatList
-          data={trips}
-          renderItem={renderTrip}
-          keyExtractor={item => item.id}
+          data={vehicles}
+          renderItem={renderVehicle}
+          keyExtractor={item => item.vehicleNo}
           contentContainerStyle={styles.listContent}
           refreshing={loading}
-          onRefresh={loadTrips}
+          onRefresh={loadVehicles}
         />
       )}
     </View>
@@ -115,28 +131,24 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
   },
-  tripCard: {
+  vehicleCard: {
     backgroundColor: 'white',
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
     elevation: 2,
   },
-  tripHeader: {
+  vehicleHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
   },
-  tripVehicle: {
+  vehicleNumber: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
   },
-  tripDate: {
-    color: '#666',
-    fontSize: 14,
-  },
-  tripDriver: {
+  vehicleInfo: {
     color: '#555',
     marginBottom: 8,
   },
@@ -168,4 +180,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TripList;
+export default VehicleList;

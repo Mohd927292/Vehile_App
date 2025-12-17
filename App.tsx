@@ -10,12 +10,14 @@ import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
 
 import VehicleList from './src/screens/Vehicle/VehicleList';
+import Vehicle_list_Screen from './src/screens/Vehicle/Vehicle_list_Screen';
 
 
 import EditTrip from './src/screens/Vehicle/EditTrip';
 
 import PartyListScreen from './src/screens/Party/PartyListScreen';
 import PartyDetailScreen from './src/screens/Party/PartyDetailScreen';
+import PartyList_Details_Screen from './src/screens/Party/PartyList_Details_Screen';
 import TripEntryScreen from './src/screens/tripentry/TripEntryScreen';
 
 import AddCustomer from './src/screens/Customer/AddCustomer';
@@ -56,10 +58,12 @@ function App() {
             <Stack.Screen name="TripEntry" component={TripEntryScreen} />
             {/* 2. Vehicle Screen */}
             <Stack.Screen name="VehicleList" component={VehicleList} />
+            <Stack.Screen name="Vehicle_list_Screen" component={Vehicle_list_Screen} />
             
             {/* 3. Party Screen */}
             <Stack.Screen name="PartyListScreen" component={PartyListScreen} />
             <Stack.Screen name="PartyDetailsScreen" component={PartyDetailScreen} />
+            <Stack.Screen name="PartyList_Details_Screen" component={PartyList_Details_Screen} />
 
             {/* 4. All Trip List */}
             <Stack.Screen name="TripList" component={TripList} />     

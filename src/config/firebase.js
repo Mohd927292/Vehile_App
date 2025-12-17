@@ -143,7 +143,30 @@ const vehicleTripService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  
+  getPartyTripData: async () => {
+    try {
+      const partySnapshot = await getDocs(query(partiesCollection, orderBy('lastTripAt', 'desc')));
+      
+      const parties = partySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          from: data.from,
+          loadCount: data.loadCount || 0,
+          createdAt: data.lastTripAt?.toDate() || null
+        };
+      });
+      
+      return parties;
+    } catch (error) {
+      throw error;
+    }
   }
+
+
 };
 
 // Customer service

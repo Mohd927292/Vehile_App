@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { tripService } from '../../config/firebase';
+import { vehicleTripService } from '../../config/firebase';
 
 const PartyListScreen = ({ navigation }) => {
   const [parties, setParties] = useState([]);
@@ -21,8 +21,8 @@ const PartyListScreen = ({ navigation }) => {
   const loadParties = async () => {
     try {
       setLoading(true);
-      const partiesData = await tripService.getParties();
-      setParties(partiesData);
+      const mergedData = await vehicleTripService.getPartyTripData();
+      setParties(mergedData);
     } catch (error) {
       console.error('Error loading parties:', error);
       Alert.alert('Error', 'Failed to load parties. Please try again.');
@@ -32,15 +32,15 @@ const PartyListScreen = ({ navigation }) => {
   };
 
   const renderParty = ({ item }) => (
-    <TouchableOpacity
+    <TouchableOpacity 
       style={styles.partyCard}
-      onPress={() => navigation.navigate('PartyDetailsScreen', { from: item.from })}
+      onPress={() => navigation.navigate('PartyList_Details_Screen', { from: item.from })}
     >
-      <View style={styles.partyInfo}>
-        <Text style={styles.partyName}>{item.from}</Text>
-        <Text style={styles.loadCount}>{item.loadCount || 0} loads</Text>
+      <View style={styles.partyHeader}>
+        <Text style={styles.partyName}>{item.from || 'N/A'}</Text>
       </View>
-      <Text style={styles.arrow}>→</Text>
+      <Text style={styles.partyInfo}>Load: {item.loadCount || 'N/A'}</Text>
+      <Text style={styles.partyInfo}>CreatedAt: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
     </TouchableOpacity>
   );
 
@@ -121,27 +121,20 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     elevation: 2,
+  },
+  partyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  partyInfo: {
-    flex: 1,
+    marginBottom: 8,
   },
   partyName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 4,
   },
-  loadCount: {
-    color: '#666',
-    fontSize: 14,
-  },
-  arrow: {
-    fontSize: 18,
-    color: '#1976d2',
-    fontWeight: 'bold',
+  partyInfo: {
+    color: '#555',
+    marginBottom: 8,
   },
   emptyContainer: {
     flex: 1,
