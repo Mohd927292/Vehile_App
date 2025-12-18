@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
+  StatusBar,
 } from 'react-native';
 import { customerService } from '../../config/firebase';
 
@@ -66,35 +67,43 @@ const CustomerList = ({ navigation }) => {
   };
 
   const renderCustomer = ({ item }) => (
-    <View style={styles.customerCard}>
-      <View style={styles.customerContent}>
-        <View style={styles.customerInfo}>
-          <Text style={styles.customerName}>{item.msName}</Text>
-          <Text style={styles.customerPhone}>{item.phoneNo}</Text>
-          <Text style={styles.customerGstin}>GSTIN: {item.gstin}</Text>
-          <Text style={styles.customerGstin}>Address1: {item.address1}</Text>
+    <TouchableOpacity 
+      style={styles.customerCard}
+      activeOpacity={0.7}
+      onPress={() => openMenu(item)}
+    >
+      <View style={styles.customerHeader}>
+        <View style={styles.avatarContainer}>
+          <Text style={styles.avatarText}>{item.msName?.charAt(0)?.toUpperCase()}</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.menuButton}
-          onPress={() => openMenu(item)}
-        >
+        <View style={styles.customerInfo}>
+          <Text style={styles.customerName} numberOfLines={1}>{item.msName}</Text>
+          <Text style={styles.customerPhone}>{item.phoneNo}</Text>
+        </View>
+        <View style={styles.menuButton}>
           <Text style={styles.menuIcon}>⋮</Text>
-        </TouchableOpacity>
+        </View>
       </View>
-    </View>
+      <View style={styles.customerDetails}>
+        <Text style={styles.customerGstin} numberOfLines={1}>GSTIN: {item.gstin}</Text>
+        <Text style={styles.customerAddress} numberOfLines={2}>{item.address1}</Text>
+      </View>
+    </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Customer List</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('AddCustomer')}>
-          <Text style={styles.addButton}>+ Add</Text>
-        </TouchableOpacity>
+        <View style={styles.headerTopRow}>
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTitle}>Customers</Text>
+          </View>
+          <View style={styles.customerCountBadge}>
+            <Text style={styles.customerCountBadgeText}>{filteredCustomers.length}</Text>
+          </View>
+        </View>
       </View>
 
       {/* Search Bar */}
@@ -112,8 +121,16 @@ const CustomerList = ({ navigation }) => {
       {/* Customer List */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#6366f1" />
           <Text style={styles.loadingText}>Loading customers...</Text>
+        </View>
+      ) : filteredCustomers.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyIcon}>👥</Text>
+          <Text style={styles.emptyTitle}>No customers found</Text>
+          <Text style={styles.emptySubtitle}>
+            {searchQuery ? 'Try adjusting your search' : 'Add your first customer to get started'}
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -124,8 +141,18 @@ const CustomerList = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           refreshing={loading}
           onRefresh={loadCustomers}
+
         />
       )}
+
+      {/* Floating Action Button */}
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => navigation.navigate('AddCustomer')}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.fabIcon}>+</Text>
+      </TouchableOpacity>
 
       {/* Menu Modal */}
       <Modal
@@ -164,104 +191,172 @@ const CustomerList = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fafc',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 50,
     backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    zIndex: 2,
   },
-  backButton: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    minWidth: 0,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#1e293b',
+    letterSpacing: 0.1,
   },
-  addButton: {
-    fontSize: 16,
-    color: '#28a745',
-    fontWeight: '600',
+  customerCount: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '500',
   },
-  listContainer: {
-    padding: 20,
+  customerCountBadge: {
+    minWidth: 44,
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customerCountBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    margin: 15,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    marginHorizontal: 16,
+    marginVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   searchIcon: {
-    fontSize: 16,
-    marginRight: 10,
-    color: '#666',
+    fontSize: 18,
+    marginRight: 12,
+    color: '#64748b',
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     fontSize: 16,
-    color: '#333',
+    color: '#1e293b',
+  },
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
   },
   customerCard: {
     backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
   },
-  customerContent: {
+  customerHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    padding: 16,
+  },
+  avatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#6366f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
   },
   customerInfo: {
     flex: 1,
   },
+  customerName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  customerPhone: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
+  },
   menuButton: {
-    padding: 5,
+    padding: 8,
   },
   menuIcon: {
     fontSize: 20,
-    color: '#666',
+    color: '#94a3b8',
     fontWeight: 'bold',
   },
-  customerName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  customerPhone: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 3,
+  customerDetails: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
   },
   customerGstin: {
-    fontSize: 14,
-    color: '#888',
+    fontSize: 13,
+    color: '#64748b',
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  customerAddress: {
+    fontSize: 13,
+    color: '#94a3b8',
+    lineHeight: 18,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 50,
+    right: 40,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#6366f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  fabIcon: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: '300',
   },
   loadingContainer: {
     flex: 1,
@@ -269,9 +364,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 24,
   },
   modalOverlay: {
     flex: 1,
@@ -281,28 +400,30 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     backgroundColor: '#fff',
-    borderRadius: 8,
+    borderRadius: 16,
     minWidth: 200,
-    elevation: 5,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    overflow: 'hidden',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#f1f5f9',
   },
   menuItemIcon: {
     fontSize: 16,
-    marginRight: 10,
+    marginRight: 12,
   },
   menuText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: '#6366f1',
+    fontWeight: '500',
   },
 });
 

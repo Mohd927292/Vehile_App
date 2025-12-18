@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import {
   View,
+  Text,
   StyleSheet,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {
   TextInput,
@@ -123,72 +126,103 @@ const AddCustomer = ({ navigation }) => {
 
   return (
     <PaperProvider>
-      <View style={styles.container}>
-        <Appbar.Header>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+      >
+        <Appbar.Header style={styles.appbar} elevated>
           <Appbar.BackAction onPress={() => navigation.goBack()} />
-          <Appbar.Content title="Add Customer" />
+          <Appbar.Content title="Add Customer" titleStyle={styles.appbarTitle} />
         </Appbar.Header>
 
-        <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
-          <TextInput
-            label="M/s Name *"
-            value={customerData.msName}
-            onChangeText={(value) => handleInputChange('msName', value)}
-            placeholder="Enter company name"
-            mode="outlined"
-            style={styles.input}
-          />
+        <ScrollView
+          style={styles.form}
+          contentContainerStyle={styles.formContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.formCard}>
+            <Text style={styles.sectionTitle}>Customer Details</Text>
 
-          <TextInput
-            label="Address 1 *"
-            value={customerData.address1}
-            onChangeText={(value) => handleInputChange('address1', value)}
-            placeholder="Enter address line 1"
-            multiline
-            mode="outlined"
-            style={styles.input}
-          />
+            <TextInput
+              label="M/s Name *"
+              value={customerData.msName}
+              onChangeText={(value) => handleInputChange('msName', value)}
+              placeholder="Enter company name"
+              mode="outlined"
+              style={styles.input}
+              outlineColor="#e2e8f0"
+              activeOutlineColor="#6366f1"
+              selectionColor="#6366f1"
+            />
 
-          <TextInput
-            label="Address 2"
-            value={customerData.address2}
-            onChangeText={(value) => handleInputChange('address2', value)}
-            placeholder="Enter address line 2"
-            multiline
-            mode="outlined"
-            style={styles.input}
-          />
+            <TextInput
+              label="Address 1 *"
+              value={customerData.address1}
+              onChangeText={(value) => handleInputChange('address1', value)}
+              placeholder="Enter address line 1"
+              multiline
+              mode="outlined"
+              style={[styles.input, styles.multilineInput]}
+              outlineColor="#e2e8f0"
+              activeOutlineColor="#6366f1"
+              selectionColor="#6366f1"
+            />
 
-          <TextInput
-            label="GSTIN *"
-            value={customerData.gstin}
-            onChangeText={(value) => handleInputChange('gstin', value)}
-            placeholder="Enter GSTIN number"
-            autoCapitalize="characters"
-            mode="outlined"
-            style={styles.input}
-          />
+            <TextInput
+              label="Address 2"
+              value={customerData.address2}
+              onChangeText={(value) => handleInputChange('address2', value)}
+              placeholder="Enter address line 2"
+              multiline
+              mode="outlined"
+              style={[styles.input, styles.multilineInput]}
+              outlineColor="#e2e8f0"
+              activeOutlineColor="#6366f1"
+              selectionColor="#6366f1"
+            />
 
-          <TextInput
-            label="Phone No *"
-            value={customerData.phoneNo}
-            onChangeText={(value) => handleInputChange('phoneNo', value)}
-            placeholder="Enter phone number"
-            keyboardType="phone-pad"
-            mode="outlined"
-            style={styles.input}
-          />
+            <TextInput
+              label="GSTIN *"
+              value={customerData.gstin}
+              onChangeText={(value) => handleInputChange('gstin', value)}
+              placeholder="Enter GSTIN"
+              autoCapitalize="characters"
+              mode="outlined"
+              style={styles.input}
+              outlineColor="#e2e8f0"
+              activeOutlineColor="#6366f1"
+              selectionColor="#6366f1"
+            />
 
-          <TextInput
-            label="Email (Optional)"
-            value={customerData.email}
-            onChangeText={(value) => handleInputChange('email', value)}
-            placeholder="Enter email address"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            mode="outlined"
-            style={styles.input}
-          />
+            <TextInput
+              label="Phone No *"
+              value={customerData.phoneNo}
+              onChangeText={(value) => handleInputChange('phoneNo', value)}
+              placeholder="10-digit number"
+              keyboardType="phone-pad"
+              mode="outlined"
+              style={styles.input}
+              outlineColor="#e2e8f0"
+              activeOutlineColor="#6366f1"
+              selectionColor="#6366f1"
+            />
+
+            <TextInput
+              label="Email (Optional)"
+              value={customerData.email}
+              onChangeText={(value) => handleInputChange('email', value)}
+              placeholder="Enter email address"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              mode="outlined"
+              style={styles.input}
+              outlineColor="#e2e8f0"
+              activeOutlineColor="#6366f1"
+              selectionColor="#6366f1"
+            />
+          </View>
         </ScrollView>
 
         <Button
@@ -197,10 +231,12 @@ const AddCustomer = ({ navigation }) => {
           disabled={isSaving}
           loading={isSaving}
           style={styles.saveButton}
+          contentStyle={styles.saveButtonContent}
+          buttonColor="#6366f1"
         >
           Save Customer
         </Button>
-      </View>
+      </KeyboardAvoidingView>
     </PaperProvider>
   );
 };
@@ -208,17 +244,50 @@ const AddCustomer = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fafc',
+  },
+  appbar: {
+    backgroundColor: '#fff',
+  },
+  appbarTitle: {
+    color: '#0f172a',
+    fontWeight: '700',
   },
   form: {
     flex: 1,
-    padding: 20,
+  },
+  formContent: {
+    padding: 16,
+    paddingBottom: 28,
+  },
+  formCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 14,
   },
   input: {
-    marginBottom: 16,
+    marginBottom: 12,
+    backgroundColor: '#fff',
+  },
+  multilineInput: {
+    minHeight: 54,
   },
   saveButton: {
-    margin: 20,
+    marginHorizontal: 16,
+    marginBottom: 18,
+    borderRadius: 14,
+    elevation: 3,
+  },
+  saveButtonContent: {
+    height: 52,
   },
 });
 
