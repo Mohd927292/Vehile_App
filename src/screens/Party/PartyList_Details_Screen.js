@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
@@ -15,8 +16,10 @@ import TripListExport from '../../components/Pdf_Excel_calender_Sort';
 const PartyList_Details_Screen = ({ navigation, route }) => {
   const { from } = route.params;
   const [trips, setTrips] = useState([]);
+  const [filteredTrips, setFilteredTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [maxLocations, setMaxLocations] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadTrips();
@@ -53,6 +56,8 @@ const PartyList_Details_Screen = ({ navigation, route }) => {
       const maxLoc = Math.max(...tripsData.map(trip => trip.locations.length), 0);
       setMaxLocations(maxLoc);
       setTrips(tripsData);
+      // Reapply search filter if there's an active search query
+      filterTrips(searchQuery, tripsData);
     } catch (error) {
       console.error('Error loading trips:', error);
       Alert.alert('Error', 'Failed to load trips. Please try again.');
@@ -63,6 +68,38 @@ const PartyList_Details_Screen = ({ navigation, route }) => {
 
   const handleEdit = (trip) => {
     navigation.navigate('TripEntry', { editTrip: trip });
+  };
+
+  const filterTrips = (query, tripsToFilter = null) => {
+    const tripsData = tripsToFilter || trips;
+    if (!query.trim()) {
+      setFilteredTrips(tripsData);
+      return;
+    }
+
+    const lowerQuery = query.toLowerCase().trim();
+    const filtered = tripsData.filter(trip => {
+      // Search in party names (from/to fields in locations)
+      const hasMatchingParty = trip.locations.some(loc => 
+        loc.from?.toLowerCase().includes(lowerQuery) ||
+        loc.to?.toLowerCase().includes(lowerQuery)
+      );
+      
+      // Also search in other fields
+      const matchesVehicle = trip.vehicleNo?.toLowerCase().includes(lowerQuery);
+      const matchesDriver = trip.driverName?.toLowerCase().includes(lowerQuery);
+      const matchesDate = trip.date?.toLowerCase().includes(lowerQuery);
+      const matchesLoadCount = trip.loadCount?.toString().toLowerCase().includes(lowerQuery);
+
+      return hasMatchingParty || matchesVehicle || matchesDriver || matchesDate || matchesLoadCount;
+    });
+
+    setFilteredTrips(filtered);
+  };
+
+  const handleSearchChange = (text) => {
+    setSearchQuery(text);
+    filterTrips(text);
   };
 
   const handleDelete = (tripId) => {
@@ -77,7 +114,7 @@ const PartyList_Details_Screen = ({ navigation, route }) => {
           onPress: async () => {
             try {
               await firestore().collection('tripEntries').doc(tripId).delete();
-              loadTrips();
+              await loadTrips();
               Alert.alert('Success', 'Trip deleted successfully');
             } catch (error) {
               console.error('Error deleting trip:', error);
@@ -110,9 +147,12 @@ const PartyList_Details_Screen = ({ navigation, route }) => {
     </View>
   );
 
-  const renderRow = ({ item, index }) => (
+  const renderRow = ({ item, index }) => {
+    // Recalculate srNo based on filtered list index
+    const displaySrNo = index + 1;
+    return (
     <View style={[styles.row, index % 2 === 0 ? styles.evenRow : styles.oddRow]}>
-      <Text style={styles.cell}>{item.srNo}</Text>
+      <Text style={styles.cell}>{displaySrNo}</Text>
       <Text style={styles.cell}>{item.date}</Text>
       <Text style={styles.cell}>{item.vehicleNo}</Text>
       <Text style={styles.cell}>{item.driverName}</Text>
@@ -142,7 +182,8 @@ const PartyList_Details_Screen = ({ navigation, route }) => {
         <Text style={styles.actionIcon}>🗑️</Text>
       </TouchableOpacity>
     </View>
-  );
+    );
+  };
 
   const getItemLayout = (data, index) => ({
     length: 60,
@@ -161,18 +202,28 @@ const PartyList_Details_Screen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-      <Text style={styles.headerTitle}>Party: {from}</Text>
-      <TripListExport data={trips} />
+      <Text style={styles.headerTitle}>{from}</Text>
+      <TripListExport data={filteredTrips} />
       </View>
 
-      {trips.length === 0 ? (
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by party name, vehicle, driver, date..."
+          placeholderTextColor="#999"
+          value={searchQuery}
+          onChangeText={handleSearchChange}
+        />
+      </View>
+
+      {filteredTrips.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No trips found</Text>
         </View>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <FlatList
-            data={trips}
+            data={filteredTrips}
             renderItem={renderRow}
             keyExtractor={item => item.id}
             ListHeaderComponent={renderHeader}
@@ -200,15 +251,6 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom:10,
-    backgroundColor: '#1976d2',
-    elevation: 5,
-  
-    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
@@ -227,10 +269,24 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: 'white',
     fontSize: 18,
-    
     letterSpacing: 0.5,
-    color: 'white',
-       
+    fontWeight: 'bold',
+  },
+  searchContainer: {
+    padding: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  searchInput: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
   headerRow: {
     flexDirection: 'row',
