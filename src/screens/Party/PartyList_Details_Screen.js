@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
+import TripListExport from '../../components/Pdf_Excel_calender_Sort';
 
 const PartyList_Details_Screen = ({ navigation, route }) => {
   const { from } = route.params;
@@ -160,11 +161,8 @@ const PartyList_Details_Screen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Party: {from}</Text>
-        <View style={styles.headerRight} />
+      <Text style={styles.headerTitle}>Party: {from}</Text>
+      <TripListExport data={trips} />
       </View>
 
       {trips.length === 0 ? (
@@ -202,6 +200,15 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom:10,
+    backgroundColor: '#1976d2',
+    elevation: 5,
+  
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
@@ -220,12 +227,15 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: 'white',
     fontSize: 18,
-    fontWeight: 'bold',
+    
+    letterSpacing: 0.5,
+    color: 'white',
+       
   },
   headerRow: {
     flexDirection: 'row',
     backgroundColor: '#333',
-    paddingVertical: 12,
+    padding: 10,
   },
   headerCell: {
     color: 'white',

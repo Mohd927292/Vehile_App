@@ -12,6 +12,7 @@ import {
   TextInput,
 } from 'react-native';
 import { vehicleTripService } from '../../config/firebase';
+import TripListExport from '../../components/Pdf_Excel_calender_Sort';
 import { deleteDoc, doc, limit, startAfter } from '@react-native-firebase/firestore';
 import { db } from '../../config/firebase';
 
@@ -57,7 +58,7 @@ const TripList = ({ navigation }) => {
     if (text.trim() === '') {
       setFilteredTrips(trips);
     } else {
-      const filtered = trips.filter(trip => 
+      const filtered = trips.filter(trip =>
         trip.vehicleNo.toLowerCase().includes(text.toLowerCase())
       );
       setFilteredTrips(filtered);
@@ -68,11 +69,11 @@ const TripList = ({ navigation }) => {
     try {
       setLoading(true);
       const mergedData = await vehicleTripService.getVehicleTripsData();
-      
+
       // Find maximum number of locations
       const maxLocs = Math.max(...mergedData.map(item => item.locations?.length || 0), 2);
       setMaxLocations(maxLocs);
-      
+
       const processedData = mergedData.map((item, index) => {
         const processedItem = {
           ...item,
@@ -83,16 +84,16 @@ const TripList = ({ navigation }) => {
           loadCount: item.loadCount || 0,
           createdAt: item.createdAt || null,
         };
-        
+
         // Add dynamic location fields
         for (let i = 0; i < maxLocs; i++) {
           processedItem[`from${i + 1}`] = item.locations?.[i]?.from || (i === 0 ? 'N/A' : '');
           processedItem[`to${i + 1}`] = item.locations?.[i]?.to || (i === 0 ? 'N/A' : '');
         }
-        
+
         return processedItem;
       });
-      
+
       setTrips(processedData);
       setFilteredTrips(processedData);
     } catch (error) {
@@ -127,7 +128,7 @@ const TripList = ({ navigation }) => {
         </Text>
       );
     }
-    
+
     return (
       <View style={[styles.row, styles.headerRow]}>
         <Text style={[styles.cell, styles.srCell, styles.headerText]}>Sr</Text>
@@ -156,7 +157,7 @@ const TripList = ({ navigation }) => {
         </Text>
       );
     }
-    
+
     return (
       <View style={[styles.row, index % 2 === 0 ? styles.evenRow : styles.oddRow]}>
         <Text style={[styles.cell, styles.srCell]}>{item.srNo}</Text>
@@ -175,13 +176,13 @@ const TripList = ({ navigation }) => {
           }) : 'N/A'}
         </Text>
         <View style={[styles.cell, styles.actionCell]}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.actionBtn, styles.editBtn]}
             onPress={() => handleEdit(item.id)}
           >
             <Text style={styles.btnText}>Edit</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.actionBtn, styles.deleteBtn]}
             onPress={() => handleDelete(item.id)}
           >
@@ -202,11 +203,10 @@ const TripList = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>All Trips</Text>
+        {/* Export Buttons */}
+        <TripListExport data={filteredTrips} />
         <View style={styles.headerRight} />
       </View>
 

@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
+import TripListExport from '../../components/Pdf_Excel_calender_Sort';
 
 const Vehicle_list_Screen = ({ navigation, route }) => {
   const { vehicleNo } = route.params;
@@ -156,11 +157,8 @@ const Vehicle_list_Screen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Vehicle: {vehicleNo}</Text>
-        <View style={styles.headerRight} />
+        <TripListExport data={trips} />
       </View>
 
       {trips.length === 0 ? (
@@ -198,6 +196,14 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
+
+    backgroundColor: '#1976d2',
+    elevation: 5,
+    
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
@@ -214,6 +220,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   headerTitle: {
+
+    letterSpacing: 0.5,
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
