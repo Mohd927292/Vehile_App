@@ -16,8 +16,10 @@ import {
 } from 'react-native-paper';
 import { db } from '../../config/firebase';
 import firestore from '@react-native-firebase/firestore';
+import { useTheme } from '../../hooks/useTheme';
 
 const AddCustomer = ({ navigation }) => {
+  const { colors } = useTheme();
   const [customerData, setCustomerData] = useState({
     msName: '',
     msnamelower: '',
@@ -127,13 +129,13 @@ const AddCustomer = ({ navigation }) => {
   return (
     <PaperProvider>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
-        <Appbar.Header style={styles.appbar} elevated>
+        <Appbar.Header style={[styles.appbar, { backgroundColor: colors.surface }]} elevated>
           <Appbar.BackAction onPress={() => navigation.goBack()} />
-          <Appbar.Content title="Add Customer" titleStyle={styles.appbarTitle} />
+          <Appbar.Content title="Add Customer" titleStyle={[styles.appbarTitle, { color: colors.text }]} />
         </Appbar.Header>
 
         <ScrollView
@@ -142,8 +144,8 @@ const AddCustomer = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.formCard}>
-            <Text style={styles.sectionTitle}>Customer Details</Text>
+          <View style={[styles.formCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Customer Details</Text>
 
             <TextInput
               label="M/s Name *"
@@ -244,13 +246,11 @@ const AddCustomer = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   appbar: {
-    backgroundColor: '#fff',
+    elevation: 2,
   },
   appbarTitle: {
-    color: '#0f172a',
     fontWeight: '700',
   },
   form: {
@@ -261,7 +261,6 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
   },
   formCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
@@ -270,7 +269,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f172a',
     marginBottom: 14,
   },
   input: {

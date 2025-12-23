@@ -15,14 +15,14 @@ import {
 import firestore from '@react-native-firebase/firestore';
 
 const EditTrip = ({ navigation, route }) => {
-  const { tripId, vehicleId } = route.params;
+  const { tripId } = route.params;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [tripData, setTripData] = useState({
-    Date: '',
-    Driver: '',
-    Load: '',
-    pairs: []
+    date: '',
+    driverName: '',
+    loadCount: '',
+    locations: []
   });
 
   useEffect(() => {
@@ -32,14 +32,18 @@ const EditTrip = ({ navigation, route }) => {
   const fetchTripData = async () => {
     try {
       const tripDoc = await firestore()
-        .collection('vehicles')
-        .doc(vehicleId)
-        .collection('trips')
+        .collection('tripEntries')
         .doc(tripId)
         .get();
       
       if (tripDoc.exists) {
-        setTripData(tripDoc.data());
+        const data = tripDoc.data();
+        setTripData({
+          date: data.date || '',
+          driverName: data.driverName || '',
+          loadCount: data.loadCount || '',
+          locations: data.locations || []
+        });
       }
     } catch (error) {
       console.error('Error fetching trip:', error);
@@ -53,12 +57,13 @@ const EditTrip = ({ navigation, route }) => {
     try {
       setSaving(true);
       await firestore()
-        .collection('vehicles')
-        .doc(vehicleId)
-        .collection('trips')
+        .collection('tripEntries')
         .doc(tripId)
         .update({
-          ...tripData,
+          date: tripData.date,
+          driverName: tripData.driverName,
+          loadCount: tripData.loadCount,
+          locations: tripData.locations,
           updatedAt: firestore.FieldValue.serverTimestamp()
         });
       
@@ -73,20 +78,20 @@ const EditTrip = ({ navigation, route }) => {
     }
   };
 
-  const updatePair = (index, field, value) => {
-    const newPairs = [...tripData.pairs];
-    newPairs[index] = { ...newPairs[index], [field]: value };
-    setTripData({ ...tripData, pairs: newPairs });
+  const updateLocation = (index, field, value) => {
+    const newLocations = [...tripData.locations];
+    newLocations[index] = { ...newLocations[index], [field]: value };
+    setTripData({ ...tripData, locations: newLocations });
   };
 
-  const addPair = () => {
-    const newPairs = [...tripData.pairs, { from: '', to: '', id: Date.now() }];
-    setTripData({ ...tripData, pairs: newPairs });
+  const addLocation = () => {
+    const newLocations = [...tripData.locations, { from: '', to: '' }];
+    setTripData({ ...tripData, locations: newLocations });
   };
 
-  const removePair = (index) => {
-    const newPairs = tripData.pairs.filter((_, i) => i !== index);
-    setTripData({ ...tripData, pairs: newPairs });
+  const removeLocation = (index) => {
+    const newLocations = tripData.locations.filter((_, i) => i !== index);
+    setTripData({ ...tripData, locations: newLocations });
   };
 
   if (loading) {
@@ -135,65 +140,65 @@ const EditTrip = ({ navigation, route }) => {
           <Text style={styles.label}>Date</Text>
           <TextInput
             style={styles.input}
-            value={tripData.Date}
-            onChangeText={(text) => setTripData({ ...tripData, Date: text })}
+            value={tripData.date}
+            onChangeText={(text) => setTripData({ ...tripData, date: text })}
             placeholder="Enter date"
             placeholderTextColor="#888"
           />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Driver</Text>
+          <Text style={styles.label}>Driver Name</Text>
           <TextInput
             style={styles.input}
-            value={tripData.Driver}
-            onChangeText={(text) => setTripData({ ...tripData, Driver: text })}
+            value={tripData.driverName}
+            onChangeText={(text) => setTripData({ ...tripData, driverName: text })}
             placeholder="Enter driver name"
             placeholderTextColor="#888"
           />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Load</Text>
+          <Text style={styles.label}>Load Count</Text>
           <TextInput
             style={styles.input}
-            value={tripData.Load || tripData.load || ''}
-            onChangeText={(text) => setTripData({ ...tripData, Load: text })}
-            placeholder="Enter load details"
+            value={tripData.loadCount ? tripData.loadCount.toString() : ''}
+            onChangeText={(text) => setTripData({ ...tripData, loadCount: text })}
+            placeholder="Enter load count"
             placeholderTextColor="#888"
           />
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.label}>Routes</Text>
-            <TouchableOpacity onPress={addPair} style={styles.addButton}>
-              <Text style={styles.addButtonText}>+ Add Route</Text>
+            <Text style={styles.label}>Locations</Text>
+            <TouchableOpacity onPress={addLocation} style={styles.addButton}>
+              <Text style={styles.addButtonText}>+ Add Location</Text>
             </TouchableOpacity>
           </View>
           
-          {tripData.pairs && tripData.pairs.map((pair, index) => (
+          {tripData.locations && tripData.locations.map((location, index) => (
             <View key={index} style={styles.pairContainer}>
-              <Text style={styles.pairLabel}>Route {index + 1}</Text>
+              <Text style={styles.pairLabel}>Location {index + 1}</Text>
               <View style={styles.pairInputs}>
                 <TextInput
                   style={[styles.input, styles.pairInput]}
-                  value={pair.from}
-                  onChangeText={(text) => updatePair(index, 'from', text)}
+                  value={location.from}
+                  onChangeText={(text) => updateLocation(index, 'from', text)}
                   placeholder="From"
                   placeholderTextColor="#888"
                 />
                 <Text style={styles.arrow}>→</Text>
                 <TextInput
                   style={[styles.input, styles.pairInput]}
-                  value={pair.to}
-                  onChangeText={(text) => updatePair(index, 'to', text)}
+                  value={location.to}
+                  onChangeText={(text) => updateLocation(index, 'to', text)}
                   placeholder="To"
                   placeholderTextColor="#888"
                 />
-                {tripData.pairs.length > 1 && (
+                {tripData.locations.length > 1 && (
                   <TouchableOpacity
-                    onPress={() => removePair(index)}
+                    onPress={() => removeLocation(index)}
                     style={styles.removeButton}
                   >
                     <Text style={styles.removeButtonText}>×</Text>

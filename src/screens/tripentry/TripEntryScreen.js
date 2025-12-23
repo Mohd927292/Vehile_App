@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -25,8 +25,42 @@ import { tripService } from '../../config/firebase';
 import AutoSuggestInput from '../../components/AutoSuggestInput';
 import { getVehicleSuggestions, getCustomerSuggestions } from '../../services/firestoreService';
 import firestore from '@react-native-firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../../hooks/useTheme';
+
+const DRAFT_KEY = 'tripEntryDraft';
+
+export const saveDraft = async (data) => {
+  try {
+    await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.warn('Failed to save trip draft:', e);
+  }
+};
+
+export const loadDraft = async () => {
+  try {
+    const value = await AsyncStorage.getItem(DRAFT_KEY);
+    if (value) {
+      return JSON.parse(value);
+    }
+  } catch (e) {
+    console.warn('Failed to load trip draft:', e);
+  }
+  return null;
+};
+
+export const clearDraft = async () => {
+  try {
+    await AsyncStorage.removeItem(DRAFT_KEY);
+  } catch (e) {
+    console.warn('Failed to clear trip draft:', e);
+  }
+};
 
 const TripEntryScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const [hydrated, setHydrated] = useState(false);
   const [trips, setTrips] = useState([{
     vehicleNo: '',
     driverName: '',
@@ -37,6 +71,53 @@ const TripEntryScreen = ({ navigation }) => {
   const [datePickerState, setDatePickerState] = useState({ show: false, tripIndex: -1 });
   const [currentTripIndex, setCurrentTripIndex] = useState(0);
   const [customerDialog, setCustomerDialog] = useState({ visible: false, field: '', tripIndex: -1, locationIndex: -1 });
+  const tripsScrollRef = useRef(null);
+  const [pendingScrollIndex, setPendingScrollIndex] = useState(null);
+
+  // Step 3: Debounced auto-save logic
+  const draftSaveTimeout = useRef();
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (draftSaveTimeout.current) clearTimeout(draftSaveTimeout.current);
+
+    draftSaveTimeout.current = setTimeout(() => {
+      saveDraft({ trips, currentTripIndex });
+    }, 800); // 800ms debounce
+
+    return () => clearTimeout(draftSaveTimeout.current);
+  }, [trips, currentTripIndex, hydrated]);
+
+  // Step 2: Restore draft trips on mount
+  useEffect(() => {
+    (async () => {
+      const data = await loadDraft();
+      if (
+        data &&
+        Array.isArray(data.trips) &&
+        typeof data.currentTripIndex === 'number'
+      ) {
+        // Fix: convert date field back to Date (if restored as string)
+        const tripsWithDateObjs = data.trips.map(trip => ({
+          ...trip,
+          date: typeof trip.date === 'string' ? new Date(trip.date) : trip.date,
+        }));
+        setTrips(tripsWithDateObjs);
+        setCurrentTripIndex(
+          Math.min(data.currentTripIndex, Math.max(data.trips.length - 1, 0))
+        );
+        // Wait for state to apply, then scroll to the last trip
+        setTimeout(() => {
+          if (tripsScrollRef.current) {
+            const idx = Math.max(data.trips.length - 1, 0);
+            const CARD_WIDTH = 344;
+            tripsScrollRef.current.scrollTo?.({ x: idx * CARD_WIDTH, animated: false });
+          }
+        }, 200);
+      }
+      setHydrated(true);
+    })();
+  }, []);
 
   const formatDate = (date) => {
     return date.toLocaleDateString('en-GB');
@@ -56,13 +137,29 @@ const TripEntryScreen = ({ navigation }) => {
   };
 
   const addTrip = () => {
+    const newIndex = trips.length; // index of the trip we are going to add
     setTrips([...trips, {
       vehicleNo: '',
       driverName: '',
       locations: [{ from: '', to: '' }],
       date: new Date(),
     }]);
+    setPendingScrollIndex(newIndex);
   };
+
+  useEffect(() => {
+    if (
+      pendingScrollIndex !== null &&
+      trips.length > pendingScrollIndex &&
+      tripsScrollRef.current
+    ) {
+      const CARD_WIDTH = 344; // matches snapToInterval
+      const x = pendingScrollIndex * CARD_WIDTH;
+      tripsScrollRef.current.scrollTo({ x, animated: true });
+      setCurrentTripIndex(pendingScrollIndex);
+      setPendingScrollIndex(null);
+    }
+  }, [pendingScrollIndex, trips.length]);
 
   const removeTrip = (tripIndex) => {
     if (trips.length > 1) {
@@ -216,6 +313,7 @@ const TripEntryScreen = ({ navigation }) => {
 
       console.log('Final results:', results);
       if (results.success === trips.length) {
+      await clearDraft();
         Alert.alert('Success', `All ${results.success} trips added successfully!`, [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);
@@ -233,6 +331,7 @@ const TripEntryScreen = ({ navigation }) => {
     }
   };
 
+  if (!hydrated) return null; // 👈 Wait for hydration before showing anything
   return (
     <PaperProvider>
       <KeyboardAvoidingView 
@@ -240,9 +339,9 @@ const TripEntryScreen = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
       >
-        <Appbar.Header>
+        <Appbar.Header style={{ backgroundColor: colors.surface }}>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title={`Trip ${currentTripIndex + 1} of ${trips.length}`} />
+        <Appbar.Content title={`Trip ${currentTripIndex + 1} of ${trips.length}`} titleStyle={{ color: colors.text }} />
         <View style={styles.headerButtons}>
           <Button 
             mode="contained" 
@@ -274,12 +373,13 @@ const TripEntryScreen = ({ navigation }) => {
       </Appbar.Header>
       
       <ScrollView 
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ flexGrow: 1 }}
         enableOnAndroid={true}
       >
         <ScrollView 
+          ref={tripsScrollRef}
           horizontal 
           showsHorizontalScrollIndicator={false}
           pagingEnabled
@@ -295,7 +395,7 @@ const TripEntryScreen = ({ navigation }) => {
         >
           <View style={styles.tripsContainer}>
             {trips.map((trip, tripIndex) => (
-              <Card key={tripIndex} style={styles.tripCard}>
+              <Card key={tripIndex} style={[styles.tripCard, { backgroundColor: colors.surface }]}>
               <Card.Content>
 
 
@@ -303,7 +403,8 @@ const TripEntryScreen = ({ navigation }) => {
                   label="Date *"
                   value={formatDate(trip.date)}
                   mode="outlined"
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.surface }]}
+                  theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
                   editable={false}
                   right={<TextInput.Icon icon="calendar" onPress={() => showDatePicker(tripIndex)} />}
                 />
@@ -316,7 +417,8 @@ const TripEntryScreen = ({ navigation }) => {
                   getSuggestions={getVehicleSuggestions}
                   placeholder="Enter vehicle number"
                   autoCapitalize="characters"
-                  style={[styles.input, { zIndex: 30 }]}
+                  style={[styles.input, { zIndex: 30, backgroundColor: colors.surface }]}
+                  theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
                 />
 
                 <TextInput
@@ -326,14 +428,15 @@ const TripEntryScreen = ({ navigation }) => {
                   placeholder="Enter driver name"
                   autoCapitalize="words"
                   mode="outlined"
-                  style={[styles.input, { zIndex: 1 }]}
+                  style={[styles.input, { zIndex: 1, backgroundColor: colors.surface }]}
+                  theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
                 />
 
                 {trip.locations.map((location, locationIndex) => (
-                  <Card key={locationIndex} style={styles.locationCard}>
+                  <Card key={locationIndex} style={[styles.locationCard, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
                     <Card.Content>
                       <View style={styles.locationHeader}>
-                        <Title style={styles.locationTitle}>{locationIndex + 1}</Title>
+                        <Title style={[styles.locationTitle, { color: colors.onPrimary, backgroundColor: colors.primary }]}>{locationIndex + 1}</Title>
                         <View style={styles.locationActions}>
                           <Button 
                             mode="contained" 
@@ -373,7 +476,8 @@ const TripEntryScreen = ({ navigation }) => {
                         getSuggestions={getCustomerSuggestions}
                         placeholder="Enter from location"
                         autoCapitalize="words"
-                        style={[styles.input, { zIndex: 20 }]}
+                        style={[styles.input, { zIndex: 20, backgroundColor: colors.surface }]}
+                        theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
                       />
 
                       <AutoSuggestInput
@@ -385,7 +489,8 @@ const TripEntryScreen = ({ navigation }) => {
                         getSuggestions={getCustomerSuggestions}
                         placeholder="Enter to location"
                         autoCapitalize="words"
-                        style={[styles.input, { zIndex: 10 }]}
+                        style={[styles.input, { zIndex: 10, backgroundColor: colors.surface }]}
+                        theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
                       />
                     </Card.Content>
                   </Card>
@@ -398,12 +503,12 @@ const TripEntryScreen = ({ navigation }) => {
           </View>
         </ScrollView>
         
-        <View style={styles.submitContainer}>
+        <View style={[styles.submitContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
           <Button
             mode="contained"
             onPress={handleSubmit}
             disabled={loading}
-            style={styles.submitButton}
+            style={[styles.submitButton, { backgroundColor: colors.primary }]}
             loading={loading}
           >
             Submit All Trips
@@ -456,7 +561,6 @@ const TripEntryScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   tripsContainer: {
     flexDirection: 'row',
@@ -472,16 +576,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
   submitContainer: {
     padding: 16,
     paddingBottom: 32,
-    backgroundColor: '#ffffff',
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
     elevation: 2,
     shadowColor: '#334155',
     shadowOffset: { width: 0, height: -1 },
@@ -490,7 +591,6 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 16,
-    backgroundColor: '#ffffff',
     position: 'relative',
     zIndex: 10,
   },
@@ -498,15 +598,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 8,
     elevation: 3,
-    shadowColor: '#1e40af',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    backgroundColor: '#1e40af',
   },
   locationCard: {
     marginBottom: 16,
-    backgroundColor: '#f1f5f9',
     borderRadius: 8,
     elevation: 2,
     shadowColor: '#475569',
@@ -514,7 +611,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 4,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
     zIndex: 5,
   },
   locationHeader: {
@@ -527,9 +623,6 @@ const styles = StyleSheet.create({
   locationTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#ffffff',
-    backgroundColor: '#475569',
-    
     borderRadius: 5,
     textAlign: 'center',
     minWidth: 28,

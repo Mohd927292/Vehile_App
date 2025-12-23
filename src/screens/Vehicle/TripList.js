@@ -15,8 +15,10 @@ import { vehicleTripService } from '../../config/firebase';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
 import { deleteDoc, doc, limit, startAfter } from '@react-native-firebase/firestore';
 import { db } from '../../config/firebase';
+import { useTheme } from '../../hooks/useTheme';
 
 const TripList = ({ navigation }) => {
+  const { colors } = useTheme();
   const [trips, setTrips] = useState([]);
   const [filteredTrips, setFilteredTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -196,36 +198,36 @@ const TripList = ({ navigation }) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1976d2" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
 
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
         {/* Export Buttons */}
         <TripListExport data={filteredTrips} />
         <View style={styles.headerRight} />
       </View>
 
-      <View style={styles.searchContainer}>
-        <View style={styles.searchWrapper}>
-          <Text style={styles.searchIcon}>🔍</Text>
+      <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <View style={[styles.searchWrapper, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <Text style={[styles.searchIcon, { color: colors.textSecondary }]}>🔍</Text>
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.text }]}
             placeholder="Search by Vehicle No..."
             value={searchText}
             onChangeText={handleSearch}
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textSecondary}
           />
         </View>
       </View>
 
       {filteredTrips.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No trips found</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No trips found</Text>
         </View>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -258,13 +260,10 @@ const TripList = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   searchContainer: {
     padding: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e1e5e9',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -274,22 +273,18 @@ const styles = StyleSheet.create({
   searchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#e1e5e9',
   },
   searchIcon: {
     fontSize: 16,
-    color: '#6c757d',
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
     height: 44,
     fontSize: 14,
-    color: '#495057',
   },
   tableContainer: {
     minWidth: 980,
@@ -305,7 +300,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     paddingTop: 50,
-    backgroundColor: '#1976d2',
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -407,7 +401,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#6c757d',
   },
 });
 

@@ -148,7 +148,7 @@ const vehicleTripService = {
   
   getPartyTripData: async () => {
     try {
-      const partySnapshot = await getDocs(query(partiesCollection, orderBy('lastTripAt', 'desc')));
+      const partySnapshot = await getDocs(query(partiesCollection, where('loadCount', '>', 0), orderBy('lastTripAt', 'desc')));
       
       const parties = partySnapshot.docs.map(doc => {
         const data = doc.data();

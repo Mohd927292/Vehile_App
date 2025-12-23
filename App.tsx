@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
   getAuth,
   onAuthStateChanged,
   FirebaseAuthTypes,
 } from '@react-native-firebase/auth';
+import { ThemeProvider } from './src/theme/ThemeContext';
+import { useTheme } from './src/hooks/useTheme';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
 
@@ -16,7 +18,6 @@ import Vehicle_list_Screen from './src/screens/Vehicle/Vehicle_list_Screen';
 import EditTrip from './src/screens/Vehicle/EditTrip';
 
 import PartyListScreen from './src/screens/Party/PartyListScreen';
-import PartyDetailScreen from './src/screens/Party/PartyDetailScreen';
 import PartyList_Details_Screen from './src/screens/Party/PartyList_Details_Screen';
 import TripEntryScreen from './src/screens/tripentry/TripEntryScreen';
 
@@ -27,10 +28,22 @@ import TripList from './src/screens/Vehicle/TripList';
 
 const Stack = createNativeStackNavigator();
 
-function App() {
+const AppNavigator = () => {
+  const { colors, isDark } = useTheme();
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
   const auth = getAuth();
+
+  const navigationTheme = {
+    ...isDark ? DarkTheme : DefaultTheme,
+    colors: {
+      ...isDark ? DarkTheme.colors : DefaultTheme.colors,
+      background: colors.background,
+      card: colors.surface,
+      text: colors.text,
+      primary: colors.primary,
+    },
+  };
 
   useEffect(() => {
     console.log('Firebase Auth initialized');
@@ -49,7 +62,7 @@ function App() {
   if (initializing) return null;
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
           <>
@@ -61,8 +74,7 @@ function App() {
             <Stack.Screen name="Vehicle_list_Screen" component={Vehicle_list_Screen} />
             
             {/* 3. Party Screen */}
-            <Stack.Screen name="PartyListScreen" component={PartyListScreen} />
-            <Stack.Screen name="PartyDetailsScreen" component={PartyDetailScreen} />
+            <Stack.Screen name="PartyListScreen" component={PartyListScreen} />            
             <Stack.Screen name="PartyList_Details_Screen" component={PartyList_Details_Screen} />
 
             {/* 4. All Trip List */}
@@ -70,6 +82,7 @@ function App() {
             {/* Edit Trip List */}
             <Stack.Screen name="EditTrip" component={EditTrip} />
 
+            {/* 5. Customer Screen */}
             <Stack.Screen name="AddCustomer" component={AddCustomer} />
             <Stack.Screen name="CustomerList" component={CustomerList} />
             <Stack.Screen name="EditCustomer" component={EditCustomer} />
@@ -79,6 +92,14 @@ function App() {
         )}
       </Stack.Navigator>
     </NavigationContainer>
+  );
+};
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppNavigator />
+    </ThemeProvider>
   );
 }
 

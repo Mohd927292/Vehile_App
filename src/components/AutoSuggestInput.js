@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { TextInput, Text, Card } from 'react-native-paper';
 import { useDebounce } from '../hooks/useDebounce';
+import { useTheme } from '../hooks/useTheme';
 
 const AutoSuggestInput = ({
   label,
@@ -13,8 +14,10 @@ const AutoSuggestInput = ({
   autoCapitalize = 'none',
   style,
   onBlur,
+  theme,
   ...props
 }) => {
+  const { colors } = useTheme();
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -73,9 +76,9 @@ const AutoSuggestInput = ({
       onPress={() => handleSuggestionPress(item)}
       activeOpacity={0.7}
     >
-      <Card style={styles.suggestionItem}>
+      <Card style={[styles.suggestionItem, { backgroundColor: colors.surface }]}>
         <Card.Content style={styles.suggestionContent}>
-          <Text style={styles.suggestionText}>
+          <Text style={[styles.suggestionText, { color: colors.text }]}>
             {item.vehicleNo || item.name || item.label}
           </Text>
         </Card.Content>
@@ -92,6 +95,8 @@ const AutoSuggestInput = ({
         placeholder={placeholder}
         autoCapitalize={autoCapitalize}
         mode="outlined"
+        theme={theme || { colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+        style={{ backgroundColor: colors.surface }}
         onFocus={() => {
           if (suggestions.length > 0) {
             setShowSuggestions(true);
@@ -106,7 +111,7 @@ const AutoSuggestInput = ({
       
       {showSuggestions && suggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>
-          <View style={styles.suggestionsList}>
+          <View style={[styles.suggestionsList, { backgroundColor: colors.surface }]}>
             <FlatList
               data={suggestions}
               renderItem={renderSuggestion}
@@ -135,7 +140,6 @@ const styles = StyleSheet.create({
   },
   suggestionsList: {
     maxHeight: 200,
-    backgroundColor: '#fff',
     borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -152,7 +156,6 @@ const styles = StyleSheet.create({
   },
   suggestionText: {
     fontSize: 16,
-    color: '#333',
   },
 });
 

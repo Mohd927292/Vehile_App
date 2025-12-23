@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import auth from '@react-native-firebase/auth';
+import { useTheme } from '../hooks/useTheme';
 
 const HomeScreen = ({ navigation }) => {
+  const { colors, toggleTheme, isDark } = useTheme();
   const handleLogout = async () => {
     try {
       await auth().signOut();
@@ -12,17 +14,24 @@ const HomeScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header with logo and customer list icon */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <View style={styles.logoContainer}>
-          <View style={styles.logoPlaceholder}>
-            <Text style={styles.logoText}>LOGO</Text>
+          <View style={[styles.logoPlaceholder, { backgroundColor: colors.border }]}>
+            <Text style={[styles.logoText, { color: colors.textSecondary }]}>LOGO</Text>
           </View>
         </View>
         
         <TouchableOpacity 
-          style={styles.customerListIcon}
+          style={[styles.themeToggle, { backgroundColor: colors.textSecondary }]}
+          onPress={toggleTheme}
+        >
+          <Text style={styles.iconText}>{isDark ? '☀️' : '🌙'}</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.customerListIcon, { backgroundColor: colors.primary }]}
           onPress={() => navigation.navigate('CustomerList')}
         >
           <Text style={styles.iconText}>👥</Text>
@@ -31,45 +40,45 @@ const HomeScreen = ({ navigation }) => {
 
       {/* Main content area */}
       <View style={styles.content}>
-        <Text style={styles.title}>Trip Tracking System</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Trip Tracking System</Text>
         
         <View style={styles.menuGrid}>
           <TouchableOpacity 
-            style={styles.menuButton}
+            style={[styles.menuButton, { backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate('TripEntry')}
           >
             <Text style={styles.menuIcon}>➕</Text>
-            <Text style={styles.menuText}>Add Trip</Text>
+            <Text style={[styles.menuText, { color: colors.text }]}>Add Trip</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={styles.menuButton}
+            style={[styles.menuButton, { backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate('VehicleList')}
           >
             <Text style={styles.menuIcon}>🚛</Text>
-            <Text style={styles.menuText}>Vehicles</Text>
+            <Text style={[styles.menuText, { color: colors.text }]}>Vehicles</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={styles.menuButton}
+            style={[styles.menuButton, { backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate('PartyListScreen')}
           >
             <Text style={styles.menuIcon}>🏢</Text>
-            <Text style={styles.menuText}>Parties</Text>
+            <Text style={[styles.menuText, { color: colors.text }]}>Parties</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={styles.menuButton}
+            style={[styles.menuButton, { backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate('TripList')}
           >
             <Text style={styles.menuIcon}>📋</Text>
-            <Text style={styles.menuText}>All Trips</Text>
+            <Text style={[styles.menuText, { color: colors.text }]}>All Trips</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Logout button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+      <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.danger }]} onPress={handleLogout}>
         <Text style={styles.buttonText}>Logout</Text>
       </TouchableOpacity>
     </View>
@@ -79,7 +88,6 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
     flexDirection: 'row',
@@ -87,7 +95,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     paddingTop: 50,
-    backgroundColor: '#fff',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -100,7 +107,6 @@ const styles = StyleSheet.create({
   logoPlaceholder: {
     width: 80,
     height: 50,
-    backgroundColor: '#ddd',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 8,
@@ -108,18 +114,24 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#666',
+  },
+  themeToggle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
   },
   customerListIcon: {
     width: 50,
     height: 50,
-    backgroundColor: '#007AFF',
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
   },
   iconText: {
-    fontSize: 24,
+    fontSize: 20,
     color: 'white',
   },
   content: {
@@ -131,7 +143,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
   },
   menuGrid: {
@@ -141,7 +152,6 @@ const styles = StyleSheet.create({
     marginTop: 30,
   },
   menuButton: {
-    backgroundColor: 'white',
     width: '48%',
     aspectRatio: 1,
     borderRadius: 12,
@@ -161,11 +171,9 @@ const styles = StyleSheet.create({
   menuText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
   },
   logoutButton: {
-    backgroundColor: '#FF3B30',
     padding: 15,
     borderRadius: 8,
     margin: 20,

@@ -9,8 +9,10 @@ import {
   Alert,
 } from 'react-native';
 import { vehicleTripService } from '../../config/firebase';
+import { useTheme } from '../../hooks/useTheme';
 
 const PartyListScreen = ({ navigation }) => {
+  const { colors } = useTheme();
   const [parties, setParties] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,28 +35,28 @@ const PartyListScreen = ({ navigation }) => {
 
   const renderParty = ({ item }) => (
     <TouchableOpacity 
-      style={styles.partyCard}
+      style={[styles.partyCard, { backgroundColor: colors.surface }]}
       onPress={() => navigation.navigate('PartyList_Details_Screen', { from: item.from })}
     >
       <View style={styles.partyHeader}>
-        <Text style={styles.partyName}>{item.from || 'N/A'}</Text>
+        <Text style={[styles.partyName, { color: colors.text }]}>{item.from || 'N/A'}</Text>
       </View>
-      <Text style={styles.partyInfo}>Load: {item.loadCount || 'N/A'}</Text>
-      <Text style={styles.partyInfo}>CreatedAt: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
+      <Text style={[styles.partyInfo, { color: colors.textSecondary }]}>Load: {item.loadCount }</Text>
+      <Text style={[styles.partyInfo, { color: colors.textSecondary }]}>CreatedAt: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
     </TouchableOpacity>
   );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1976d2" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>
@@ -64,7 +66,7 @@ const PartyListScreen = ({ navigation }) => {
 
       {parties.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No parties found</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No parties found</Text>
         </View>
       ) : (
         <FlatList
@@ -83,7 +85,6 @@ const PartyListScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   loadingContainer: {
     flex: 1,
@@ -96,7 +97,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     paddingTop: 50,
-    backgroundColor: '#1976d2',
     elevation: 4,
   },
   headerRight: {
@@ -116,7 +116,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   partyCard: {
-    backgroundColor: 'white',
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
@@ -130,10 +129,8 @@ const styles = StyleSheet.create({
   partyName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
   },
   partyInfo: {
-    color: '#555',
     marginBottom: 8,
   },
   emptyContainer: {
@@ -143,7 +140,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
   },
 });
 

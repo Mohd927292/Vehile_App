@@ -9,8 +9,10 @@ import {
   Alert,
 } from 'react-native';
 import { vehicleTripService } from '../../config/firebase';
+import { useTheme } from '../../hooks/useTheme';
 
 const VehicleList = ({ navigation }) => {
+  const { colors } = useTheme();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,30 +49,30 @@ const VehicleList = ({ navigation }) => {
 
   const renderVehicle = ({ item }) => (
     <TouchableOpacity 
-      style={styles.vehicleCard}
+      style={[styles.vehicleCard, { backgroundColor: colors.surface }]}
       onPress={() => navigation.navigate('Vehicle_list_Screen', { vehicleNo: item.vehicleNo })}
     >
       <View style={styles.vehicleHeader}>
-        <Text style={styles.vehicleNumber}>{item.vehicleNo || 'N/A'}</Text>
+        <Text style={[styles.vehicleNumber, { color: colors.text }]}>{item.vehicleNo || 'N/A'}</Text>
       </View>
       
-      <Text style={styles.vehicleInfo}>Load Count: {item.loadCount || 'N/A'}</Text>
-      <Text style={styles.vehicleInfo}>Last Trip: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
+      <Text style={[styles.vehicleInfo, { color: colors.textSecondary }]}>Load Count: {item.loadCount || 'N/A'}</Text>
+      <Text style={[styles.vehicleInfo, { color: colors.textSecondary }]}>Last Trip: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
     </TouchableOpacity>
   );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1976d2" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>
@@ -80,7 +82,7 @@ const VehicleList = ({ navigation }) => {
 
       {vehicles.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No vehicles found</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No vehicles found</Text>
         </View>
       ) : (
         <FlatList
@@ -99,7 +101,6 @@ const VehicleList = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   loadingContainer: {
     flex: 1,
@@ -112,7 +113,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     paddingTop: 50,
-    backgroundColor: '#1976d2',
     elevation: 4,
   },
   headerRight: {
@@ -132,7 +132,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   vehicleCard: {
-    backgroundColor: 'white',
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
@@ -146,10 +145,8 @@ const styles = StyleSheet.create({
   vehicleNumber: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
   },
   vehicleInfo: {
-    color: '#555',
     marginBottom: 8,
   },
   routesContainer: {
@@ -176,7 +173,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
   },
 });
 

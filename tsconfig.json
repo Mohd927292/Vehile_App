@@ -3,3 +3,4 @@
   "include": ["**/*.ts", "**/*.tsx", "src/screens/Details_updator.js"],
   "exclude": ["**/node_modules", "**/Pods"]
 }
+

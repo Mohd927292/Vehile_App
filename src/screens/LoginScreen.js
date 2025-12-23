@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import { getApp } from '@react-native-firebase/app';
+import { useTheme } from '../hooks/useTheme';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const { colors } = useTheme();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -48,12 +50,13 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Vehicle App</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Text style={[styles.title, { color: colors.text }]}>Vehicle App</Text>
       
       <TextInput
-        style={styles.input}
+        style={[styles.input, { backgroundColor: colors.surface, color: colors.text }]}
         placeholder="Email"
+        placeholderTextColor={colors.textSecondary}
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
@@ -61,15 +64,16 @@ const LoginScreen = ({ navigation }) => {
       />
       
       <TextInput
-        style={styles.input}
+        style={[styles.input, { backgroundColor: colors.surface, color: colors.text }]}
         placeholder="Password"
+        placeholderTextColor={colors.textSecondary}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
       />
       
       <TouchableOpacity 
-        style={styles.button} 
+        style={[styles.button, { backgroundColor: colors.primary }]} 
         onPress={handleLogin}
         disabled={loading}
       >
@@ -77,7 +81,7 @@ const LoginScreen = ({ navigation }) => {
       </TouchableOpacity>
       
       <TouchableOpacity 
-        style={[styles.button, styles.signUpButton]} 
+        style={[styles.button, { backgroundColor: colors.success }]} 
         onPress={handleSignUp}
         disabled={loading}
       >
@@ -92,30 +96,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#f5f5f5',
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 40,
-    color: '#333',
   },
   input: {
-    backgroundColor: 'white',
     padding: 15,
     borderRadius: 8,
     marginBottom: 15,
     fontSize: 16,
   },
   button: {
-    backgroundColor: '#007AFF',
     padding: 15,
     borderRadius: 8,
     marginBottom: 10,
-  },
-  signUpButton: {
-    backgroundColor: '#34C759',
   },
   buttonText: {
     color: 'white',

@@ -63,7 +63,7 @@ const Vehicle_list_Screen = ({ navigation, route }) => {
   };
 
   const handleEdit = (trip) => {
-    navigation.navigate('TripEntry', { editTrip: trip });
+    navigation.navigate('EditTrip', { tripId: trip.id });
   };
 
   const filterTrips = (query, tripsToFilter = null) => {
@@ -111,7 +111,28 @@ const Vehicle_list_Screen = ({ navigation, route }) => {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Get trip data first to access locations
+              const tripDoc = await firestore().collection('tripEntries').doc(tripId).get();
+              const tripData = tripDoc.data();
+              
               await firestore().collection('tripEntries').doc(tripId).delete();
+              
+              // Decrease loadCount in vehicles collection
+              await firestore().collection('vehicles').doc(vehicleNo).update({
+                loadCount: firestore.FieldValue.increment(-1)
+              });
+
+              // Decrease loadCount in parties collection for each location
+              if (tripData?.locations) {
+                for (const location of tripData.locations) {
+                  if (location.from) {
+                    await firestore().collection('parties').doc(location.from).update({
+                      loadCount: firestore.FieldValue.increment(-1)
+                    });
+                  }
+                }
+              }
+              
               await loadTrips();
               Alert.alert('Success', 'Trip deleted successfully');
             } catch (error) {

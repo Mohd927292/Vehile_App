@@ -826,72 +826,105 @@ const TripListExport = ({
         </View>
       </Modal>
 
-      {/* Sort Modal */}
-      <Modal
-        visible={showSortModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowSortModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Sort Data</Text>
-              <TouchableOpacity
-                onPress={() => setShowSortModal(false)}
-                style={styles.closeButton}
-              >
-                <Icon name="close" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.sortOptions}>
-              <TouchableOpacity
-                style={[
-                  styles.sortOption,
-                  sortConfig.field === 'date' && styles.sortOptionActive,
-                ]}
-                onPress={() => handleSort('date')}
-              >
-                <Text style={styles.sortOptionText}>Sort by Date</Text>
-                {sortConfig.field === 'date' && (
-                  <Icon
-                    name={sortConfig.order === 'asc' ? 'arrow-up' : 'arrow-down'}
-                    size={20}
-                    color="#1976d2"
-                  />
-                )}
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.sortOption,
-                  sortConfig.field === 'createdAt' && styles.sortOptionActive,
-                ]}
-                onPress={() => handleSort('createdAt')}
-              >
-                <Text style={styles.sortOptionText}>Sort by Created At</Text>
-                {sortConfig.field === 'createdAt' && (
-                  <Icon
-                    name={sortConfig.order === 'asc' ? 'arrow-up' : 'arrow-down'}
-                    size={20}
-                    color="#1976d2"
-                  />
-                )}
-              </TouchableOpacity>
-              
-              {sortConfig.field && (
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.clearButton, { marginTop: 20 }]}
-                  onPress={clearSort}
-                >
-                  <Text style={styles.clearButtonText}>Clear Sort</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+ {/* Sort Modal */}
+<Modal
+  visible={showSortModal}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setShowSortModal(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalCard}>
+
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Sort</Text>
+        <TouchableOpacity onPress={() => setShowSortModal(false)}>
+          <Icon name="close" size={22} color="#444" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Summary */}
+      <View style={styles.summary}>
+        <Text style={styles.summaryLabel}>Current selection</Text>
+        <Text style={styles.summaryValue}>
+          {sortConfig.field
+            ? `${sortConfig.field === 'date' ? 'Date' : 'Created At'} · ${
+                sortConfig.order === 'asc' ? 'Ascending' : 'Descending'
+              }`
+            : 'None'}
+        </Text>
+      </View>
+
+      {/* Sort Field */}
+      <Text style={styles.sectionTitle}>Sort by</Text>
+
+      {[
+        { key: 'date', label: 'Date' },
+        { key: 'createdAt', label: 'Created At' },
+      ].map(item => (
+        <TouchableOpacity
+          key={item.key}
+          style={styles.radioRow}
+          onPress={() => handleSort(item.key)}
+        >
+          <View style={styles.radioOuter}>
+            {sortConfig.field === item.key && (
+              <View style={styles.radioInner} />
+            )}
           </View>
-        </View>
-      </Modal>
+          <Text style={styles.radioLabel}>{item.label}</Text>
+        </TouchableOpacity>
+      ))}
+
+      {/* Order */}
+      <Text style={styles.sectionTitle}>Order</Text>
+
+      <View style={styles.segment}>
+        {[
+          { key: 'asc', label: 'Ascending' },
+          { key: 'desc', label: 'Descending' },
+        ].map(item => (
+          <TouchableOpacity
+            key={item.key}
+            style={[
+              styles.segmentButton,
+              sortConfig.order === item.key && styles.segmentActive,
+            ]}
+            onPress={() =>
+              setSortConfig(prev => ({ ...prev, order: item.key }))
+            }
+          >
+            <Text
+              style={[
+                styles.segmentText,
+                sortConfig.order === item.key && styles.segmentTextActive,
+              ]}
+            >
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <TouchableOpacity onPress={clearSort}>
+          <Text style={styles.clearText}>Reset</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.applyButton}
+          onPress={() => setShowSortModal(false)}
+        >
+          <Text style={styles.applyText}>Apply</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
+
+
     </>
   );
 };
@@ -914,6 +947,141 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#fff',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  
+  modalCard: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 20,
+  },
+  
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111',
+  },
+  
+  summary: {
+    backgroundColor: '#f6f8fa',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+  },
+  
+  summaryLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111',
+  },
+  
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 10,
+    color: '#333',
+  },
+  
+  radioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  
+  radioOuter: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#1976d2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  
+  radioInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#1976d2',
+  },
+  
+  radioLabel: {
+    fontSize: 15,
+    color: '#111',
+  },
+  
+  segment: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#d0d7de',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginTop: 6,
+  },
+  
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  
+  segmentActive: {
+    backgroundColor: '#1976d2',
+  },
+  
+  segmentText: {
+    fontSize: 14,
+    color: '#444',
+  },
+  
+  segmentTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  
+  clearText: {
+    color: '#555',
+    fontSize: 14,
+  },
+  
+  applyButton: {
+    backgroundColor: '#1976d2',
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  
+  applyText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  
   exportingOverlay: {
     position: 'absolute',
     top: 0,
@@ -934,17 +1102,22 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    width: '90%',
+    borderRadius: 10,
+    padding: 20,    
     maxWidth: 400,
     maxHeight: '80%',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+   
   },
   modalTitle: {
     fontSize: 20,

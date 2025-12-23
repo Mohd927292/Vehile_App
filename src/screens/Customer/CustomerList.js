@@ -11,8 +11,10 @@ import {
   StatusBar,
 } from 'react-native';
 import { customerService } from '../../config/firebase';
+import { useTheme } from '../../hooks/useTheme';
 
 const CustomerList = ({ navigation }) => {
+  const { colors } = useTheme();
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,67 +70,67 @@ const CustomerList = ({ navigation }) => {
 
   const renderCustomer = ({ item }) => (
     <TouchableOpacity 
-      style={styles.customerCard}
+      style={[styles.customerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
       activeOpacity={0.7}
       onPress={() => openMenu(item)}
     >
       <View style={styles.customerHeader}>
-        <View style={styles.avatarContainer}>
+        <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
           <Text style={styles.avatarText}>{item.msName?.charAt(0)?.toUpperCase()}</Text>
         </View>
         <View style={styles.customerInfo}>
-          <Text style={styles.customerName} numberOfLines={1}>{item.msName}</Text>
-          <Text style={styles.customerPhone}>{item.phoneNo}</Text>
+          <Text style={[styles.customerName, { color: colors.text }]} numberOfLines={1}>{item.msName}</Text>
+          <Text style={[styles.customerPhone, { color: colors.textSecondary }]}>{item.phoneNo}</Text>
         </View>
         <View style={styles.menuButton}>
-          <Text style={styles.menuIcon}>⋮</Text>
+          <Text style={[styles.menuIcon, { color: colors.textSecondary }]}>⋮</Text>
         </View>
       </View>
       <View style={styles.customerDetails}>
-        <Text style={styles.customerGstin} numberOfLines={1}>GSTIN: {item.gstin}</Text>
-        <Text style={styles.customerAddress} numberOfLines={2}>{item.address1}</Text>
+        <Text style={[styles.customerGstin, { color: colors.textSecondary }]} numberOfLines={1}>GSTIN: {item.gstin}</Text>
+        <Text style={[styles.customerAddress, { color: colors.textSecondary }]} numberOfLines={2}>{item.address1}</Text>
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.text === '#FFFFFF' ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <View style={styles.headerTopRow}>
           <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTitle}>Customers</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Customers</Text>
           </View>
-          <View style={styles.customerCountBadge}>
-            <Text style={styles.customerCountBadgeText}>{filteredCustomers.length}</Text>
+          <View style={[styles.customerCountBadge, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.customerCountBadgeText, { color: colors.text }]}>{filteredCustomers.length}</Text>
           </View>
         </View>
       </View>
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.text }]}
           placeholder="Search by name, phone, or GSTIN..."
           value={searchQuery}
           onChangeText={handleSearch}
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textSecondary}
         />
       </View>
 
       {/* Customer List */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366f1" />
-          <Text style={styles.loadingText}>Loading customers...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading customers...</Text>
         </View>
       ) : filteredCustomers.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>👥</Text>
-          <Text style={styles.emptyTitle}>No customers found</Text>
-          <Text style={styles.emptySubtitle}>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>No customers found</Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
             {searchQuery ? 'Try adjusting your search' : 'Add your first customer to get started'}
           </Text>
         </View>
@@ -147,7 +149,7 @@ const CustomerList = ({ navigation }) => {
 
       {/* Floating Action Button */}
       <TouchableOpacity 
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: colors.primary }]}
         onPress={() => navigation.navigate('AddCustomer')}
         activeOpacity={0.8}
       >
@@ -166,20 +168,20 @@ const CustomerList = ({ navigation }) => {
           activeOpacity={1}
           onPress={closeMenu}
         >
-          <View style={styles.menuContainer}>
+          <View style={[styles.menuContainer, { backgroundColor: colors.surface }]}>
             <TouchableOpacity 
               style={styles.menuItem}
               onPress={handleEditCustomer}
             >
               <Text style={styles.menuItemIcon}>✏️</Text>
-              <Text style={styles.menuText}>Edit Customer</Text>
+              <Text style={[styles.menuText, { color: colors.primary }]}>Edit Customer</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.menuItem}
               onPress={closeMenu}
             >
               <Text style={styles.menuItemIcon}>❌</Text>
-              <Text style={[styles.menuText, { color: '#666' }]}>Cancel</Text>
+              <Text style={[styles.menuText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -191,15 +193,12 @@ const CustomerList = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   header: {
-    backgroundColor: '#fff',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.06,
@@ -220,7 +219,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#1e293b',
     letterSpacing: 0.1,
   },
   customerCount: {
@@ -234,21 +232,17 @@ const styles = StyleSheet.create({
     height: 28,
     paddingHorizontal: 10,
     borderRadius: 999,
-    backgroundColor: '#f1f5f9',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   customerCountBadgeText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#334155',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     marginHorizontal: 16,
     marginVertical: 16,
     paddingHorizontal: 16,
@@ -265,18 +259,15 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#1e293b',
   },
   listContainer: {
     paddingHorizontal: 16,
     paddingBottom: 100,
   },
   customerCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
     overflow: 'hidden',
   },
   customerHeader: {
@@ -288,7 +279,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#6366f1',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -304,12 +294,10 @@ const styles = StyleSheet.create({
   customerName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
     marginBottom: 2,
   },
   customerPhone: {
     fontSize: 14,
-    color: '#64748b',
     fontWeight: '500',
   },
   menuButton: {
@@ -317,7 +305,6 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     fontSize: 20,
-    color: '#94a3b8',
     fontWeight: 'bold',
   },
   customerDetails: {
@@ -328,13 +315,11 @@ const styles = StyleSheet.create({
   },
   customerGstin: {
     fontSize: 13,
-    color: '#64748b',
     marginBottom: 4,
     fontWeight: '500',
   },
   customerAddress: {
     fontSize: 13,
-    color: '#94a3b8',
     lineHeight: 18,
   },
   fab: {
@@ -344,11 +329,9 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#6366f1',
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
-    shadowColor: '#6366f1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -366,7 +349,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#64748b',
     fontWeight: '500',
   },
   emptyContainer: {
@@ -382,13 +364,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1e293b',
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#64748b',
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -399,7 +379,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   menuContainer: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     minWidth: 200,
     elevation: 8,
@@ -422,7 +401,6 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontSize: 16,
-    color: '#6366f1',
     fontWeight: '500',
   },
 });
