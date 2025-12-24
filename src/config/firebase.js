@@ -133,6 +133,7 @@ const vehicleTripService = {
           vehicleNo: tripData.vehicleNo,
           driverName: tripData.driverName,
           date: tripData.date,
+          dateTimestamp: tripData.dateTimestamp,
           locations: tripData.locations,
           createdAt: tripData.createdAt?.toDate() || null,
           loadCount: vehicleData.loadCount || 0

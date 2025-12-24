@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,9 +21,23 @@ const Vehicle_list_Screen = ({ navigation, route }) => {
   const [maxLocations, setMaxLocations] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [displayedTrips, setDisplayedTrips] = useState([]);
+
+  // Create stable callback function
+  const handleDataChange = useCallback((newData) => {
+    console.log('📨 Vehicle Screen received data:', newData.length, 'trips');
+    setDisplayedTrips(newData);
+  }, []);
+
   useEffect(() => {
     loadTrips();
   }, []);
+
+  useEffect(() => {
+    // Update displayed trips when filteredTrips changes
+    console.log('🔄 Vehicle Screen: filteredTrips changed:', filteredTrips.length);
+    setDisplayedTrips(filteredTrips);
+  }, [filteredTrips]);
 
   const loadTrips = async () => {
     try {
@@ -41,6 +55,7 @@ const Vehicle_list_Screen = ({ navigation, route }) => {
           id: doc.id,
           srNo: index + 1,
           date: data.date || 'N/A',
+          dateTimestamp: data.dateTimestamp || null, // Add timestamp field
           vehicleNo: data.vehicleNo || 'N/A',
           driverName: data.driverName || 'N/A',
           locations: data.locations || [],
@@ -222,7 +237,20 @@ const Vehicle_list_Screen = ({ navigation, route }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{vehicleNo}</Text>
-        <TripListExport data={filteredTrips} />
+        {console.log('🚨 PARENT DEBUG - About to render TripListExport with props:', {
+          data: filteredTrips,
+          onDataChange: (newData) => {
+            console.log('📨 DIRECT CALLBACK Vehicle Screen received data:', newData.length, 'trips');
+            setDisplayedTrips(newData);
+          }
+        })}
+        <TripListExport 
+          data={filteredTrips} 
+          onDataChange={(newData) => {
+            console.log('📨 DIRECT CALLBACK Vehicle Screen received data:', newData.length, 'trips');
+            setDisplayedTrips(newData);
+          }}
+        />
       </View>
 
       <View style={styles.searchContainer}>
@@ -235,14 +263,14 @@ const Vehicle_list_Screen = ({ navigation, route }) => {
         />
       </View>
 
-      {filteredTrips.length === 0 ? (
+      {displayedTrips.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No trips found</Text>
         </View>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <FlatList
-            data={filteredTrips}
+            data={displayedTrips}
             renderItem={renderRow}
             keyExtractor={item => item.id}
             ListHeaderComponent={renderHeader}

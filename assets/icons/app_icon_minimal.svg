@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1976D2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0D47A1;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="vehicleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E3F2FD;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#bgGradient2)" stroke="#0D47A1" stroke-width="8"/>
+  
+  <!-- Simple Vehicle Shape -->
+  <path d="M 150 280 L 150 240 Q 150 230 160 230 L 300 230 Q 310 230 310 240 L 310 250 L 350 250 Q 370 250 370 270 L 370 280 Z" fill="url(#vehicleGradient)"/>
+  
+  <!-- Vehicle Windows -->
+  <rect x="170" y="240" width="40" height="20" rx="3" fill="#1976D2" opacity="0.3"/>
+  <rect x="220" y="240" width="40" height="20" rx="3" fill="#1976D2" opacity="0.3"/>
+  <rect x="270" y="240" width="30" height="20" rx="3" fill="#1976D2" opacity="0.3"/>
+  
+  <!-- Wheels -->
+  <circle cx="180" cy="300" r="20" fill="#424242"/>
+  <circle cx="180" cy="300" r="12" fill="#757575"/>
+  <circle cx="180" cy="300" r="6" fill="#BDBDBD"/>
+  
+  <circle cx="280" cy="300" r="20" fill="#424242"/>
+  <circle cx="280" cy="300" r="12" fill="#757575"/>
+  <circle cx="280" cy="300" r="6" fill="#BDBDBD"/>
+  
+  <circle cx="340" cy="300" r="20" fill="#424242"/>
+  <circle cx="340" cy="300" r="12" fill="#757575"/>
+  <circle cx="340" cy="300" r="6" fill="#BDBDBD"/>
+  
+  <!-- GPS/Location Symbol -->
+  <circle cx="256" cy="180" r="40" fill="none" stroke="#FFFFFF" stroke-width="4" opacity="0.8"/>
+  <circle cx="256" cy="180" r="25" fill="none" stroke="#FFFFFF" stroke-width="3" opacity="0.6"/>
+  <circle cx="256" cy="180" r="8" fill="#FFFFFF"/>
+  
+  <!-- Navigation Arrow -->
+  <path d="M 256 160 L 246 200 L 256 190 L 266 200 Z" fill="#FF5722"/>
+</svg>

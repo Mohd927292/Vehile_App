@@ -120,7 +120,15 @@ const TripEntryScreen = ({ navigation }) => {
   }, []);
 
   const formatDate = (date) => {
-    return date.toLocaleDateString('en-GB');
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`; // YYYY-MM-DD format
+  };
+
+  const formatDateForDisplay = (date) => {
+    return date.toLocaleDateString('en-GB'); // DD/MM/YYYY for UI display
   };
 
   const showDatePicker = (tripIndex) => {
@@ -296,7 +304,8 @@ const TripEntryScreen = ({ navigation }) => {
               from: loc.from.trim(),
               to: loc.to.trim()
             })),
-            date: formatDate(trips[i].date),
+            date: formatDate(trips[i].date), // YYYY-MM-DD format
+            dateTimestamp: firestore.Timestamp.fromDate(trips[i].date), // For optimal sorting
           };
 
           console.log(`Submitting trip ${i + 1}:`, JSON.stringify(tripData, null, 2));
@@ -401,7 +410,7 @@ const TripEntryScreen = ({ navigation }) => {
 
                 <TextInput
                   label="Date *"
-                  value={formatDate(trip.date)}
+                  value={formatDateForDisplay(trip.date)}
                   mode="outlined"
                   style={[styles.input, { backgroundColor: colors.surface }]}
                   theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}

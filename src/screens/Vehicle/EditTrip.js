@@ -12,7 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import firestore from '@react-native-firebase/firestore';
+import firestore, { getFirestore, collection, doc, getDoc, updateDoc, serverTimestamp } from '@react-native-firebase/firestore';
 
 const EditTrip = ({ navigation, route }) => {
   const { tripId } = route.params;
@@ -20,8 +20,8 @@ const EditTrip = ({ navigation, route }) => {
   const [saving, setSaving] = useState(false);
   const [tripData, setTripData] = useState({
     date: '',
+    vehicleNo: '',
     driverName: '',
-    loadCount: '',
     locations: []
   });
 
@@ -31,17 +31,15 @@ const EditTrip = ({ navigation, route }) => {
 
   const fetchTripData = async () => {
     try {
-      const tripDoc = await firestore()
-        .collection('tripEntries')
-        .doc(tripId)
-        .get();
+      const db = getFirestore();
+      const tripDoc = await getDoc(doc(db, 'tripEntries', tripId));
       
-      if (tripDoc.exists) {
+      if (tripDoc.exists()) {
         const data = tripDoc.data();
         setTripData({
           date: data.date || '',
+          vehicleNo: data.vehicleNo || '',
           driverName: data.driverName || '',
-          loadCount: data.loadCount || '',
           locations: data.locations || []
         });
       }
@@ -56,16 +54,14 @@ const EditTrip = ({ navigation, route }) => {
   const updateTrip = async () => {
     try {
       setSaving(true);
-      await firestore()
-        .collection('tripEntries')
-        .doc(tripId)
-        .update({
-          date: tripData.date,
-          driverName: tripData.driverName,
-          loadCount: tripData.loadCount,
-          locations: tripData.locations,
-          updatedAt: firestore.FieldValue.serverTimestamp()
-        });
+      const db = getFirestore();
+      await updateDoc(doc(db, 'tripEntries', tripId), {
+        date: tripData.date,
+        vehicleNo: tripData.vehicleNo,
+        driverName: tripData.driverName,
+        locations: tripData.locations,
+        updatedAt: serverTimestamp()
+      });
       
       Alert.alert('Success', 'Trip updated successfully', [
         { text: 'OK', onPress: () => navigation.goBack() }
@@ -148,23 +144,23 @@ const EditTrip = ({ navigation, route }) => {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.label}>Vehicle No</Text>
+          <TextInput
+            style={styles.input}
+            value={tripData.vehicleNo}
+            onChangeText={(text) => setTripData({ ...tripData, vehicleNo: text })}
+            placeholder="Enter vehicle number"
+            placeholderTextColor="#888"
+          />
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.label}>Driver Name</Text>
           <TextInput
             style={styles.input}
             value={tripData.driverName}
             onChangeText={(text) => setTripData({ ...tripData, driverName: text })}
             placeholder="Enter driver name"
-            placeholderTextColor="#888"
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Load Count</Text>
-          <TextInput
-            style={styles.input}
-            value={tripData.loadCount ? tripData.loadCount.toString() : ''}
-            onChangeText={(text) => setTripData({ ...tripData, loadCount: text })}
-            placeholder="Enter load count"
             placeholderTextColor="#888"
           />
         </View>

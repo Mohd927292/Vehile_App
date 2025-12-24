@@ -24,10 +24,17 @@ const TripList = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [maxLocations, setMaxLocations] = useState(2);
   const [searchText, setSearchText] = useState('');
+  const [displayedTrips, setDisplayedTrips] = useState([]);
 
-  const handleEdit = useCallback((tripId) => {
-    navigation.navigate('TripEntry', { tripId, mode: 'edit' });
-  }, [navigation]);
+  // Create stable callback function
+  const handleDataChange = useCallback((newData) => {
+    console.log('📨 TripList Screen received data:', newData.length, 'trips');
+    setDisplayedTrips(newData);
+  }, []);
+
+  const handleEdit = (trip) => {
+    navigation.navigate('EditTrip', { tripId: trip.id });
+  };
 
   const handleDelete = useCallback(async (tripId) => {
     Alert.alert(
@@ -81,6 +88,7 @@ const TripList = ({ navigation }) => {
           ...item,
           srNo: index + 1,
           date: item.date || 'N/A',
+          dateTimestamp: item.dateTimestamp || null, // Add timestamp field
           vehicleNo: item.vehicleNo || 'N/A',
           driverName: item.driverName || 'N/A',
           loadCount: item.loadCount || 0,
@@ -109,6 +117,12 @@ const TripList = ({ navigation }) => {
   useEffect(() => {
     loadTrips();
   }, []);
+
+  useEffect(() => {
+    // Update displayed trips when filteredTrips changes
+    console.log('🔄 TripList Screen: filteredTrips changed:', filteredTrips.length);
+    setDisplayedTrips(filteredTrips);
+  }, [filteredTrips]);
 
   useFocusEffect(
     useCallback(() => {
@@ -178,17 +192,11 @@ const TripList = ({ navigation }) => {
           }) : 'N/A'}
         </Text>
         <View style={[styles.cell, styles.actionCell]}>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.editBtn]}
-            onPress={() => handleEdit(item.id)}
-          >
-            <Text style={styles.btnText}>Edit</Text>
+          <TouchableOpacity style={styles.cell} onPress={() => handleEdit(item)}>
+            <Text style={styles.actionIcon}>✏️</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.deleteBtn]}
-            onPress={() => handleDelete(item.id)}
-          >
-            <Text style={styles.btnText}>Del</Text>
+          <TouchableOpacity style={styles.cell} onPress={() => handleDelete(item.id)}>
+            <Text style={styles.actionIcon}>🗑️</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -208,7 +216,13 @@ const TripList = ({ navigation }) => {
 
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
         {/* Export Buttons */}
-        <TripListExport data={filteredTrips} />
+        <TripListExport 
+          data={filteredTrips} 
+          onDataChange={(newData) => {
+            console.log('📨 DIRECT CALLBACK TripList Screen received data:', newData.length, 'trips');
+            setDisplayedTrips(newData);
+          }}
+        />
         <View style={styles.headerRight} />
       </View>
 
@@ -225,7 +239,7 @@ const TripList = ({ navigation }) => {
         </View>
       </View>
 
-      {filteredTrips.length === 0 ? (
+      {displayedTrips.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No trips found</Text>
         </View>
@@ -233,7 +247,7 @@ const TripList = ({ navigation }) => {
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.tableContainer}>
             <FlatList
-              data={filteredTrips}
+              data={displayedTrips}
               renderItem={renderTrip}
               keyExtractor={keyExtractor}
               ListHeaderComponent={renderHeader}
@@ -376,22 +390,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
   },
-  actionBtn: {
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 4,
-    minWidth: 28,
-  },
-  editBtn: {
-    backgroundColor: '#28a745',
-  },
-  deleteBtn: {
-    backgroundColor: '#dc3545',
-  },
-  btnText: {
-    color: 'white',
-    fontSize: 9,
-    fontWeight: 'bold',
+  actionIcon: {
+    fontSize: 16,
     textAlign: 'center',
   },
   emptyContainer: {

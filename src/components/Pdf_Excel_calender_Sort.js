@@ -46,6 +46,12 @@ const TripListExport = ({
   onExcelExport,
   onPDFExport,
 }) => {
+  console.log('🔧 TripListExport initialized with:', { 
+    dataLength: data.length, 
+    hasOnDataChange: !!onDataChange,
+    onDataChangeType: typeof onDataChange,
+    allProps: Object.keys(arguments[0] || {})
+  });
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
   const [startDate, setStartDate] = useState(null);
@@ -58,17 +64,32 @@ const TripListExport = ({
   // Convert date string to Date object for comparison
   const parseDate = useCallback((dateStr) => {
     if (!dateStr || dateStr === 'N/A') return null;
-    // Handle various date formats (DD/MM/YYYY, YYYY-MM-DD, etc.)
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) {
-      // Try DD/MM/YYYY format
+    
+    // Handle YYYY-MM-DD format (new format)
+    if (dateStr.includes('-') && dateStr.length === 10) {
+      const date = new Date(dateStr);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+    
+    // Handle DD/MM/YYYY format (legacy format)
+    if (dateStr.includes('/')) {
       const parts = dateStr.split('/');
       if (parts.length === 3) {
-        return new Date(parts[2], parts[1] - 1, parts[0]);
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        const date = new Date(year, month, day);
+        if (!isNaN(date.getTime())) {
+          return date;
+        }
       }
-      return null;
     }
-    return date;
+    
+    // Fallback to standard Date parsing
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? null : date;
   }, []);
 
   // Format date for display
@@ -80,11 +101,18 @@ const TripListExport = ({
 
   // Filter data by date range
   const filterByDateRange = useCallback((trips, start, end) => {
-    if (!start || !end) return trips;
+    console.log('🗓️ CALENDAR FILTER:', { start, end, tripsCount: trips.length });
+    if (!start || !end) {
+      console.log('❌ No date range selected, returning all trips');
+      return trips;
+    }
     
-    return trips.filter(trip => {
+    const filtered = trips.filter(trip => {
       const tripDate = parseDate(trip.date);
-      if (!tripDate) return false;
+      if (!tripDate) {
+        console.log('❌ Invalid trip date:', trip.date);
+        return false;
+      }
       
       const startDateObj = new Date(start);
       const endDateObj = new Date(end);
@@ -92,60 +120,117 @@ const TripListExport = ({
       // Set time to start/end of day for accurate comparison
       startDateObj.setHours(0, 0, 0, 0);
       endDateObj.setHours(23, 59, 59, 999);
-      tripDate.setHours(12, 0, 0, 0);
+      tripDate.setHours(0, 0, 0, 0); // Normalize trip date time
       
-      return tripDate >= startDateObj && tripDate <= endDateObj;
+      const inRange = tripDate >= startDateObj && tripDate <= endDateObj;
+      console.log('📅 Trip date check:', { 
+        originalDate: trip.date,
+        tripDate: tripDate.toDateString(), 
+        startDate: startDateObj.toDateString(), 
+        endDate: endDateObj.toDateString(), 
+        inRange 
+      });
+      
+      return inRange;
     });
+    
+    console.log('✅ Calendar filtered trips:', filtered.length);
+    return filtered;
   }, [parseDate]);
 
   // Sort data
   const sortData = useCallback((trips, field, order) => {
-    if (!field) return trips;
+    console.log('🔄 SORT DATA:', { field, order, tripsCount: trips.length });
+    if (!field) {
+      console.log('❌ No sort field, returning original order');
+      return trips;
+    }
     
     const sorted = [...trips].sort((a, b) => {
       let aValue, bValue;
       
       if (field === 'date') {
-        aValue = parseDate(a.date);
-        bValue = parseDate(b.date);
+        // Use dateTimestamp if available (better for sorting), fallback to date string
+        if (a.dateTimestamp && b.dateTimestamp) {
+          aValue = a.dateTimestamp.toDate ? a.dateTimestamp.toDate() : new Date(a.dateTimestamp);
+          bValue = b.dateTimestamp.toDate ? b.dateTimestamp.toDate() : new Date(b.dateTimestamp);
+          console.log('📅 Sorting by dateTimestamp:', { 
+            aTimestamp: a.dateTimestamp, aParsed: aValue?.toDateString(), 
+            bTimestamp: b.dateTimestamp, bParsed: bValue?.toDateString() 
+          });
+        } else {
+          aValue = parseDate(a.date);
+          bValue = parseDate(b.date);
+          console.log('📅 Sorting by date string:', { 
+            aDate: a.date, aParsed: aValue?.toDateString(), 
+            bDate: b.date, bParsed: bValue?.toDateString() 
+          });
+        }
+        // Handle null dates (put them at the end)
+        if (!aValue && !bValue) return 0;
         if (!aValue) return 1;
         if (!bValue) return -1;
       } else if (field === 'createdAt') {
-        aValue = a.createdAt ? new Date(a.createdAt) : null;
-        bValue = b.createdAt ? new Date(b.createdAt) : null;
+        // createdAt is already a Date object from Firestore
+        aValue = a.createdAt instanceof Date ? a.createdAt : (a.createdAt ? new Date(a.createdAt) : null);
+        bValue = b.createdAt instanceof Date ? b.createdAt : (b.createdAt ? new Date(b.createdAt) : null);
+        console.log('⏰ Sorting by createdAt:', { 
+          aCreated: a.createdAt, aParsed: aValue?.toDateString(), 
+          bCreated: b.createdAt, bParsed: bValue?.toDateString() 
+        });
+        // Handle null dates (put them at the end)
+        if (!aValue && !bValue) return 0;
         if (!aValue) return 1;
         if (!bValue) return -1;
       } else {
+        console.log('❌ Unknown sort field:', field);
         return 0;
       }
       
-      if (order === 'asc') {
-        return aValue - bValue;
-      } else {
-        return bValue - aValue;
-      }
+      const result = order === 'asc' ? aValue - bValue : bValue - aValue;
+      console.log('🔢 Sort comparison result:', result);
+      return result;
     });
     
+    console.log('✅ Sorted trips count:', sorted.length);
     return sorted;
   }, [parseDate]);
 
   // Apply filters and sorting, then notify parent
   const applyFiltersAndSort = useCallback((trips, dateFilter = { start: startDate, end: endDate }, sort = sortConfig) => {
+    console.log('🚀 APPLY FILTERS AND SORT:', { 
+      originalTripsCount: trips.length, 
+      dateFilter, 
+      sort,
+      hasOnDataChange: !!onDataChange 
+    });
+    
     let filtered = [...trips];
     
     // Apply date filter
     if (dateFilter.start && dateFilter.end) {
+      console.log('📅 Applying date filter...');
       filtered = filterByDateRange(filtered, dateFilter.start, dateFilter.end);
+    } else {
+      console.log('⏭️ Skipping date filter (no date range)');
     }
     
     // Apply sorting
     if (sort.field) {
+      console.log('🔄 Applying sort...');
       filtered = sortData(filtered, sort.field, sort.order);
+    } else {
+      console.log('⏭️ Skipping sort (no sort field)');
     }
+    
+    console.log('📊 Final result:', { finalCount: filtered.length });
     
     // Notify parent component
     if (onDataChange) {
+      console.log('📤 Sending data to parent component');
       onDataChange(filtered);
+    } else {
+      console.log('❌ No onDataChange callback provided');
     }
     
     return filtered;
@@ -569,6 +654,8 @@ const TripListExport = ({
 
   // Apply date filter
   const applyDateFilter = useCallback(() => {
+    console.log('📅 APPLY DATE FILTER:', { selectedStartDate, selectedEndDate });
+    
     if (!selectedStartDate || !selectedEndDate) {
       Alert.alert('Invalid Selection', 'Please select both start and end dates');
       return;
@@ -581,9 +668,10 @@ const TripListExport = ({
     
     setStartDate(selectedStartDate);
     setEndDate(selectedEndDate);
+    console.log('🎯 Applying calendar filter with data:', data.length, 'trips');
     applyFiltersAndSort(data, { start: selectedStartDate, end: selectedEndDate }, sortConfig);
     setShowCalendarModal(false);
-   // Alert.alert('Filter Applied', `Showing trips from ${selectedStartDate} to ${selectedEndDate}`);
+    Alert.alert('Filter Applied', `Showing trips from ${selectedStartDate} to ${selectedEndDate}`);
   }, [selectedStartDate, selectedEndDate, data, sortConfig, applyFiltersAndSort]);
 
   // Cancel date filter (close modal without applying)
@@ -605,23 +693,14 @@ const TripListExport = ({
     Alert.alert('Filter Cleared', 'All trips are now visible');
   }, [data, sortConfig, applyFiltersAndSort]);
 
-  // Handle sort selection
+  // Handle sort selection (just update the config, don't apply immediately)
   const handleSort = useCallback((field) => {
     const newOrder = sortConfig.field === field && sortConfig.order === 'asc' 
       ? 'desc' 
       : 'asc';
     
-    const newSortConfig = { field, order: newOrder };
-    setSortConfig(newSortConfig);
-    
-    applyFiltersAndSort(data, { start: startDate, end: endDate }, newSortConfig);
-    setShowSortModal(false);
-    
-    Alert.alert(
-      'Sorted',
-      `Sorted by ${field} (${newOrder === 'asc' ? 'Ascending' : 'Descending'})`
-    );
-  }, [sortConfig, data, startDate, endDate, applyFiltersAndSort]);
+    setSortConfig({ field, order: newOrder });
+  }, [sortConfig]);
 
   // Clear sort
   const clearSort = useCallback(() => {
@@ -915,7 +994,18 @@ const TripListExport = ({
 
         <TouchableOpacity
           style={styles.applyButton}
-          onPress={() => setShowSortModal(false)}
+          onPress={() => {
+            console.log('🔄 APPLY SORT BUTTON PRESSED:', sortConfig);
+            if (sortConfig.field) {
+              console.log('🎯 Applying sort with data:', data.length, 'trips');
+              applyFiltersAndSort(data, { start: startDate, end: endDate }, sortConfig);
+              Alert.alert('Sort Applied', `Sorted by ${sortConfig.field} (${sortConfig.order})`);
+            } else {
+              console.log('❌ No sort field selected');
+              Alert.alert('No Sort Selected', 'Please select a field to sort by');
+            }
+            setShowSortModal(false);
+          }}
         >
           <Text style={styles.applyText}>Apply</Text>
         </TouchableOpacity>
@@ -949,8 +1039,9 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   
   modalCard: {
@@ -1082,105 +1173,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   
-  exportingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,    
-    maxWidth: 400,
-    maxHeight: '80%',
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-   
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  closeButton: {
-    padding: 5,
-  },
-  dateRangeInfo: {
-    marginVertical: 15,
-    padding: 10,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-  },
-  dateRangeText: {
-    fontSize: 14,
-    color: '#333',
-    textAlign: 'center',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    gap: 10,
-  },
-  modalButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  applyButton: {
-    backgroundColor: '#1976d2',
-  },
-  applyButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  clearButton: {
-    backgroundColor: '#f5f5f5',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  clearButtonText: {
-    color: '#333',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  sortOptions: {
-    marginTop: 10,
-  },
-  sortOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    marginVertical: 5,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: 'transparent',
+  disabledButton: {
+    backgroundColor: '#ccc',
+    opacity: 0.6,
   },
   sortOptionActive: {
     borderColor: '#1976d2',
@@ -1192,81 +1187,171 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   calendarContainer: {
-    marginVertical: 10,
+    marginVertical: 15,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   calendarHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
-    paddingHorizontal: 10,
+    marginBottom: 20,
+    paddingHorizontal: 8,
   },
   calendarNavButton: {
-    padding: 5,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f0f4ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e3f2fd',
   },
   calendarMonthText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1976d2',
+    letterSpacing: 0.5,
   },
   calendarWeekDays: {
     flexDirection: 'row',
-    marginBottom: 5,
+    marginBottom: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    paddingVertical: 8,
   },
   weekDay: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   weekDayText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
     color: '#1976d2',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   calendarDaysGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 2,
   },
   calendarDay: {
-    width: '14.28%',
+    width: '13.5%',
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 2,
+    margin: 1,
+    borderRadius: 8,
   },
   calendarDayInRange: {
     backgroundColor: '#e3f2fd',
   },
   calendarDayStart: {
     backgroundColor: '#1976d2',
-    borderTopLeftRadius: 20,
-    borderBottomLeftRadius: 20,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
   },
   calendarDayEnd: {
     backgroundColor: '#1976d2',
-    borderTopRightRadius: 20,
-    borderBottomRightRadius: 20,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
   },
-  calendarDayToday: {
-    borderWidth: 2,
-    borderColor: '#1976d2',
-    borderRadius: 20,
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    margin: 20,
+    maxHeight: '85%',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
   },
-  calendarDayText: {
-    fontSize: 14,
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1976d2',
+    letterSpacing: 0.5,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateRangeInfo: {
+    marginVertical: 16,
+    padding: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1976d2',
+  },
+  dateRangeText: {
+    fontSize: 15,
     color: '#333',
-    fontWeight: '400',
+    textAlign: 'center',
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+  
+  calendarDayText: {
+    fontSize: 15,
+    color: '#333',
+    fontWeight: '500',
   },
   calendarDayTextDisabled: {
-    color: '#d9e1e8',
+    color: '#bdbdbd',
+    fontWeight: '300',
   },
   calendarDayTextSelected: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   calendarDayTextToday: {
     color: '#1976d2',
-    fontWeight: 'bold',
+    fontWeight: '700',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    gap: 8,
+    paddingHorizontal: 4,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
   },
   cancelButton: {
     backgroundColor: '#f5f5f5',
@@ -1274,16 +1359,43 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   cancelButtonText: {
-    color: '#333',
+    color: '#666',
     fontWeight: '600',
-    fontSize: 16,
+    fontSize: 15,
   },
-  disabledButton: {
-    backgroundColor: '#ccc',
-    opacity: 0.6,
+  clearButton: {
+    backgroundColor: '#fff3e0',
+    borderWidth: 1,
+    borderColor: '#ff9800',
   },
-});
+  clearButtonText: {
+    color: '#ff9800',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  calendarDayToday: {
+    borderWidth: 2,
+    borderColor: '#1976d2',
+    backgroundColor: '#fff3e0',
+  },
+  calendarDayText: {
+    fontSize: 15,
+    color: '#333',
+    fontWeight: '500',
+  },
+  calendarDayTextDisabled: {
+    color: '#bdbdbd',
+    fontWeight: '300',
+  },
+  calendarDayTextSelected: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  calendarDayTextToday: {
+    color: '#1976d2',
+    fontWeight: '700',
+  },
+})
 
 export default TripListExport;
-
 
