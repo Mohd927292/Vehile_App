@@ -6,7 +6,9 @@ import {
   ScrollView,
   Platform,
   KeyboardAvoidingView,
+  Dimensions,
 } from 'react-native';
+import { useNavigate } from 'react-router-native';
 import {
   TextInput,
   Button,
@@ -24,7 +26,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { tripService } from '../../config/firebase';
 import AutoSuggestInput from '../../components/AutoSuggestInput';
 import { getVehicleSuggestions, getCustomerSuggestions } from '../../services/firestoreService';
-import firestore from '@react-native-firebase/firestore';
+import { getFirestore, collection, query, where, limit, getDocs, Timestamp } from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -58,8 +60,10 @@ export const clearDraft = async () => {
   }
 };
 
-const TripEntryScreen = ({ navigation }) => {
+const TripEntryScreen = () => {
   const { colors } = useTheme();
+  const navigate = useNavigate();
+  const screenWidth = Dimensions.get('window').width;
   const [hydrated, setHydrated] = useState(false);
   const [trips, setTrips] = useState([{
     vehicleNo: '',
@@ -110,8 +114,7 @@ const TripEntryScreen = ({ navigation }) => {
         setTimeout(() => {
           if (tripsScrollRef.current) {
             const idx = Math.max(data.trips.length - 1, 0);
-            const CARD_WIDTH = 344;
-            tripsScrollRef.current.scrollTo?.({ x: idx * CARD_WIDTH, animated: false });
+            tripsScrollRef.current.scrollTo?.({ x: idx * screenWidth, animated: false });
           }
         }, 200);
       }
@@ -161,13 +164,12 @@ const TripEntryScreen = ({ navigation }) => {
       trips.length > pendingScrollIndex &&
       tripsScrollRef.current
     ) {
-      const CARD_WIDTH = 344; // matches snapToInterval
-      const x = pendingScrollIndex * CARD_WIDTH;
+      const x = pendingScrollIndex * screenWidth;
       tripsScrollRef.current.scrollTo({ x, animated: true });
       setCurrentTripIndex(pendingScrollIndex);
       setPendingScrollIndex(null);
     }
-  }, [pendingScrollIndex, trips.length]);
+  }, [pendingScrollIndex, trips.length, screenWidth]);
 
   const removeTrip = (tripIndex) => {
     if (trips.length > 1) {
@@ -214,11 +216,10 @@ const TripEntryScreen = ({ navigation }) => {
   // Validate customer exists in Firestore
   const validateCustomer = async (customerName) => {
     try {
-      const snapshot = await firestore()
-        .collection('customers')
-        .where('msName', '==', customerName)
-        .limit(1)
-        .get();
+      const db = getFirestore();
+      const customersRef = collection(db, 'customers');
+      const q = query(customersRef, where('msName', '==', customerName), limit(1));
+      const snapshot = await getDocs(q);
       return !snapshot.empty;
     } catch (error) {
       console.error('Error validating customer:', error);
@@ -255,7 +256,7 @@ const TripEntryScreen = ({ navigation }) => {
 
   const navigateToAddCustomer = () => {
     setCustomerDialog({ visible: false, field: '', tripIndex: -1, locationIndex: -1 });
-    navigation.navigate('AddCustomer');
+    navigate('/add-customer');
   };
 
   const validateTrip = (trip, tripIndex) => {
@@ -305,7 +306,7 @@ const TripEntryScreen = ({ navigation }) => {
               to: loc.to.trim()
             })),
             date: formatDate(trips[i].date), // YYYY-MM-DD format
-            dateTimestamp: firestore.Timestamp.fromDate(trips[i].date), // For optimal sorting
+            dateTimestamp: Timestamp.fromDate(trips[i].date), // For optimal sorting
           };
 
           console.log(`Submitting trip ${i + 1}:`, JSON.stringify(tripData, null, 2));
@@ -324,7 +325,7 @@ const TripEntryScreen = ({ navigation }) => {
       if (results.success === trips.length) {
       await clearDraft();
         Alert.alert('Success', `All ${results.success} trips added successfully!`, [
-          { text: 'OK', onPress: () => navigation.goBack() }
+          { text: 'OK', onPress: () => navigate(-1) }
         ]);
       } else {
         const message = `${results.success} trips saved, ${results.failed} failed.\n${results.errors.join('\n')}`;
@@ -349,22 +350,10 @@ const TripEntryScreen = ({ navigation }) => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
       >
         <Appbar.Header style={{ backgroundColor: colors.surface }}>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
+        <Appbar.BackAction onPress={() => navigate(-1)} />
         <Appbar.Content title={`Trip ${currentTripIndex + 1} of ${trips.length}`} titleStyle={{ color: colors.text }} />
         <View style={styles.headerButtons}>
-          <Button 
-            mode="contained" 
-            compact 
-            onPress={addTrip}
-            buttonColor="#1e40af"
-            textColor="#ffffff"
-           // contentStyle={styles.headerButtonContent}
-            style={styles.headerAddButton}
-            labelStyle={styles.headerButtonLabel}
-          >
-            +
-          </Button>
-          {trips.length > 1 && (
+        {trips.length > 1 && (
             <Button 
               mode="contained" 
               compact 
@@ -378,6 +367,19 @@ const TripEntryScreen = ({ navigation }) => {
               −
             </Button>
           )}
+          <Button 
+            mode="contained" 
+            compact 
+            onPress={addTrip}
+            buttonColor="#1e40af"
+            textColor="#ffffff"
+           // contentStyle={styles.headerButtonContent}
+            style={styles.headerAddButton}
+            labelStyle={styles.headerButtonLabel}
+          >
+            +
+          </Button>
+     
         </View>
       </Appbar.Header>
       
@@ -392,12 +394,12 @@ const TripEntryScreen = ({ navigation }) => {
           horizontal 
           showsHorizontalScrollIndicator={false}
           pagingEnabled
-          snapToInterval={344}
+          snapToInterval={screenWidth}
           decelerationRate="fast"
           keyboardShouldPersistTaps="handled"
           onScroll={(event) => {
             const scrollX = event.nativeEvent.contentOffset.x;
-            const index = Math.round(scrollX / 344);
+            const index = Math.round(scrollX / screenWidth);
             setCurrentTripIndex(Math.min(index, trips.length - 1));
           }}
           scrollEventThrottle={16}
@@ -413,9 +415,14 @@ const TripEntryScreen = ({ navigation }) => {
                   value={formatDateForDisplay(trip.date)}
                   mode="outlined"
                   style={[styles.input, { backgroundColor: colors.surface }]}
-                  theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                  theme={{ colors: { onSurfaceVariant: colors.text, color: colors.text, outline: colors.border } }}
                   editable={false}
                   right={<TextInput.Icon icon="calendar" onPress={() => showDatePicker(tripIndex)} />}
+                  outlineColor={colors.border}
+                  activeOutlineColor={colors.primary}
+                  selectionColor={colors.primary}
+                  textColor={colors.text}
+                  placeholderTextColor={colors.textSecondary}
                 />
 
                 <AutoSuggestInput
@@ -428,6 +435,11 @@ const TripEntryScreen = ({ navigation }) => {
                   autoCapitalize="characters"
                   style={[styles.input, { zIndex: 30, backgroundColor: colors.surface }]}
                   theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                  outlineColor={colors.border}
+                  activeOutlineColor={colors.primary}
+                  selectionColor={colors.primary}
+                  textColor={colors.text}
+                  placeholderTextColor={colors.textSecondary}
                 />
 
                 <TextInput
@@ -439,27 +451,20 @@ const TripEntryScreen = ({ navigation }) => {
                   mode="outlined"
                   style={[styles.input, { zIndex: 1, backgroundColor: colors.surface }]}
                   theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                  outlineColor={colors.border}
+                  activeOutlineColor={colors.primary}
+                  selectionColor={colors.primary}
+                  textColor={colors.text}
+                  placeholderTextColor={colors.textSecondary}
                 />
 
                 {trip.locations.map((location, locationIndex) => (
-                  <Card key={locationIndex} style={[styles.locationCard, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
+                  <Card key={locationIndex} style={[styles.locationCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                     <Card.Content>
                       <View style={styles.locationHeader}>
                         <Title style={[styles.locationTitle, { color: colors.onPrimary, backgroundColor: colors.primary }]}>{locationIndex + 1}</Title>
                         <View style={styles.locationActions}>
-                          <Button 
-                            mode="contained" 
-                            compact 
-                            onPress={() => addLocationPair(tripIndex)}
-                            buttonColor="#059669"
-                            textColor="#ffffff"
-                            contentStyle={styles.locationButtonContent}
-                            style={styles.addLocationButton}
-                            labelStyle={styles.locationButtonLabel}
-                          >
-                            +
-                          </Button>
-                          {trip.locations.length > 1 && (
+                        {trip.locations.length > 1 && (
                             <Button 
                               mode="contained" 
                               compact 
@@ -473,6 +478,19 @@ const TripEntryScreen = ({ navigation }) => {
                               -
                             </Button>
                           )}
+                          <Button 
+                            mode="contained" 
+                            compact 
+                            onPress={() => addLocationPair(tripIndex)}
+                            buttonColor="#059669"
+                            textColor="#ffffff"
+                            contentStyle={styles.locationButtonContent}
+                            style={styles.addLocationButton}
+                            labelStyle={styles.locationButtonLabel}
+                          >
+                            +
+                          </Button>
+                        
                         </View>
                       </View>
                       
@@ -487,6 +505,11 @@ const TripEntryScreen = ({ navigation }) => {
                         autoCapitalize="words"
                         style={[styles.input, { zIndex: 20, backgroundColor: colors.surface }]}
                         theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                        outlineColor={colors.border}
+                        activeOutlineColor={colors.primary}
+                        selectionColor={colors.primary}
+                        textColor={colors.text}
+                        placeholderTextColor={colors.textSecondary}
                       />
 
                       <AutoSuggestInput
@@ -500,6 +523,11 @@ const TripEntryScreen = ({ navigation }) => {
                         autoCapitalize="words"
                         style={[styles.input, { zIndex: 10, backgroundColor: colors.surface }]}
                         theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                        outlineColor={colors.border}
+                        activeOutlineColor={colors.primary}
+                        selectionColor={colors.primary}
+                        textColor={colors.text}
+                        placeholderTextColor={colors.textSecondary}
                       />
                     </Card.Content>
                   </Card>
@@ -572,21 +600,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tripsContainer: {
-    flexDirection: 'row',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-  },
+    flexDirection: 'row',  },
   tripCard: {
-    width: 320,
-    marginHorizontal: 12,
-    elevation: 4,
-    shadowColor: '#334155',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    width: Dimensions.get('window').width,
+     
   },
   submitContainer: {
     padding: 16,
@@ -599,7 +616,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   input: {
-    marginBottom: 16,
+    marginVertical: 15,
     position: 'relative',
     zIndex: 10,
   },
@@ -612,15 +629,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   locationCard: {
-    marginBottom: 16,
-    borderRadius: 8,
-    elevation: 2,
-    shadowColor: '#475569',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    borderWidth: 1,
-    zIndex: 5,
+    
+
   },
   locationHeader: {
     flexDirection: 'row',

@@ -15,7 +15,7 @@ import {
   Provider as PaperProvider,
 } from 'react-native-paper';
 import { db } from '../../config/firebase';
-import firestore from '@react-native-firebase/firestore';
+import { collection, addDoc, serverTimestamp } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
 
 const AddCustomer = ({ navigation }) => {
@@ -68,28 +68,7 @@ const AddCustomer = ({ navigation }) => {
       Alert.alert('Error', 'Customer name is required');
       return;
     }
-    if (!customerData.address1?.trim()) {
-      Alert.alert('Error', 'Address line 1 is required');
-      return;
-    }
-    if (!customerData.gstin?.trim()) {
-      Alert.alert('Error', 'GSTIN is required');
-      return;
-    } else if (!validateGSTIN(customerData.gstin.trim())) {
-      Alert.alert('Error', 'Please enter a valid GSTIN');
-      return;
-    }
-    if (!customerData.phoneNo?.trim()) {
-      Alert.alert('Error', 'Phone number is required');
-      return;
-    } else if (!validatePhone(customerData.phoneNo.trim())) {
-      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
-      return;
-    }
-    if (!validateEmail(customerData.email?.trim())) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return;
-    }
+  
 
     try {
       setIsSaving(true);
@@ -103,11 +82,12 @@ const AddCustomer = ({ navigation }) => {
         gstin: customerData.gstin.trim(),
         phoneNo: customerData.phoneNo.trim(),
         email: customerData.email?.trim() || '',
-        createdAt: firestore.FieldValue.serverTimestamp(),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
       
-      const docRef = await db.collection('customers').add(customerDataToSave);
+      const customersRef = collection(db, 'customers');
+      const docRef = await addDoc(customersRef, customerDataToSave);
       
       Alert.alert('Success', 'Customer saved successfully!', [
         { 
@@ -144,7 +124,7 @@ const AddCustomer = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={[styles.formCard, { backgroundColor: colors.surface }]}>
+          <View style={[styles.formCard, { backgroundColor: colors.background , borderColor:colors.border}]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Customer Details</Text>
 
             <TextInput
@@ -153,23 +133,27 @@ const AddCustomer = ({ navigation }) => {
               onChangeText={(value) => handleInputChange('msName', value)}
               placeholder="Enter company name"
               mode="outlined"
-              style={styles.input}
-              outlineColor="#e2e8f0"
-              activeOutlineColor="#6366f1"
-              selectionColor="#6366f1"
+              style={[styles.input, {backgroundColor:colors.surface}]}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+              selectionColor={colors.primary}
+              textColor={colors.text}
+              placeholderTextColor={colors.textSecondary}
             />
 
             <TextInput
-              label="Address 1 *"
+              label="Address 1 "
               value={customerData.address1}
               onChangeText={(value) => handleInputChange('address1', value)}
               placeholder="Enter address line 1"
               multiline
               mode="outlined"
-              style={[styles.input, styles.multilineInput]}
-              outlineColor="#e2e8f0"
-              activeOutlineColor="#6366f1"
-              selectionColor="#6366f1"
+              style={[styles.input, styles.multilineInput,{backgroundColor:colors.surface}]}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+              selectionColor={colors.primary}
+              textColor={colors.text}
+              placeholderTextColor={colors.textSecondary}
             />
 
             <TextInput
@@ -179,36 +163,42 @@ const AddCustomer = ({ navigation }) => {
               placeholder="Enter address line 2"
               multiline
               mode="outlined"
-              style={[styles.input, styles.multilineInput]}
-              outlineColor="#e2e8f0"
-              activeOutlineColor="#6366f1"
-              selectionColor="#6366f1"
+              style={[styles.input, styles.multilineInput,{backgroundColor:colors.surface}]}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+              selectionColor={colors.primary}
+              textColor={colors.text}
+              placeholderTextColor={colors.textSecondary}
             />
 
             <TextInput
-              label="GSTIN *"
+              label="GSTIN "
               value={customerData.gstin}
               onChangeText={(value) => handleInputChange('gstin', value)}
               placeholder="Enter GSTIN"
               autoCapitalize="characters"
               mode="outlined"
-              style={styles.input}
-              outlineColor="#e2e8f0"
-              activeOutlineColor="#6366f1"
-              selectionColor="#6366f1"
+              style={[styles.input,{backgroundColor:colors.surface}]}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+              selectionColor={colors.primary}
+              textColor={colors.text}
+              placeholderTextColor={colors.textSecondary}
             />
 
             <TextInput
-              label="Phone No *"
+              label="Phone No "
               value={customerData.phoneNo}
               onChangeText={(value) => handleInputChange('phoneNo', value)}
               placeholder="10-digit number"
               keyboardType="phone-pad"
               mode="outlined"
-              style={styles.input}
-              outlineColor="#e2e8f0"
-              activeOutlineColor="#6366f1"
-              selectionColor="#6366f1"
+              style={[styles.input,{backgroundColor:colors.surface}]}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+              selectionColor={colors.primary}
+              textColor={colors.text}
+              placeholderTextColor={colors.textSecondary}
             />
 
             <TextInput
@@ -219,10 +209,12 @@ const AddCustomer = ({ navigation }) => {
               keyboardType="email-address"
               autoCapitalize="none"
               mode="outlined"
-              style={styles.input}
-              outlineColor="#e2e8f0"
-              activeOutlineColor="#6366f1"
-              selectionColor="#6366f1"
+              style={[styles.input,{backgroundColor:colors.surface}]}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+              selectionColor={colors.primary}
+              textColor={colors.text}
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
         </ScrollView>
@@ -273,7 +265,7 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 12,
-    backgroundColor: '#fff',
+    
   },
   multilineInput: {
     minHeight: 54,

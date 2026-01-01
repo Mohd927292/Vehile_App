@@ -2,7 +2,7 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
-const svgPath = './assets/icons/app_icon_clean.svg';
+const iconPath = './assets/icons/Icon-512.png';
 const androidResPath = './android/app/src/main/res';
 
 const iconSizes = [
@@ -17,12 +17,12 @@ async function generateIcons() {
   for (const { folder, size } of iconSizes) {
     const outputDir = path.join(androidResPath, folder);
     
-    await sharp(svgPath)
+    await sharp(iconPath)
       .resize(size, size)
       .png()
       .toFile(path.join(outputDir, 'ic_launcher.png'));
     
-    await sharp(svgPath)
+    await sharp(iconPath)
       .resize(size, size)
       .png()
       .toFile(path.join(outputDir, 'ic_launcher_round.png'));

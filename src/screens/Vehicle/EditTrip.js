@@ -12,10 +12,13 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useNavigate, useLocation } from 'react-router-native';
 import firestore, { getFirestore, collection, doc, getDoc, updateDoc, serverTimestamp } from '@react-native-firebase/firestore';
 
-const EditTrip = ({ navigation, route }) => {
-  const { tripId } = route.params;
+const EditTrip = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const tripId = location.state?.tripId;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [tripData, setTripData] = useState({
@@ -64,7 +67,7 @@ const EditTrip = ({ navigation, route }) => {
       });
       
       Alert.alert('Success', 'Trip updated successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+        { text: 'OK', onPress: () => navigate(-1) }
       ]);
     } catch (error) {
       console.error('Error updating trip:', error);
@@ -110,7 +113,7 @@ const EditTrip = ({ navigation, route }) => {
       <StatusBar barStyle="light-content" backgroundColor="#7b2ff2" />
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => navigate(-1)}
           style={styles.backButton}
         >
           <Text style={styles.backButtonText}>← Back</Text>

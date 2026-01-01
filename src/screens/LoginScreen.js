@@ -4,7 +4,7 @@ import auth from '@react-native-firebase/auth';
 import { getApp } from '@react-native-firebase/app';
 import { useTheme } from '../hooks/useTheme';
 
-const LoginScreen = ({ navigation }) => {
+const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);

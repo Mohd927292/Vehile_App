@@ -8,10 +8,12 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { useNavigate } from 'react-router-native';
 import { vehicleTripService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
 
-const PartyListScreen = ({ navigation }) => {
+const PartyListScreen = () => {
+  const navigate = useNavigate();
   const { colors } = useTheme();
   const [parties, setParties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,8 +25,37 @@ const PartyListScreen = ({ navigation }) => {
   const loadParties = async () => {
     try {
       setLoading(true);
-      const mergedData = await vehicleTripService.getPartyTripData();
-      setParties(mergedData);
+      
+      // Get all trips and build parties from TO locations
+      const tripsSnapshot = await vehicleTripService.getVehicleTripsData();
+      
+      // Extract all TO locations and count them
+      const partyMap = new Map();
+      
+      tripsSnapshot.forEach(trip => {
+        if (trip.locations && trip.locations.length > 0) {
+          trip.locations.forEach(location => {
+            if (location.to) {
+              const partyName = location.to;
+              if (partyMap.has(partyName)) {
+                partyMap.set(partyName, {
+                  ...partyMap.get(partyName),
+                  loadCount: partyMap.get(partyName).loadCount + 1
+                });
+              } else {
+                partyMap.set(partyName, {
+                  id: partyName,
+                  to: partyName,
+                  loadCount: 1,
+                  createdAt: trip.createdAt
+                });
+              }
+            }
+          });
+        }
+      });
+      
+      setParties(Array.from(partyMap.values()));
     } catch (error) {
       console.error('Error loading parties:', error);
       Alert.alert('Error', 'Failed to load parties. Please try again.');
@@ -36,10 +67,10 @@ const PartyListScreen = ({ navigation }) => {
   const renderParty = ({ item }) => (
     <TouchableOpacity 
       style={[styles.partyCard, { backgroundColor: colors.surface }]}
-      onPress={() => navigation.navigate('PartyList_Details_Screen', { from: item.from })}
+      onPress={() => navigate('/party-details', { state: { to: item.to } })}
     >
       <View style={styles.partyHeader}>
-        <Text style={[styles.partyName, { color: colors.text }]}>{item.from || 'N/A'}</Text>
+        <Text style={[styles.partyName, { color: colors.text }]}>{item.to || 'N/A'}</Text>
       </View>
       <Text style={[styles.partyInfo, { color: colors.textSecondary }]}>Load: {item.loadCount }</Text>
       <Text style={[styles.partyInfo, { color: colors.textSecondary }]}>CreatedAt: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>

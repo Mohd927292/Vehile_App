@@ -10,11 +10,15 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
-import firestore from '@react-native-firebase/firestore';
+import { useNavigate, useLocation } from 'react-router-native';
+import firestore, { getFirestore, collection, query, where, orderBy, limit, getDocs, doc, getDoc, deleteDoc, updateDoc, increment } from '@react-native-firebase/firestore';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
+import { getRouteParams, navigateWithParams } from '../../utils/navigation';
 
-const Vehicle_list_Screen = ({ navigation, route }) => {
-  const { vehicleNo } = route.params;
+const Vehicle_list_Screen = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { vehicleNo } = getRouteParams(location);
   const [trips, setTrips] = useState([]);
   const [filteredTrips, setFilteredTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,12 +46,14 @@ const Vehicle_list_Screen = ({ navigation, route }) => {
   const loadTrips = async () => {
     try {
       setLoading(true);
-      const querySnapshot = await firestore()
-        .collection('tripEntries')
-        .where('vehicleNo', '==', vehicleNo)
-        .orderBy('createdAt', 'desc')
-        .limit(1000)
-        .get();
+      const db = getFirestore();
+      const q = query(
+        collection(db, 'tripEntries'),
+        where('vehicleNo', '==', vehicleNo),
+        orderBy('createdAt', 'desc'),
+        limit(1000)
+      );
+      const querySnapshot = await getDocs(q);
 
       const tripsData = querySnapshot.docs.map((doc, index) => {
         const data = doc.data();
@@ -78,7 +84,7 @@ const Vehicle_list_Screen = ({ navigation, route }) => {
   };
 
   const handleEdit = (trip) => {
-    navigation.navigate('EditTrip', { tripId: trip.id });
+    navigateWithParams(navigate, '/edit-trip', { tripId: trip.id });
   };
 
   const filterTrips = (query, tripsToFilter = null) => {
@@ -127,22 +133,26 @@ const Vehicle_list_Screen = ({ navigation, route }) => {
           onPress: async () => {
             try {
               // Get trip data first to access locations
-              const tripDoc = await firestore().collection('tripEntries').doc(tripId).get();
+              const db = getFirestore();
+              const tripDocRef = doc(db, 'tripEntries', tripId);
+              const tripDoc = await getDoc(tripDocRef);
               const tripData = tripDoc.data();
               
-              await firestore().collection('tripEntries').doc(tripId).delete();
+              await deleteDoc(tripDocRef);
               
               // Decrease loadCount in vehicles collection
-              await firestore().collection('vehicles').doc(vehicleNo).update({
-                loadCount: firestore.FieldValue.increment(-1)
+              const vehicleDocRef = doc(db, 'vehicles', vehicleNo);
+              await updateDoc(vehicleDocRef, {
+                loadCount: increment(-1)
               });
 
               // Decrease loadCount in parties collection for each location
               if (tripData?.locations) {
                 for (const location of tripData.locations) {
                   if (location.from) {
-                    await firestore().collection('parties').doc(location.from).update({
-                      loadCount: firestore.FieldValue.increment(-1)
+                    const partyDocRef = doc(db, 'parties', location.from);
+                    await updateDoc(partyDocRef, {
+                      loadCount: increment(-1)
                     });
                   }
                 }

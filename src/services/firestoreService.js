@@ -1,4 +1,7 @@
-import firestore from '@react-native-firebase/firestore';
+import { getFirestore, collection, query, orderBy, startAt, endAt, limit, getDocs } from '@react-native-firebase/firestore';
+
+// Get Firestore instance
+const db = getFirestore();
 
 // Fetch vehicle suggestions from Firestore
 export const getVehicleSuggestions = async searchText => {
@@ -6,13 +9,15 @@ export const getVehicleSuggestions = async searchText => {
 
   try {
     const searchUpper = searchText.toUpperCase();
-    const snapshot = await firestore()
-      .collection('vehicles')
-      .orderBy('vehicleNo')
-      .startAt(searchUpper)
-      .endAt(searchUpper + '\uf8ff')
-      .limit(10)
-      .get();
+    const vehiclesRef = collection(db, 'vehicles');
+    const q = query(
+      vehiclesRef,
+      orderBy('vehicleNo'),
+      startAt(searchUpper),
+      endAt(searchUpper + '\uf8ff'),
+      limit(10)
+    );
+    const snapshot = await getDocs(q);
 
     return snapshot.docs.map(doc => ({
       id: doc.id,
@@ -36,13 +41,15 @@ export const getCustomerSuggestions = async searchText => {
     const searchLower = searchText.toLowerCase();
     console.log('🔍 Searching for:', searchLower);
 
-    const snapshot = await firestore()
-      .collection('customers')
-      .orderBy('msnamelower')
-      .startAt(searchLower)
-      .endAt(searchLower + '\uf8ff')
-      .limit(10)
-      .get();
+    const customersRef = collection(db, 'customers');
+    const q = query(
+      customersRef,
+      orderBy('msnamelower'),
+      startAt(searchLower),
+      endAt(searchLower + '\uf8ff'),
+      limit(10)
+    );
+    const snapshot = await getDocs(q);
 
     console.log('📊 Firestore query returned:', snapshot.size, 'documents');
 

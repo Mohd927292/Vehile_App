@@ -10,11 +10,15 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
-import firestore from '@react-native-firebase/firestore';
+import { useNavigate, useLocation } from 'react-router-native';
+import { tripEntriesCollection } from '../../config/firebase';
+import { getDocs, query, orderBy, deleteDoc, doc } from '@react-native-firebase/firestore';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
 
-const PartyList_Details_Screen = ({ navigation, route }) => {
-  const { from } = route.params;
+const PartyList_Details_Screen = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const to = location.state?.to;
   const [trips, setTrips] = useState([]);
   const [filteredTrips, setFilteredTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +29,6 @@ const PartyList_Details_Screen = ({ navigation, route }) => {
 
   // Create stable callback function
   const handleDataChange = useCallback((newData) => {
-    console.log('📨 Party Screen received data:', newData.length, 'trips');
     setDisplayedTrips(newData);
   }, []);
 
@@ -34,23 +37,19 @@ const PartyList_Details_Screen = ({ navigation, route }) => {
   }, []);
 
   useEffect(() => {
-    // Update displayed trips when filteredTrips changes
-    console.log('🔄 Party Screen: filteredTrips changed:', filteredTrips.length);
     setDisplayedTrips(filteredTrips);
   }, [filteredTrips]);
 
   const loadTrips = async () => {
     try {
       setLoading(true);
-      const querySnapshot = await firestore()
-        .collection('tripEntries')
-        .orderBy('createdAt', 'desc')
-        .get();
-
-      // Filter trips that have the party name in any location's from field
+      const q = query(tripEntriesCollection, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      
+      // Filter trips that have the party name in any location's to field
       const filteredDocs = querySnapshot.docs.filter(doc => {
         const locations = doc.data().locations || [];
-        return locations.some(loc => loc.from === from);
+        return locations.some(loc => loc.to === to);
       });
 
       const tripsData = filteredDocs.map((doc, index) => {
@@ -82,7 +81,7 @@ const PartyList_Details_Screen = ({ navigation, route }) => {
   };
 
   const handleEdit = (trip) => {
-    navigation.navigate('EditTrip', { tripId: trip.id });
+    navigate('/edit-trip', { state: { tripId: trip.id } });
   };
 
   const filterTrips = (query, tripsToFilter = null) => {
@@ -128,7 +127,7 @@ const PartyList_Details_Screen = ({ navigation, route }) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await firestore().collection('tripEntries').doc(tripId).delete();
+              await deleteDoc(doc(tripEntriesCollection, tripId));
               await loadTrips();
               Alert.alert('Success', 'Trip deleted successfully');
             } catch (error) {
@@ -217,13 +216,10 @@ const PartyList_Details_Screen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{from}</Text>
+        <Text style={styles.headerTitle}>{to}</Text>
         <TripListExport 
           data={filteredTrips} 
-          onDataChange={(newData) => {
-            console.log('📨 DIRECT CALLBACK Party Screen received data:', newData.length, 'trips');
-            setDisplayedTrips(newData);
-          }}
+          onDataChange={handleDataChange}
         />
       </View>
 

@@ -44,10 +44,10 @@ const tripService = {
       // 3. Update parties collection for each location
       if (tripData.locations && tripData.locations.length > 0) {
         for (const location of tripData.locations) {
-          if (location.from) {
-            const partyRef = doc(partiesCollection, location.from);
+          if (location.to) {
+            const partyRef = doc(partiesCollection, location.to);
             batch.set(partyRef, {
-              from: location.from,
+              to: location.to,
               loadCount: increment(1),
               lastTripAt: serverTimestamp(),
             }, { merge: true });
@@ -73,10 +73,10 @@ const tripService = {
     }
   },
   
-  // Get trips by party (from location)
-  getTripsByParty: async (from) => {
+  // Get trips by party (to location)
+  getTripsByParty: async (to) => {
     try {
-      const q = query(tripEntriesCollection, where('locations', 'array-contains-any', [{ from }]), orderBy('createdAt', 'desc'));
+      const q = query(tripEntriesCollection, where('locations', 'array-contains-any', [{ to }]), orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
@@ -155,7 +155,7 @@ const vehicleTripService = {
         const data = doc.data();
         return {
           id: doc.id,
-          from: data.from,
+          to: data.to,
           loadCount: data.loadCount || 0,
           createdAt: data.lastTripAt?.toDate() || null
         };

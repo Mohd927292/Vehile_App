@@ -10,11 +10,14 @@ import {
   Modal,
   StatusBar,
 } from 'react-native';
+import { useNavigate } from 'react-router-native';
 import { customerService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
+import { navigateWithParams } from '../../utils/navigation';
 
-const CustomerList = ({ navigation }) => {
+const CustomerList = () => {
   const { colors } = useTheme();
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,7 +68,7 @@ const CustomerList = ({ navigation }) => {
 
   const handleEditCustomer = () => {
     closeMenu();
-    navigation.navigate('EditCustomer', { customer: selectedCustomer });
+    navigateWithParams(navigate, '/edit-customer', { customer: selectedCustomer });
   };
 
   const renderCustomer = ({ item }) => (
@@ -150,7 +153,7 @@ const CustomerList = ({ navigation }) => {
       {/* Floating Action Button */}
       <TouchableOpacity 
         style={[styles.fab, { backgroundColor: colors.primary }]}
-        onPress={() => navigation.navigate('AddCustomer')}
+        onPress={() => navigate('/add-customer')}
         activeOpacity={0.8}
       >
         <Text style={styles.fabIcon}>+</Text>

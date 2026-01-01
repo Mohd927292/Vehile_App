@@ -7,6 +7,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  useColorScheme,
 } from 'react-native';
 
 import {
@@ -16,10 +17,14 @@ import {
   Provider as PaperProvider,
 } from 'react-native-paper';
 import { db } from '../../config/firebase';
-import firestore from '@react-native-firebase/firestore';
+import { collection, doc, updateDoc, serverTimestamp } from '@react-native-firebase/firestore';
+import { useTheme } from '../../hooks/useTheme';
 
 const EditCustomer = ({ navigation, route }) => {
   const customer = route?.params?.customer;
+  const colorScheme = useColorScheme();
+  const {colors} = useTheme();
+  
 
   const initialCustomerData = useMemo(() => ({
     msName: customer?.msName || '',
@@ -69,30 +74,7 @@ const EditCustomer = ({ navigation, route }) => {
       Alert.alert('Error', 'Customer name is required');
       return;
     }
-    if (!customerData.address1?.trim()) {
-      Alert.alert('Error', 'Address line 1 is required');
-      return;
-    }
-    if (!customerData.gstin?.trim()) {
-      Alert.alert('Error', 'GSTIN is required');
-      return;
-    }
-    if (!validateGSTIN(customerData.gstin.trim())) {
-      Alert.alert('Error', 'Please enter a valid GSTIN');
-      return;
-    }
-    if (!customerData.phoneNo?.trim()) {
-      Alert.alert('Error', 'Phone number is required');
-      return;
-    }
-    if (!validatePhone(customerData.phoneNo.trim())) {
-      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
-      return;
-    }
-    if (!validateEmail(customerData.email?.trim())) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return;
-    }
+
 
     try {
       setIsSaving(true);
@@ -105,10 +87,12 @@ const EditCustomer = ({ navigation, route }) => {
         gstin: customerData.gstin.trim(),
         phoneNo: customerData.phoneNo.trim(),
         email: customerData.email?.trim() || '',
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
 
-      await db.collection('customers').doc(customer.id).update(customerDataToSave);
+      const customersRef = collection(db, 'customers');
+      const customerDoc = doc(customersRef, customer.id);
+      await updateDoc(customerDoc, customerDataToSave);
 
       Alert.alert('Success', 'Customer updated successfully!', [
         {
@@ -130,13 +114,13 @@ const EditCustomer = ({ navigation, route }) => {
   return (
     <PaperProvider>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
-        <Appbar.Header style={styles.appbar} elevated>
+        <Appbar.Header style={[styles.appbar, { backgroundColor: colors.background  }]} elevated>
           <Appbar.BackAction onPress={() => navigation.goBack()} />
-          <Appbar.Content title="Edit Customer" titleStyle={styles.appbarTitle} />
+          <Appbar.Content title="Edit Customer" titleStyle={[styles.appbarTitle, { color: colors.text }]} />
         </Appbar.Header>
 
         <ScrollView
@@ -145,7 +129,7 @@ const EditCustomer = ({ navigation, route }) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.formCard}>
+          <View style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             
          
             <TextInput
@@ -154,10 +138,12 @@ const EditCustomer = ({ navigation, route }) => {
               onChangeText={(value) => handleInputChange('msName', value)}
               placeholder="Enter company name"
               mode="outlined"
-              style={styles.input}
-              outlineColor="#e2e8f0"
-              activeOutlineColor="#6366f1"
-              selectionColor="#6366f1"
+              style={[styles.input, { backgroundColor: colors.surface }]}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+              selectionColor={colors.primary}
+              textColor={colors.text}
+              placeholderTextColor={colors.textSecondary}
             />
 
             <TextInput
@@ -167,10 +153,12 @@ const EditCustomer = ({ navigation, route }) => {
               placeholder="Enter address line 1"
               multiline
               mode="outlined"
-              style={[styles.input, styles.multilineInput]}
-              outlineColor="#e2e8f0"
-              activeOutlineColor="#6366f1"
-              selectionColor="#6366f1"
+              style={[styles.input, styles.multilineInput, { backgroundColor: colors.surface }]}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+              selectionColor={colors.primary}
+              textColor={colors.text}
+              placeholderTextColor={colors.textSecondary}
             />
 
             <TextInput
@@ -180,10 +168,12 @@ const EditCustomer = ({ navigation, route }) => {
               placeholder="Enter address line 2"
               multiline
               mode="outlined"
-              style={[styles.input, styles.multilineInput]}
-              outlineColor="#e2e8f0"
-              activeOutlineColor="#6366f1"
-              selectionColor="#6366f1"
+              style={[styles.input, styles.multilineInput, { backgroundColor: colors.surface }]}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+              selectionColor={colors.primary}
+              textColor={colors.text}
+              placeholderTextColor={colors.textSecondary}
             />
 
             <TextInput
@@ -193,10 +183,12 @@ const EditCustomer = ({ navigation, route }) => {
               placeholder="Enter GSTIN"
               autoCapitalize="characters"
               mode="outlined"
-              style={styles.input}
-              outlineColor="#e2e8f0"
-              activeOutlineColor="#6366f1"
-              selectionColor="#6366f1"
+              style={[styles.input, { backgroundColor: colors.surface }]}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+              selectionColor={colors.primary}
+              textColor={colors.text}
+              placeholderTextColor={colors.textSecondary}
             />
 
             <TextInput
@@ -206,10 +198,12 @@ const EditCustomer = ({ navigation, route }) => {
               placeholder="10-digit number"
               keyboardType="phone-pad"
               mode="outlined"
-              style={styles.input}
-              outlineColor="#e2e8f0"
-              activeOutlineColor="#6366f1"
-              selectionColor="#6366f1"
+              style={[styles.input, { backgroundColor: colors.surface }]}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+              selectionColor={colors.primary}
+              textColor={colors.text}
+              placeholderTextColor={colors.textSecondary}
             />
 
             <TextInput
@@ -220,10 +214,12 @@ const EditCustomer = ({ navigation, route }) => {
               keyboardType="email-address"
               autoCapitalize="none"
               mode="outlined"
-              style={styles.input}
-              outlineColor="#e2e8f0"
-              activeOutlineColor="#6366f1"
-              selectionColor="#6366f1"
+              style={[styles.input, { backgroundColor: colors.surface }]}
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+              selectionColor={colors.primary}
+              textColor={colors.text}
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
         </ScrollView>
@@ -235,7 +231,7 @@ const EditCustomer = ({ navigation, route }) => {
           loading={isSaving}
           style={styles.saveButton}
           contentStyle={styles.saveButtonContent}
-          buttonColor="#6366f1"
+          buttonColor={colors.primary}
         >
           Update Customer
         </Button>
@@ -247,13 +243,10 @@ const EditCustomer = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   appbar: {
-    backgroundColor: '#fff',
   },
   appbarTitle: {
-    color: '#0f172a',
     fontWeight: '700',
   },
   form: {
@@ -264,26 +257,21 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
   },
   formCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f172a',
   },
   sectionSubtitle: {
     marginTop: 4,
     marginBottom: 14,
     fontSize: 13,
-    color: '#64748b',
   },
   input: {
     marginBottom: 12,
-    backgroundColor: '#fff',
   },
   multilineInput: {
     minHeight: 54,

@@ -6,6 +6,11 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
  *
  * @type {import('@react-native/metro-config').MetroConfig}
  */
-const config = {};
+const config = {
+  resolver: {
+    // Disable Fast Refresh during development to prevent navigation resets
+    unstable_enablePackageExports: false,
+  },
+};
 
 module.exports = mergeConfig(getDefaultConfig(__dirname), config);

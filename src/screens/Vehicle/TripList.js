@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -11,13 +10,16 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
+import { useNavigate, useLocation } from 'react-router-native';
 import { vehicleTripService } from '../../config/firebase';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
 import { deleteDoc, doc, limit, startAfter } from '@react-native-firebase/firestore';
 import { db } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
 
-const TripList = ({ navigation }) => {
+const TripList = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { colors } = useTheme();
   const [trips, setTrips] = useState([]);
   const [filteredTrips, setFilteredTrips] = useState([]);
@@ -33,7 +35,7 @@ const TripList = ({ navigation }) => {
   }, []);
 
   const handleEdit = (trip) => {
-    navigation.navigate('EditTrip', { tripId: trip.id });
+    navigate('/edit-trip', { state: { tripId: trip.id } });
   };
 
   const handleDelete = useCallback(async (tripId) => {
@@ -119,16 +121,17 @@ const TripList = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
+    // Reload trips when screen comes into focus (route changes)
+    if (location.pathname === '/trip-list') {
+      loadTrips();
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
     // Update displayed trips when filteredTrips changes
     console.log('🔄 TripList Screen: filteredTrips changed:', filteredTrips.length);
     setDisplayedTrips(filteredTrips);
   }, [filteredTrips]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadTrips();
-    }, [])
-  );
 
   const renderHeader = useCallback(() => {
     const locationHeaders = [];
