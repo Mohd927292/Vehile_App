@@ -26,9 +26,36 @@ const PartyListScreen = () => {
     try {
       setLoading(true);
       
-      // Use the dedicated party service method
-      const partiesData = await vehicleTripService.getPartyTripData();
-      setParties(partiesData);
+      // Get all trips and build parties from TO locations
+      const tripsSnapshot = await vehicleTripService.getVehicleTripsData();
+      
+      // Extract all TO locations and count them
+      const partyMap = new Map();
+      
+      tripsSnapshot.forEach(trip => {
+        if (trip.locations && trip.locations.length > 0) {
+          trip.locations.forEach(location => {
+            if (location.to) {
+              const partyName = location.to;
+              if (partyMap.has(partyName)) {
+                partyMap.set(partyName, {
+                  ...partyMap.get(partyName),
+                  loadCount: partyMap.get(partyName).loadCount + 1
+                });
+              } else {
+                partyMap.set(partyName, {
+                  id: partyName,
+                  to: partyName,
+                  loadCount: 1,
+                  createdAt: trip.createdAt
+                });
+              }
+            }
+          });
+        }
+      });
+      
+      setParties(Array.from(partyMap.values()));
     } catch (error) {
       console.error('Error loading parties:', error);
       Alert.alert('Error', 'Failed to load parties. Please try again.');

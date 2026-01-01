@@ -14,10 +14,10 @@ import {
   Appbar,
   Provider as PaperProvider,
 } from 'react-native-paper';
+import { useNavigate } from 'react-router-native';
 import { db } from '../../config/firebase';
 import { collection, addDoc, serverTimestamp } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
-import { useNavigate } from 'react-router-native';
 
 const AddCustomer = () => {
   const navigate = useNavigate();

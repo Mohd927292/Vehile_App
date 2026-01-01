@@ -16,10 +16,10 @@ import {
   Appbar,
   Provider as PaperProvider,
 } from 'react-native-paper';
+import { useNavigate, useLocation } from 'react-router-native';
 import { db } from '../../config/firebase';
 import { collection, doc, updateDoc, serverTimestamp } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
-import { useNavigate, useLocation } from 'react-router-native';
 
 const EditCustomer = () => {
   const navigate = useNavigate();

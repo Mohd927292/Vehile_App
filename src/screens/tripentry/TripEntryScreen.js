@@ -417,7 +417,7 @@ const TripEntryScreen = () => {
                   style={[styles.input, { backgroundColor: colors.surface }]}
                   theme={{ colors: { onSurfaceVariant: colors.text, color: colors.text, outline: colors.border } }}
                   editable={false}
-                  right={<TextInput.Icon icon="calendar" color={colors.primary} onPress={() => showDatePicker(tripIndex)} />}
+                  right={<TextInput.Icon icon="calendar" onPress={() => showDatePicker(tripIndex)} />}
                   outlineColor={colors.border}
                   activeOutlineColor={colors.primary}
                   selectionColor={colors.primary}
@@ -494,15 +494,13 @@ const TripEntryScreen = () => {
                         </View>
                       </View>
                       
-                      <TextInput
+                      <AutoSuggestInput
                         label="From Location *"
                         value={location.from}
                         onChangeText={(text) => handleLocationChange(tripIndex, locationIndex, 'from', text)}
-                       // onSuggestionSelect={(suggestion) => handleLocationSuggestion(tripIndex, locationIndex, 'from', suggestion)}
-                       // onBlur={(value) => handleLocationBlur(tripIndex, locationIndex, 'from', value)}
-                       // getSuggestions={getCustomerSuggestions}
-
-                          mode="outlined"
+                        onSuggestionSelect={(suggestion) => handleLocationSuggestion(tripIndex, locationIndex, 'from', suggestion)}
+                        onBlur={(value) => handleLocationBlur(tripIndex, locationIndex, 'from', value)}
+                        getSuggestions={getCustomerSuggestions}
                         placeholder="Enter from location"
                         autoCapitalize="words"
                         style={[styles.input, { zIndex: 20, backgroundColor: colors.surface }]}
