@@ -17,8 +17,10 @@ import {
 import { db } from '../../config/firebase';
 import { collection, addDoc, serverTimestamp } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
+import { useNavigate } from 'react-router-native';
 
-const AddCustomer = ({ navigation }) => {
+const AddCustomer = () => {
+  const navigate = useNavigate();
   const { colors } = useTheme();
   const [customerData, setCustomerData] = useState({
     msName: '',
@@ -92,7 +94,7 @@ const AddCustomer = ({ navigation }) => {
       Alert.alert('Success', 'Customer saved successfully!', [
         { 
           text: 'OK', 
-          onPress: () => navigation.goBack() 
+          onPress: () => navigate(-1) 
         }
       ]);
     } catch (error) {
@@ -114,7 +116,7 @@ const AddCustomer = ({ navigation }) => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
         <Appbar.Header style={[styles.appbar, { backgroundColor: colors.surface }]} elevated>
-          <Appbar.BackAction onPress={() => navigation.goBack()} />
+          <Appbar.BackAction onPress={() => navigate(-1)} />
           <Appbar.Content title="Add Customer" titleStyle={[styles.appbarTitle, { color: colors.text }]} />
         </Appbar.Header>
 

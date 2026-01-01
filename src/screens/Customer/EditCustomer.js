@@ -19,9 +19,12 @@ import {
 import { db } from '../../config/firebase';
 import { collection, doc, updateDoc, serverTimestamp } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
+import { useNavigate, useLocation } from 'react-router-native';
 
-const EditCustomer = ({ navigation, route }) => {
-  const customer = route?.params?.customer;
+const EditCustomer = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const customer = location.state?.customer;
   const colorScheme = useColorScheme();
   const {colors} = useTheme();
   
@@ -97,7 +100,7 @@ const EditCustomer = ({ navigation, route }) => {
       Alert.alert('Success', 'Customer updated successfully!', [
         {
           text: 'OK',
-          onPress: () => navigation.goBack(),
+          onPress: () => navigate(-1),
         },
       ]);
     } catch (error) {
@@ -119,7 +122,7 @@ const EditCustomer = ({ navigation, route }) => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
         <Appbar.Header style={[styles.appbar, { backgroundColor: colors.background  }]} elevated>
-          <Appbar.BackAction onPress={() => navigation.goBack()} />
+          <Appbar.BackAction onPress={() => navigate(-1)} />
           <Appbar.Content title="Edit Customer" titleStyle={[styles.appbarTitle, { color: colors.text }]} />
         </Appbar.Header>
 
