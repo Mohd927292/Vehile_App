@@ -13,7 +13,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-native';
 import { vehicleTripService } from '../../config/firebase';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
-import { deleteDoc, doc, limit, startAfter } from '@react-native-firebase/firestore';
+import {getFirestore, getDoc, deleteDoc, updateDoc, doc, increment, limit, startAfter } from '@react-native-firebase/firestore';
 import { db } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -38,7 +38,7 @@ const TripList = () => {
     navigate('/edit-trip', { state: { tripId: trip.id } });
   };
 
-  const handleDelete = useCallback(async (tripId) => {
+  const handleDelete = (tripId) => {
     Alert.alert(
       'Delete Trip',
       'Are you sure you want to delete this trip?',
@@ -49,18 +49,53 @@ const TripList = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteDoc(doc(db, 'tripEntries', tripId));
+              // Get trip data first to access locations
+              const db = getFirestore();
+              const tripDocRef = doc(db, 'tripEntries', tripId);
+              const tripDoc = await getDoc(tripDocRef);
+              const tripData = tripDoc.data();
+             // console.log('Trip data:', tripData);
+              const vehicleNo = tripData?.vehicleNo;
+            //  console.log('Vehicle no:', vehicleNo);
+              await deleteDoc(tripDocRef);
+              
+              // Decrease loadCount in vehicles collection
+              const vehicleDocRef = doc(db, 'vehicles', vehicleNo);
+              await updateDoc(vehicleDocRef, {
+                loadCount: increment(-1)
+              });
+
+              // Decrease loadCount in parties collection for each location
+              if (tripData?.locations) {
+                for (const location of tripData.locations) {
+                  if (location.to) {
+                    try {
+                      const partyDocRef = doc(db, 'parties', location.to);
+                      const partyDoc = await getDoc(partyDocRef);
+                      if (partyDoc.exists()) {
+                        await updateDoc(partyDocRef, {
+                          loadCount: increment(-1)
+                        });
+                      }
+                    } catch (partyError) {
+                      console.warn(`Error updating party ${location.to}:`, partyError);
+                      // Continue with other locations even if one fails
+                    }
+                  }
+                }
+              }
+              
+              await loadTrips();
               Alert.alert('Success', 'Trip deleted successfully');
-              loadTrips(); // Refresh the list
             } catch (error) {
               console.error('Error deleting trip:', error);
               Alert.alert('Error', 'Failed to delete trip');
             }
-          }
-        }
+          },
+        },
       ]
     );
-  }, []);
+  };
 
   const keyExtractor = useCallback((item) => item.id, []);
 

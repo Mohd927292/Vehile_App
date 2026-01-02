@@ -1,6 +1,6 @@
 import { getApps, initializeApp } from '@react-native-firebase/app';
 import firestore, { getFirestore, collection, doc, writeBatch, serverTimestamp, increment, getDocs, query, where, orderBy } from '@react-native-firebase/firestore';
-import auth, { getAuth } from '@react-native-firebase/auth';
+import { getAuth } from '@react-native-firebase/auth';
 
 // Initialize Firebase if not already initialized
 if (getApps().length === 0) {

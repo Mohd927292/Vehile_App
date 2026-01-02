@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useNavigate } from 'react-router-native';
-import auth from '@react-native-firebase/auth';
+import { getAuth, signOut } from '@react-native-firebase/auth';
 import { useTheme } from '../hooks/useTheme';
 
 const HomeScreen = () => {
@@ -9,7 +9,8 @@ const HomeScreen = () => {
   const navigate = useNavigate();
   const handleLogout = async () => {
     try {
-      await auth().signOut();
+      const auth = getAuth();
+      await signOut(auth);
     } catch (error) {
       console.error('Logout error:', error);
     }

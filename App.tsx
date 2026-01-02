@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BackHandler } from 'react-native';
-import { NativeRouter, Routes, Route, useNavigate } from 'react-router-native';
+import { NativeRouter, Routes, Route, useNavigate, useLocation } from 'react-router-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getAuth,
@@ -25,16 +25,21 @@ import TripList from './src/screens/Vehicle/TripList';
 
 const BackButtonHandler = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   
   useEffect(() => {
     const backAction = () => {
+      if (location.pathname === '/') {
+        BackHandler.exitApp();
+        return true;
+      }
       navigate(-1);
       return true;
     };
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   return null;
 };
@@ -55,7 +60,7 @@ const AppNavigator = () => {
   if (initializing) return null;
 
   return (
-    <NativeRouter>
+    <NativeRouter future={{ v7_relativeSplatPath: true }}>
       <BackButtonHandler />
       <Routes>
         {user ? (

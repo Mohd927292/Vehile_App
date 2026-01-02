@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import auth from '@react-native-firebase/auth';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from '@react-native-firebase/auth';
 import { getApp } from '@react-native-firebase/app';
 import { useTheme } from '../hooks/useTheme';
 
@@ -21,7 +21,8 @@ const LoginScreen = () => {
     console.log('Firebase app initialized:', !!getApp());
     setLoading(true);
     try {
-      const result = await auth().signInWithEmailAndPassword(email, password);
+      const auth = getAuth();
+      const result = await signInWithEmailAndPassword(auth, email, password);
       console.log('Login successful:', result.user.uid);
     } catch (error) {
       console.log('Login error:', error.code, error.message);
@@ -40,7 +41,8 @@ const LoginScreen = () => {
     console.log('Attempting signup with:', email);
     setLoading(true);
     try {
-      const result = await auth().createUserWithEmailAndPassword(email, password);
+      const auth = getAuth();
+      const result = await createUserWithEmailAndPassword(auth, email, password);
       console.log('SignUp successful:', result.user.uid);
     } catch (error) {
       console.log('SignUp error:', error.code, error.message);

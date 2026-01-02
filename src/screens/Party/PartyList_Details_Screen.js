@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useNavigate, useLocation } from 'react-router-native';
 import { tripEntriesCollection } from '../../config/firebase';
-import { getDocs, query, orderBy, deleteDoc, doc } from '@react-native-firebase/firestore';
+import {getFirestore,getDoc, getDocs, query, orderBy, deleteDoc,updateDoc, doc, increment } from '@react-native-firebase/firestore';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
 
 const PartyList_Details_Screen = () => {
@@ -127,7 +127,46 @@ const PartyList_Details_Screen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteDoc(doc(tripEntriesCollection, tripId));
+              // Get trip data first to access locations
+              const db = getFirestore();
+              const tripDocRef = doc(db, 'tripEntries', tripId);
+              const tripDoc = await getDoc(tripDocRef);
+              const tripData = tripDoc.data();
+              
+              await deleteDoc(tripDocRef);
+              console.log('Trip deleted with ID:', tripData);
+
+              const vehicleNo = tripData?.vehicleNo;
+              
+              // Decrease loadCount in vehicles collection
+              const vehicleDocRef = doc(db, 'vehicles', vehicleNo);
+              await updateDoc(vehicleDocRef, {
+                loadCount: increment(-1)
+              });
+
+              console.log('Decreased loadCount for vehicle:', vehicleNo);
+
+              // Decrease loadCount in parties collection for each location
+              if (tripData?.locations) {
+                for (const location of tripData.locations) {
+                  if (location.to) {
+                    try {
+                      const partyDocRef = doc(db, 'parties', location.to);
+                      const partyDoc = await getDoc(partyDocRef);
+                      if (partyDoc.exists()) {
+                        await updateDoc(partyDocRef, {
+                          loadCount: increment(-1)
+                        });
+                      }
+                      console.log('Decreased loadCount for party:', location.to);
+                    } catch (partyError) {
+                      console.warn(`Error updating party ${location.to}:`, partyError);
+                      // Continue with other locations even if one fails
+                    }
+                  }
+                }
+              }
+              
               await loadTrips();
               Alert.alert('Success', 'Trip deleted successfully');
             } catch (error) {

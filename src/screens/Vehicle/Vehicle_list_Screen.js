@@ -149,11 +149,19 @@ const Vehicle_list_Screen = () => {
               // Decrease loadCount in parties collection for each location
               if (tripData?.locations) {
                 for (const location of tripData.locations) {
-                  if (location.from) {
-                    const partyDocRef = doc(db, 'parties', location.from);
-                    await updateDoc(partyDocRef, {
-                      loadCount: increment(-1)
-                    });
+                  if (location.to) {
+                    try {
+                      const partyDocRef = doc(db, 'parties', location.to);
+                      const partyDoc = await getDoc(partyDocRef);
+                      if (partyDoc.exists()) {
+                        await updateDoc(partyDocRef, {
+                          loadCount: increment(-1)
+                        });
+                      }
+                    } catch (partyError) {
+                      console.warn(`Error updating party ${location.to}:`, partyError);
+                      // Continue with other locations even if one fails
+                    }
                   }
                 }
               }
