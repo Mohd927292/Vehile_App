@@ -14,17 +14,19 @@ import {
   Appbar,
   Provider as PaperProvider,
 } from 'react-native-paper';
-import { useNavigate } from 'react-router-native';
+import { useNavigate, useLocation } from 'react-router-native';
 import { db } from '../../config/firebase';
 import { collection, addDoc, serverTimestamp } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
 
 const AddCustomer = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { colors } = useTheme();
+  const prefilledName = location.state?.customerName || '';
   const [customerData, setCustomerData] = useState({
-    msName: '',
-    msnamelower: '',
+    msName: prefilledName,
+    msnamelower: prefilledName.toLowerCase(),
     address1: '',
     address2: '',
     gstin: '',
@@ -134,7 +136,8 @@ const AddCustomer = () => {
               value={customerData.msName}
               onChangeText={(value) => handleInputChange('msName', value)}
               placeholder="Enter company name"
-              mode="outlined"
+              autoCapitalize="characters"
+                            mode="outlined"
               style={[styles.input, {backgroundColor:colors.surface}]}
               outlineColor={colors.border}
               activeOutlineColor={colors.primary}
@@ -148,6 +151,8 @@ const AddCustomer = () => {
               value={customerData.address1}
               onChangeText={(value) => handleInputChange('address1', value)}
               placeholder="Enter address line 1"
+              
+              autoCapitalize="characters"
               multiline
               mode="outlined"
               style={[styles.input, styles.multilineInput,{backgroundColor:colors.surface}]}
@@ -163,6 +168,7 @@ const AddCustomer = () => {
               value={customerData.address2}
               onChangeText={(value) => handleInputChange('address2', value)}
               placeholder="Enter address line 2"
+              autoCapitalize="characters"
               multiline
               mode="outlined"
               style={[styles.input, styles.multilineInput,{backgroundColor:colors.surface}]}

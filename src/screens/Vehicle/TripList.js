@@ -212,8 +212,21 @@ const TripList = () => {
       );
     }
 
+    // Check if any to field has "no load", "NO LOAD", or "IN LOCATION.TO"
+    const hasNoLoad = (() => {
+      for (let i = 1; i <= maxLocations; i++) {
+        const toValue = (item[`to${i}`] || '').toLowerCase();
+        if (toValue.includes('no load') || toValue.includes('in location.to')) {
+          return true;
+        }
+      }
+      return false;
+    })();
+
+    const rowStyle = hasNoLoad ? styles.redRow : styles.greenRow;
+
     return (
-      <View style={[styles.row, index % 2 === 0 ? styles.evenRow : styles.oddRow]}>
+      <View style={[styles.row, rowStyle, index % 2 === 0 ? styles.evenRow : styles.oddRow]}>
         <Text style={[styles.cell, styles.srCell]}>{item.srNo}</Text>
         <Text style={[styles.cell, styles.dateCell]} numberOfLines={1}>{item.date}</Text>
         <Text style={[styles.cell, styles.vehicleCell]} numberOfLines={1}>{item.vehicleNo}</Text>

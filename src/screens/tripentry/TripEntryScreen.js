@@ -255,8 +255,9 @@ const TripEntryScreen = () => {
   };
 
   const navigateToAddCustomer = () => {
+    const { customerName } = customerDialog;
     setCustomerDialog({ visible: false, field: '', tripIndex: -1, locationIndex: -1 });
-    navigate('/add-customer');
+    navigate('/add-customer', { state: { customerName } });
   };
 
   const validateTrip = (trip, tripIndex) => {
@@ -280,7 +281,7 @@ const TripEntryScreen = () => {
   const handleSubmit = async () => {
     console.log('=== SUBMIT STARTED ===');
     console.log('Total trips to submit:', trips.length);
-    
+
     // Validate all trips
     for (let i = 0; i < trips.length; i++) {
       const error = validateTrip(trips[i], i);
@@ -290,7 +291,21 @@ const TripEntryScreen = () => {
         return;
       }
     }
-    console.log('All trips validated successfully');
+
+    // Validate all customers exist
+    for (let i = 0; i < trips.length; i++) {
+      for (let j = 0; j < trips[i].locations.length; j++) {
+        const { to } = trips[i].locations[j];
+        if (to.trim()) {
+          const isValid = await validateCustomer(to);
+          if (!isValid) {
+            Alert.alert('Customer Not Found', `Customer "${to}" in trip ${i + 1} not found. Please add customer first.`);
+            return;
+          }
+        }
+      }
+    }
+    console.log('All trips and customers validated successfully');
 
     setLoading(true);
     const results = { success: 0, failed: 0, errors: [] };
@@ -323,7 +338,7 @@ const TripEntryScreen = () => {
 
       console.log('Final results:', results);
       if (results.success === trips.length) {
-      await clearDraft();
+        await clearDraft();
         Alert.alert('Success', `All ${results.success} trips added successfully!`, [
           { text: 'OK', onPress: () => navigate(-1) }
         ]);
@@ -344,254 +359,257 @@ const TripEntryScreen = () => {
   if (!hydrated) return null; // 👈 Wait for hydration before showing anything
   return (
     <PaperProvider>
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
       >
         <Appbar.Header style={{ backgroundColor: colors.surface }}>
-        <Appbar.BackAction onPress={() => navigate(-1)} />
-        <Appbar.Content title={`Trip ${currentTripIndex + 1} of ${trips.length}`} titleStyle={{ color: colors.text }} />
-        <View style={styles.headerButtons}>
-        {trips.length > 1 && (
-            <Button 
-              mode="contained" 
-              compact 
-              onPress={() => removeTrip(trips.length - 1)}
-              buttonColor="#dc2626"
-              textColor="#ffffff"
-              contentStyle={styles.headerButtonContent}
-              style={styles.headerRemoveButton}
-              labelStyle={styles.headerButtonLabel}
-            >
-              −
-            </Button>
-          )}
-          <Button 
-            mode="contained" 
-            compact 
-            onPress={addTrip}
-            buttonColor="#1e40af"
-            textColor="#ffffff"
-           // contentStyle={styles.headerButtonContent}
-            style={styles.headerAddButton}
-            labelStyle={styles.headerButtonLabel}
-          >
-            +
-          </Button>
-     
-        </View>
-      </Appbar.Header>
-      
-      <ScrollView 
-        style={[styles.container, { backgroundColor: colors.background }]}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ flexGrow: 1 }}
-        enableOnAndroid={true}
-      >
-        <ScrollView 
-          ref={tripsScrollRef}
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          pagingEnabled
-          snapToInterval={screenWidth}
-          decelerationRate="fast"
-          keyboardShouldPersistTaps="handled"
-          onScroll={(event) => {
-            const scrollX = event.nativeEvent.contentOffset.x;
-            const index = Math.round(scrollX / screenWidth);
-            setCurrentTripIndex(Math.min(index, trips.length - 1));
-          }}
-          scrollEventThrottle={16}
-        >
-          <View style={styles.tripsContainer}>
-            {trips.map((trip, tripIndex) => (
-              <Card key={tripIndex} style={[styles.tripCard, { backgroundColor: colors.surface }]}>
-              <Card.Content>
-
-
-                <TextInput
-                  label="Date *"
-                  value={formatDateForDisplay(trip.date)}
-                  mode="outlined"
-                  style={[styles.input, { backgroundColor: colors.surface }]}
-                  theme={{ colors: { onSurfaceVariant: colors.text, color: colors.text, outline: colors.border } }}
-                  editable={false}
-                  right={<TextInput.Icon icon="calendar" color={colors.primary} onPress={() => showDatePicker(tripIndex)} />}
-                  outlineColor={colors.border}
-                  activeOutlineColor={colors.primary}
-                  selectionColor={colors.primary}
-                  textColor={colors.text}
-                  placeholderTextColor={colors.textSecondary}
-                />
-
-                <AutoSuggestInput
-                  label="Vehicle Number *"
-                  value={trip.vehicleNo}
-                  onChangeText={(text) => updateTrip(tripIndex, 'vehicleNo', text)}
-                  onSuggestionSelect={(suggestion) => handleVehicleSuggestion(tripIndex, suggestion)}
-                  getSuggestions={getVehicleSuggestions}
-                  placeholder="Enter vehicle number"
-                  autoCapitalize="characters"
-                  style={[styles.input, { zIndex: 30, backgroundColor: colors.surface }]}
-                  theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
-                  outlineColor={colors.border}
-                  activeOutlineColor={colors.primary}
-                  selectionColor={colors.primary}
-                  textColor={colors.text}
-                  placeholderTextColor={colors.textSecondary}
-                />
-
-                <TextInput
-                  label="Driver Name *"
-                  value={trip.driverName}
-                  onChangeText={(text) => updateTrip(tripIndex, 'driverName', text)}
-                  placeholder="Enter driver name"
-                  autoCapitalize="words"
-                  mode="outlined"
-                  style={[styles.input, { zIndex: 1, backgroundColor: colors.surface }]}
-                  theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
-                  outlineColor={colors.border}
-                  activeOutlineColor={colors.primary}
-                  selectionColor={colors.primary}
-                  textColor={colors.text}
-                  placeholderTextColor={colors.textSecondary}
-                />
-
-                {trip.locations.map((location, locationIndex) => (
-                  <Card key={locationIndex} style={[styles.locationCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <Card.Content>
-                      <View style={styles.locationHeader}>
-                        <Title style={[styles.locationTitle, { color: colors.onPrimary, backgroundColor: colors.primary }]}>{locationIndex + 1}</Title>
-                        <View style={styles.locationActions}>
-                        {trip.locations.length > 1 && (
-                            <Button 
-                              mode="contained" 
-                              compact 
-                              onPress={() => removeLocationPair(tripIndex, locationIndex)}
-                              buttonColor="#b91c1c"
-                              textColor="#ffffff"
-                              contentStyle={styles.locationButtonContent}
-                              style={styles.removeLocationButton}
-                              labelStyle={styles.locationButtonLabel}
-                            >
-                              -
-                            </Button>
-                          )}
-                          <Button 
-                            mode="contained" 
-                            compact 
-                            onPress={() => addLocationPair(tripIndex)}
-                            buttonColor="#059669"
-                            textColor="#ffffff"
-                            contentStyle={styles.locationButtonContent}
-                            style={styles.addLocationButton}
-                            labelStyle={styles.locationButtonLabel}
-                          >
-                            +
-                          </Button>
-                        
-                        </View>
-                      </View>
-                      
-                      <TextInput
-                        label="From Location *"
-                        value={location.from}
-                        onChangeText={(text) => handleLocationChange(tripIndex, locationIndex, 'from', text)}
-                        // onSuggestionSelect={(suggestion) => handleLocationSuggestion(tripIndex, locationIndex, 'from', suggestion)}
-                        // onBlur={(value) => handleLocationBlur(tripIndex, locationIndex, 'from', value)}
-                        // getSuggestions={getCustomerSuggestions}
-                        mode="outlined"
-
-                        placeholder="Enter from location"
-                        autoCapitalize="words"
-                        style={[styles.input, { zIndex: 20, backgroundColor: colors.surface }]}
-                        theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
-                        outlineColor={colors.border}
-                        activeOutlineColor={colors.primary}
-                        selectionColor={colors.primary}
-                        textColor={colors.text}
-                        placeholderTextColor={colors.textSecondary}
-                      />
-
-                      <AutoSuggestInput
-                        label="To Location *"
-                        value={location.to}
-                        onChangeText={(text) => handleLocationChange(tripIndex, locationIndex, 'to', text)}
-                        onSuggestionSelect={(suggestion) => handleLocationSuggestion(tripIndex, locationIndex, 'to', suggestion)}
-                        onBlur={(value) => handleLocationBlur(tripIndex, locationIndex, 'to', value)}
-                        getSuggestions={getCustomerSuggestions}
-                        placeholder="Enter to location"
-                        autoCapitalize="words"
-                        style={[styles.input, { zIndex: 10, backgroundColor: colors.surface }]}
-                        theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
-                        outlineColor={colors.border}
-                        activeOutlineColor={colors.primary}
-                        selectionColor={colors.primary}
-                        textColor={colors.text}
-                        placeholderTextColor={colors.textSecondary}
-                      />
-                    </Card.Content>
-                  </Card>
-                ))}
-
-
-              </Card.Content>
-            </Card>
-            ))}
-          </View>
-        </ScrollView>
-        
-        <View style={[styles.submitContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-          <Button
-            mode="contained"
-            onPress={handleSubmit}
-            disabled={loading}
-            style={[styles.submitButton, { backgroundColor: colors.primary }]}
-            loading={loading}
-          >
-            Submit All Trips
-          </Button>
-        </View>
-      </ScrollView>
-      
-      {datePickerState.show && (
-        <DateTimePicker
-          value={trips[datePickerState.tripIndex]?.date || new Date()}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onDateChange}
-        />
-      )}
-      
-      <Portal>
-        <Dialog visible={customerDialog.visible} onDismiss={handleCustomerNotFound}>
-          <Dialog.Title>Customer Not Found</Dialog.Title>
-          <Dialog.Content>
-            <Paragraph>
-              Customer "{customerDialog.customerName}" not found. Please add customer first.
-            </Paragraph>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button 
-              onPress={handleCustomerNotFound}
-              textColor="#64748b"
-              style={styles.dialogCancelButton}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onPress={navigateToAddCustomer}
+          <Appbar.BackAction onPress={() => navigate(-1)} />
+          <Appbar.Content title={`Trip ${currentTripIndex + 1} of ${trips.length}`} titleStyle={{ color: colors.text }} />
+          <View style={styles.headerButtons}>
+             <Button
               mode="contained"
+              compact
+              onPress={addTrip}
               buttonColor="#1e40af"
               textColor="#ffffff"
-              style={styles.dialogActionButton}
+              // contentStyle={styles.headerButtonContent}
+              style={styles.headerAddButton}
+              labelStyle={styles.headerButtonLabel}
             >
-              Add Customer
+              +
             </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+            {trips.length > 1 && (
+              <Button
+                mode="contained"
+                compact
+                onPress={() => removeTrip(trips.length - 1)}
+                buttonColor="#dc2626"
+                textColor="#ffffff"
+                contentStyle={styles.headerButtonContent}
+                style={styles.headerRemoveButton}
+                labelStyle={styles.headerButtonLabel}
+              >
+                −
+              </Button>
+            )}
+           
+
+          </View>
+        </Appbar.Header>
+
+        <ScrollView
+          style={[styles.container, { backgroundColor: colors.background }]}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1 }}
+          enableOnAndroid={true}
+        >
+          <ScrollView
+            ref={tripsScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            pagingEnabled
+            snapToInterval={screenWidth}
+            decelerationRate="fast"
+            keyboardShouldPersistTaps="handled"
+            onScroll={(event) => {
+              const scrollX = event.nativeEvent.contentOffset.x;
+              const index = Math.round(scrollX / screenWidth);
+              setCurrentTripIndex(Math.min(index, trips.length - 1));
+            }}
+            scrollEventThrottle={16}
+          >
+            <View style={styles.tripsContainer}>
+              {trips.map((trip, tripIndex) => (
+                <Card key={tripIndex} style={[styles.tripCard, { backgroundColor: colors.surface }]}>
+                  <Card.Content>
+
+
+                    <TextInput
+                      label="Date *"
+                      value={formatDateForDisplay(trip.date)}
+                      mode="outlined"
+                      style={[styles.input, { backgroundColor: colors.surface }]}
+                      theme={{ colors: { onSurfaceVariant: colors.text, color: colors.text, outline: colors.border } }}
+                      editable={false}
+                      right={<TextInput.Icon icon="calendar" color={colors.primary} onPress={() => showDatePicker(tripIndex)} />}
+                      outlineColor={colors.border}
+                      activeOutlineColor={colors.primary}
+                      selectionColor={colors.primary}
+                      textColor={colors.text}
+                      placeholderTextColor={colors.textSecondary}
+                    />
+
+                    <AutoSuggestInput
+                      label="Vehicle Number *"
+                      value={trip.vehicleNo}
+                      onChangeText={(text) => updateTrip(tripIndex, 'vehicleNo', text)}
+                      onSuggestionSelect={(suggestion) => handleVehicleSuggestion(tripIndex, suggestion)}
+                      getSuggestions={getVehicleSuggestions}
+                      placeholder="Enter vehicle number"
+                      autoCapitalize="characters"
+                      style={[styles.input, { zIndex: 30, backgroundColor: colors.surface }]}
+                      theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                      outlineColor={colors.border}
+                      activeOutlineColor={colors.primary}
+                      selectionColor={colors.primary}
+                      textColor={colors.text}
+                      placeholderTextColor={colors.textSecondary}
+                    />
+
+                    <TextInput
+                      label="Driver Name *"
+                      value={trip.driverName}
+                      onChangeText={(text) => updateTrip(tripIndex, 'driverName', text)}
+                      placeholder="Enter driver name"
+                      autoCapitalize="characters"
+                      mode="outlined"
+                      style={[styles.input, { zIndex: 1, backgroundColor: colors.surface }]}
+                      theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                      outlineColor={colors.border}
+                      activeOutlineColor={colors.primary}
+                      selectionColor={colors.primary}
+                      textColor={colors.text}
+                      placeholderTextColor={colors.textSecondary}
+                    />
+
+                    {trip.locations.map((location, locationIndex) => (
+                      <Card key={locationIndex} style={[styles.locationCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        <Card.Content>
+                          <View style={styles.locationHeader}>
+                            <Title style={[styles.locationTitle, { color: colors.onPrimary, backgroundColor: colors.primary }]}>{locationIndex + 1}</Title>
+                            <View style={styles.locationActions}>
+                              <Button
+                                mode="contained"
+                                compact
+                                onPress={() => addLocationPair(tripIndex)}
+                                buttonColor="#059669"
+                                textColor="#ffffff"
+                                contentStyle={styles.locationButtonContent}
+                                style={styles.addLocationButton}
+                                labelStyle={styles.locationButtonLabel}
+                              >
+                                +
+                              </Button>
+                              {trip.locations.length > 1 && (
+                                <Button
+                                  mode="contained"
+                                  compact
+                                  onPress={() => removeLocationPair(tripIndex, locationIndex)}
+                                  buttonColor="#b91c1c"
+                                  textColor="#ffffff"
+                                  contentStyle={styles.locationButtonContent}
+                                  style={styles.removeLocationButton}
+                                  labelStyle={styles.locationButtonLabel}
+                                >
+                                  -
+                                </Button>
+                              )}
+
+
+                            </View>
+                          </View>
+
+                          <TextInput
+                            label="From Location *"
+                            value={location.from}
+                            onChangeText={(text) => handleLocationChange(tripIndex, locationIndex, 'from', text)}
+                            // onSuggestionSelect={(suggestion) => handleLocationSuggestion(tripIndex, locationIndex, 'from', suggestion)}
+                            // onBlur={(value) => handleLocationBlur(tripIndex, locationIndex, 'from', value)}
+                            // getSuggestions={getCustomerSuggestions}
+                            mode="outlined"
+
+                            placeholder="Enter from location"
+                            autoCapitalize="characters"
+                            multiline
+                            style={[styles.input, { zIndex: 20, backgroundColor: colors.surface }]}
+                            theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                            outlineColor={colors.border}
+                            activeOutlineColor={colors.primary}
+                            selectionColor={colors.primary}
+                            textColor={colors.text}
+                            placeholderTextColor={colors.textSecondary}
+                          />
+
+                          <AutoSuggestInput
+                            label="To Location *"
+                            value={location.to}
+                            onChangeText={(text) => handleLocationChange(tripIndex, locationIndex, 'to', text)}
+                            onSuggestionSelect={(suggestion) => handleLocationSuggestion(tripIndex, locationIndex, 'to', suggestion)}
+                            onBlur={(value) => handleLocationBlur(tripIndex, locationIndex, 'to', value)}
+                            getSuggestions={getCustomerSuggestions}
+                            placeholder="Enter to location"
+                            autoCapitalize="characters"
+                            style={[styles.input, { zIndex: 10, backgroundColor: colors.surface }]}
+                            theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                            outlineColor={colors.border}
+                            activeOutlineColor={colors.primary}
+                            selectionColor={colors.primary}
+                            textColor={colors.text}
+                            placeholderTextColor={colors.textSecondary}
+                          />
+                        </Card.Content>
+                      </Card>
+                    ))}
+
+
+                  </Card.Content>
+                </Card>
+              ))}
+            </View>
+          </ScrollView>
+
+          <View style={[styles.submitContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+            <Button
+              mode="contained"
+              onPress={handleSubmit}
+              disabled={loading}
+              style={[styles.submitButton, { backgroundColor: colors.primary }]}
+              loading={loading}
+            >
+              Submit All Trips
+            </Button>
+          </View>
+        </ScrollView>
+
+        {datePickerState.show && (
+          <DateTimePicker
+            value={trips[datePickerState.tripIndex]?.date || new Date()}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={onDateChange}
+          />
+        )}
+
+        <Portal>
+          <Dialog visible={customerDialog.visible} onDismiss={handleCustomerNotFound}>
+            <Dialog.Title>Customer Not Found</Dialog.Title>
+            <Dialog.Content>
+              <Paragraph>
+                Customer "{customerDialog.customerName}" not found. Please add customer first.
+              </Paragraph>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button
+                onPress={handleCustomerNotFound}
+                textColor="#64748b"
+                style={styles.dialogCancelButton}
+              >
+                Cancel
+              </Button>
+              <Button
+                onPress={navigateToAddCustomer}
+                mode="contained"
+                buttonColor="#1e40af"
+                textColor="#ffffff"
+                style={styles.dialogActionButton}
+              >
+                Add Customer
+              </Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
       </KeyboardAvoidingView>
     </PaperProvider>
   );
@@ -602,10 +620,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tripsContainer: {
-    flexDirection: 'row',  },
+    flexDirection: 'row',
+  },
   tripCard: {
     width: Dimensions.get('window').width,
-     
+
   },
   submitContainer: {
     padding: 16,
@@ -631,7 +650,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   locationCard: {
-    
+
 
   },
   locationHeader: {
@@ -689,13 +708,13 @@ const styles = StyleSheet.create({
   headerButtonLabel: {
     fontSize: 25,
     fontWeight: '600',
-    height:20,
-    height:20,
+    height: 20,
+    height: 20,
     marginTop: 6,
-   
- 
-   
-   
+
+
+
+
   },
   addLocationButton: {
     borderRadius: 6,
@@ -726,7 +745,7 @@ const styles = StyleSheet.create({
   locationButtonLabel: {
     fontSize: 20,
     fontWeight: '600',
-   
+
     paddingVertical: 0,
     marginVertical: 0,
   },

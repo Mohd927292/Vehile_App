@@ -140,6 +140,7 @@ const EditCustomer = () => {
               value={customerData.msName}
               onChangeText={(value) => handleInputChange('msName', value)}
               placeholder="Enter company name"
+              autoCapitalize="characters"
               mode="outlined"
               style={[styles.input, { backgroundColor: colors.surface }]}
               outlineColor={colors.border}
@@ -154,6 +155,7 @@ const EditCustomer = () => {
               value={customerData.address1}
               onChangeText={(value) => handleInputChange('address1', value)}
               placeholder="Enter address line 1"
+              autoCapitalize="characters"
               multiline
               mode="outlined"
               style={[styles.input, styles.multilineInput, { backgroundColor: colors.surface }]}
@@ -169,6 +171,7 @@ const EditCustomer = () => {
               value={customerData.address2}
               onChangeText={(value) => handleInputChange('address2', value)}
               placeholder="Enter address line 2"
+              autoCapitalize="characters"
               multiline
               mode="outlined"
               style={[styles.input, styles.multilineInput, { backgroundColor: colors.surface }]}
