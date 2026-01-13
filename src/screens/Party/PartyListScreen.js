@@ -8,12 +8,12 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useNavigate } from 'react-router-native';
+import { useNavigation } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
 
 const PartyListScreen = () => {
-  const navigate = useNavigate();
+  const navigation = useNavigation();
   const { colors } = useTheme();
   const [parties, setParties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +67,7 @@ const PartyListScreen = () => {
   const renderParty = ({ item }) => (
     <TouchableOpacity 
       style={[styles.partyCard, { backgroundColor: colors.surface }]}
-      onPress={() => navigate('/party-details', { state: { to: item.to } })}
+      onPress={() => navigation.navigate('PartyDetails', { to: item.to })}
     >
       <View style={styles.partyHeader}>
         <Text style={[styles.partyName, { color: colors.text }]}>{item.to || 'N/A'}</Text>

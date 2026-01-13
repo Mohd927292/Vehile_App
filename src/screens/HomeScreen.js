@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { useNavigate } from 'react-router-native';
+import { useNavigation } from '@react-navigation/native';
 import { getAuth, signOut } from '@react-native-firebase/auth';
 import { useTheme } from '../hooks/useTheme';
 
 const HomeScreen = () => {
   const { colors, toggleTheme, isDark } = useTheme();
-  const navigate = useNavigate();
+  const navigation = useNavigation();
   const handleLogout = async () => {
     try {
       const auth = getAuth();
@@ -35,7 +35,7 @@ const HomeScreen = () => {
         
         <TouchableOpacity 
           style={[styles.customerListIcon, { backgroundColor: colors.primary }]}
-          onPress={() => navigate('/customer-list')}
+          onPress={() => navigation.navigate('CustomerList')}
         >
           <Text style={styles.iconText}>👥</Text>
         </TouchableOpacity>
@@ -48,7 +48,7 @@ const HomeScreen = () => {
         <View style={styles.menuGrid}>
           <TouchableOpacity 
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
-            onPress={() => navigate('/trip-entry')}
+            onPress={() => navigation.navigate('TripEntry')}
           >
             <Text style={styles.menuIcon}>➕</Text>
             <Text style={[styles.menuText, { color: colors.text }]}>Add Trip</Text>
@@ -56,7 +56,7 @@ const HomeScreen = () => {
           
           <TouchableOpacity 
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
-            onPress={() => navigate('/vehicle-list')}
+            onPress={() => navigation.navigate('VehicleList')}
           >
             <Text style={styles.menuIcon}>🚛</Text>
             <Text style={[styles.menuText, { color: colors.text }]}>Vehicles</Text>
@@ -64,7 +64,7 @@ const HomeScreen = () => {
           
           <TouchableOpacity 
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
-            onPress={() => navigate('/party-list')}
+            onPress={() => navigation.navigate('PartyList')}
           >
             <Text style={styles.menuIcon}>🏢</Text>
             <Text style={[styles.menuText, { color: colors.text }]}>Parties</Text>
@@ -72,7 +72,7 @@ const HomeScreen = () => {
           
           <TouchableOpacity 
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
-            onPress={() => navigate('/trip-list')}
+            onPress={() => navigation.navigate('TripList')}
           >
             <Text style={styles.menuIcon}>📋</Text>
             <Text style={[styles.menuText, { color: colors.text }]}>All Trips</Text>

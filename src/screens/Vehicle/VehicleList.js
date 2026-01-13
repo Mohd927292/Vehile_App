@@ -8,14 +8,14 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useNavigate } from 'react-router-native';
+import { useNavigation } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
 import { navigateWithParams } from '../../utils/navigation';
 
 const VehicleList = () => {
   const { colors } = useTheme();
-  const navigate = useNavigate();
+  const navigation = useNavigation();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +53,7 @@ const VehicleList = () => {
   const renderVehicle = ({ item }) => (
     <TouchableOpacity 
       style={[styles.vehicleCard, { backgroundColor: colors.surface }]}
-      onPress={() => navigateWithParams(navigate, '/vehicle-details', { vehicleNo: item.vehicleNo })}
+      onPress={() => navigation.navigate('VehicleDetails', { vehicleNo: item.vehicleNo })}
     >
       <View style={styles.vehicleHeader}>
         <Text style={[styles.vehicleNumber, { color: colors.text }]}>{item.vehicleNo || 'N/A'}</Text>
@@ -76,7 +76,7 @@ const VehicleList = () => {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
-        <TouchableOpacity onPress={() => navigate(-1)}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Vehicles</Text>

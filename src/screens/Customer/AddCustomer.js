@@ -14,16 +14,16 @@ import {
   Appbar,
   Provider as PaperProvider,
 } from 'react-native-paper';
-import { useNavigate, useLocation } from 'react-router-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { db } from '../../config/firebase';
 import { collection, addDoc, serverTimestamp } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
 
 const AddCustomer = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigation = useNavigation();
+  const route = useRoute();
   const { colors } = useTheme();
-  const prefilledName = location.state?.customerName || '';
+  const prefilledName = route.params?.customerName || '';
   const [customerData, setCustomerData] = useState({
     msName: prefilledName,
     msnamelower: prefilledName.toLowerCase(),
@@ -93,10 +93,10 @@ const AddCustomer = () => {
       const customersRef = collection(db, 'customers');
       const docRef = await addDoc(customersRef, customerDataToSave);
       
-      Alert.alert('Success', 'Customer saved successfully!', [
+        Alert.alert('Success', 'Customer saved successfully!', [
         { 
           text: 'OK', 
-          onPress: () => navigate(-1) 
+          onPress: () => navigation.goBack() 
         }
       ]);
     } catch (error) {
@@ -118,7 +118,7 @@ const AddCustomer = () => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
         <Appbar.Header style={[styles.appbar, { backgroundColor: colors.surface }]} elevated>
-          <Appbar.BackAction onPress={() => navigate(-1)} />
+          <Appbar.BackAction onPress={() => navigation.goBack()} />
           <Appbar.Content title="Add Customer" titleStyle={[styles.appbarTitle, { color: colors.text }]} />
         </Appbar.Header>
 

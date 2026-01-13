@@ -16,15 +16,15 @@ import {
   Appbar,
   Provider as PaperProvider,
 } from 'react-native-paper';
-import { useNavigate, useLocation } from 'react-router-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { db } from '../../config/firebase';
 import { collection, doc, updateDoc, serverTimestamp } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
 
 const EditCustomer = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const customer = location.state?.customer;
+  const navigation = useNavigation();
+  const route = useRoute();
+  const customer = route.params?.customer;
   const colorScheme = useColorScheme();
   const {colors} = useTheme();
   
@@ -100,7 +100,7 @@ const EditCustomer = () => {
       Alert.alert('Success', 'Customer updated successfully!', [
         {
           text: 'OK',
-          onPress: () => navigate(-1),
+          onPress: () => navigation.goBack(),
         },
       ]);
     } catch (error) {
@@ -122,7 +122,7 @@ const EditCustomer = () => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
         <Appbar.Header style={[styles.appbar, { backgroundColor: colors.background  }]} elevated>
-          <Appbar.BackAction onPress={() => navigate(-1)} />
+          <Appbar.BackAction onPress={() => navigation.goBack()} />
           <Appbar.Content title="Edit Customer" titleStyle={[styles.appbarTitle, { color: colors.text }]} />
         </Appbar.Header>
 

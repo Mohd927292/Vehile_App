@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { BackHandler } from 'react-native';
-import { NativeRouter, Routes, Route, useNavigate, useLocation } from 'react-router-native';
+import 'react-native-gesture-handler';
+import React, { useEffect, useState, useRef } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BackHandler, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getAuth,
@@ -23,31 +26,14 @@ import CustomerList from './src/screens/Customer/CustomerList';
 import EditCustomer from './src/screens/Customer/EditCustomer';
 import TripList from './src/screens/Vehicle/TripList';
 
-const BackButtonHandler = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  
-  useEffect(() => {
-    const backAction = () => {
-      if (location.pathname === '/') {
-        BackHandler.exitApp();
-        return true;
-      }
-      navigate(-1);
-      return true;
-    };
+const Stack = createNativeStackNavigator();
 
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
-    return () => backHandler.remove();
-  }, [navigate, location.pathname]);
-
-  return null;
-};
-
-const AppNavigator = () => {
+function App() {
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
   const auth = getAuth();
+  const navigationRef = useRef(null);
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, user => {
@@ -57,39 +43,83 @@ const AppNavigator = () => {
     return () => unsubscribe();
   }, [initializing, auth]);
 
+  // Android 16 back handler
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      const currentRoute = navigationRef.current?.getCurrentRoute();
+      console.log('🔙 Hardware back button pressed - Android 16, Current screen:', currentRoute?.name);
+      return false; // Let React Navigation handle
+    });
+    return () => backHandler.remove();
+  }, []);
+
+  // App state change listener
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      const currentRoute = navigationRef.current?.getCurrentRoute();
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        console.log('🟢 App has come to the foreground, Current screen:', currentRoute?.name);
+      } else if (nextAppState.match(/inactive|background/)) {
+        console.log('🔴 App has gone to the background, Current screen:', currentRoute?.name);
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
   if (initializing) return null;
 
   return (
-    <NativeRouter future={{ v7_relativeSplatPath: true }}>
-      <BackButtonHandler />
-      <Routes>
-        {user ? (
-          <>
-            <Route path="/" element={<HomeScreen />} />
-            <Route path="/trip-entry" element={<TripEntryScreen />} />
-            <Route path="/vehicle-list" element={<VehicleList />} />
-            <Route path="/vehicle-details" element={<Vehicle_list_Screen />} />
-            <Route path="/party-list" element={<PartyListScreen />} />
-            <Route path="/party-details" element={<PartyList_Details_Screen />} />
-            <Route path="/trip-list" element={<TripList />} />
-            <Route path="/edit-trip" element={<EditTrip />} />
-            <Route path="/add-customer" element={<AddCustomer />} />
-            <Route path="/customer-list" element={<CustomerList />} />
-            <Route path="/edit-customer" element={<EditCustomer />} />
-          </>
-        ) : (
-          <Route path="/" element={<LoginScreen />} />
-        )}
-      </Routes>
-    </NativeRouter>
-  );
-};
-
-function App() {
-  return (
-    <ThemeProvider>
-      <AppNavigator />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <NavigationContainer
+          ref={navigationRef}
+          onStateChange={(state) => {
+            const currentRoute = state?.routes?.[state.index];
+            console.log('📱 Navigation state changed to:', currentRoute?.name);
+          }}
+        >
+          <Stack.Navigator 
+            screenOptions={{ 
+              headerShown: false,
+              gestureEnabled: true,
+              fullScreenGestureEnabled: true,
+              animation: 'slide_from_right'
+            }}
+            screenListeners={{
+              beforeRemove: (e) => {
+                console.log('🚫 Screen about to be removed:', e.target?.split('-')[0]);
+              },
+              transitionStart: (e) => {
+                console.log('🔄 Screen transition started from:', e.target?.split('-')[0]);
+              },
+              transitionEnd: (e) => {
+                console.log('✅ Screen transition ended to:', e.target?.split('-')[0]);
+              }
+            }}
+          >
+            {user ? (
+              <>
+                <Stack.Screen name="Home" component={HomeScreen} />
+                <Stack.Screen name="TripEntry" component={TripEntryScreen} />
+                <Stack.Screen name="VehicleList" component={VehicleList} />
+                <Stack.Screen name="VehicleDetails" component={Vehicle_list_Screen} />
+                <Stack.Screen name="PartyList" component={PartyListScreen} />
+                <Stack.Screen name="PartyDetails" component={PartyList_Details_Screen} />
+                <Stack.Screen name="TripList" component={TripList} />
+                <Stack.Screen name="EditTrip" component={EditTrip} />
+                <Stack.Screen name="AddCustomer" component={AddCustomer} />
+                <Stack.Screen name="CustomerList" component={CustomerList} />
+                <Stack.Screen name="EditCustomer" component={EditCustomer} />
+              </>
+            ) : (
+              <Stack.Screen name="Login" component={LoginScreen} />
+            )}
+          </Stack.Navigator>
+        </NavigationContainer>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 

@@ -10,15 +10,15 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
-import { useNavigate, useLocation } from 'react-router-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import firestore, { getFirestore, collection, query, where, orderBy, limit, getDocs, doc, getDoc, deleteDoc, updateDoc, increment } from '@react-native-firebase/firestore';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
 import { getRouteParams, navigateWithParams } from '../../utils/navigation';
 
 const Vehicle_list_Screen = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { vehicleNo } = getRouteParams(location);
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { vehicleNo } = route.params || {};
   const [trips, setTrips] = useState([]);
   const [filteredTrips, setFilteredTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +84,7 @@ const Vehicle_list_Screen = () => {
   };
 
   const handleEdit = (trip) => {
-    navigateWithParams(navigate, '/edit-trip', { tripId: trip.id });
+    navigation.navigate('EditTrip', { tripId: trip.id });
   };
 
   const filterTrips = (query, tripsToFilter = null) => {

@@ -10,15 +10,15 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
-import { useNavigate, useLocation } from 'react-router-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { tripEntriesCollection } from '../../config/firebase';
 import {getFirestore,getDoc, getDocs, query, orderBy, deleteDoc,updateDoc, doc, increment } from '@react-native-firebase/firestore';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
 
 const PartyList_Details_Screen = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const to = location.state?.to;
+  const navigation = useNavigation();
+  const route = useRoute();
+  const to = route.params?.to;
   const [trips, setTrips] = useState([]);
   const [filteredTrips, setFilteredTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +81,7 @@ const PartyList_Details_Screen = () => {
   };
 
   const handleEdit = (trip) => {
-    navigate('/edit-trip', { state: { tripId: trip.id } });
+    navigation.navigate('EditTrip', { tripId: trip.id });
   };
 
   const filterTrips = (query, tripsToFilter = null) => {

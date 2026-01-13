@@ -10,7 +10,7 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
-import { useNavigate, useLocation } from 'react-router-native';
+import { useNavigation } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
 import {getFirestore, getDoc, deleteDoc, updateDoc, doc, increment, limit, startAfter } from '@react-native-firebase/firestore';
@@ -18,8 +18,7 @@ import { db } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
 
 const TripList = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigation = useNavigation();
   const { colors } = useTheme();
   const [trips, setTrips] = useState([]);
   const [filteredTrips, setFilteredTrips] = useState([]);
@@ -35,7 +34,7 @@ const TripList = () => {
   }, []);
 
   const handleEdit = (trip) => {
-    navigate('/edit-trip', { state: { tripId: trip.id } });
+    navigation.navigate('EditTrip', { tripId: trip.id });
   };
 
   const handleDelete = (tripId) => {
@@ -156,11 +155,12 @@ const TripList = () => {
   }, []);
 
   useEffect(() => {
-    // Reload trips when screen comes into focus (route changes)
-    if (location.pathname === '/trip-list') {
+    // Reload trips when screen comes into focus
+    const unsubscribe = navigation.addListener('focus', () => {
       loadTrips();
-    }
-  }, [location.pathname]);
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   useEffect(() => {
     // Update displayed trips when filteredTrips changes

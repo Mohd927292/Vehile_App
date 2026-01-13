@@ -8,7 +8,7 @@ import {
   KeyboardAvoidingView,
   Dimensions,
 } from 'react-native';
-import { useNavigate } from 'react-router-native';
+import { useNavigation } from '@react-navigation/native';
 import {
   TextInput,
   Button,
@@ -62,7 +62,7 @@ export const clearDraft = async () => {
 
 const TripEntryScreen = () => {
   const { colors } = useTheme();
-  const navigate = useNavigate();
+  const navigation = useNavigation();
   const screenWidth = Dimensions.get('window').width;
   const [hydrated, setHydrated] = useState(false);
   const [trips, setTrips] = useState([{
@@ -257,7 +257,7 @@ const TripEntryScreen = () => {
   const navigateToAddCustomer = () => {
     const { customerName } = customerDialog;
     setCustomerDialog({ visible: false, field: '', tripIndex: -1, locationIndex: -1 });
-    navigate('/add-customer', { state: { customerName } });
+    navigation.navigate('AddCustomer', { customerName });
   };
 
   const validateTrip = (trip, tripIndex) => {
@@ -340,7 +340,7 @@ const TripEntryScreen = () => {
       if (results.success === trips.length) {
         await clearDraft();
         Alert.alert('Success', `All ${results.success} trips added successfully!`, [
-          { text: 'OK', onPress: () => navigate(-1) }
+          { text: 'OK', onPress: () => navigation.goBack() }
         ]);
       } else {
         const message = `${results.success} trips saved, ${results.failed} failed.\n${results.errors.join('\n')}`;
@@ -365,7 +365,7 @@ const TripEntryScreen = () => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
       >
         <Appbar.Header style={{ backgroundColor: colors.surface }}>
-          <Appbar.BackAction onPress={() => navigate(-1)} />
+          <Appbar.BackAction onPress={() => navigation.goBack()} />
           <Appbar.Content title={`Trip ${currentTripIndex + 1} of ${trips.length}`} titleStyle={{ color: colors.text }} />
           <View style={styles.headerButtons}>
              <Button
