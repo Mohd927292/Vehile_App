@@ -1,12 +1,36 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getAuth, signOut } from '@react-native-firebase/auth';
 import { useTheme } from '../hooks/useTheme';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const HomeScreen = () => {
   const { colors, toggleTheme, isDark } = useTheme();
   const navigation = useNavigation();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollViewRef = useRef(null);
+  const screenWidth = Dimensions.get('window').width;
+  
+  const images = [
+    require('../../assets/images/1.jpg'),
+    require('../../assets/images/2.png'),
+    require('../../assets/images/3.png'),
+    require('../../assets/images/4.jpg'),
+    require('../../assets/images/5.jpg'),
+  ];
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % images.length;
+        scrollViewRef.current?.scrollTo({ x: nextIndex * (screenWidth - 40), animated: true });
+        return nextIndex;
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+  
   const handleLogout = async () => {
     try {
       const auth = getAuth();
@@ -21,8 +45,13 @@ const HomeScreen = () => {
       {/* Header with logo and customer list icon */}
       <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <View style={styles.logoContainer}>
-          <View style={[styles.logoPlaceholder, { backgroundColor: colors.border }]}>
-            <Text style={[styles.logoText, { color: colors.textSecondary }]}>LOGO</Text>
+          <View style={styles.logoIconWrapper}>
+            <Image 
+              source={require('../../assets/icons/Icon-192.png')} 
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+            <Text style={[styles.logoAppName, { color: colors.text }]}>TripTrack</Text>
           </View>
         </View>
         
@@ -30,27 +59,47 @@ const HomeScreen = () => {
           style={[styles.themeToggle, { backgroundColor: colors.textSecondary }]}
           onPress={toggleTheme}
         >
-          <Text style={styles.iconText}>{isDark ? '☀️' : '🌙'}</Text>
+          <Icon name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} size={24} color="white" />
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={[styles.customerListIcon, { backgroundColor: colors.primary }]}
           onPress={() => navigation.navigate('CustomerList')}
         >
-          <Text style={styles.iconText}>👥</Text>
+          <Icon name="account-group" size={26} color="white" />
         </TouchableOpacity>
       </View>
 
       {/* Main content area */}
       <View style={styles.content}>
-        <Text style={[styles.title, { color: colors.text }]}>Trip Tracking System</Text>
+        <View style={styles.sliderContainer}>
+          <ScrollView
+            ref={scrollViewRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              const index = Math.round(e.nativeEvent.contentOffset.x / (screenWidth - 40));
+              setCurrentIndex(index);
+            }}
+          >
+            {images.map((img, index) => (
+              <Image key={index} source={img} style={[styles.sliderImage, { width: screenWidth - 40 }]} resizeMode="cover" />
+            ))}
+          </ScrollView>
+          <View style={styles.pagination}>
+            {images.map((_, index) => (
+              <View key={index} style={[styles.dot, currentIndex === index && styles.activeDot]} />
+            ))}
+          </View>
+        </View>
         
         <View style={styles.menuGrid}>
           <TouchableOpacity 
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate('TripEntry')}
           >
-            <Text style={styles.menuIcon}>➕</Text>
+            <Icon name="plus-circle" size={48} color="#4CAF50" />
             <Text style={[styles.menuText, { color: colors.text }]}>Add Trip</Text>
           </TouchableOpacity>
           
@@ -58,7 +107,7 @@ const HomeScreen = () => {
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate('VehicleList')}
           >
-            <Text style={styles.menuIcon}>🚛</Text>
+            <Icon name="truck-fast" size={48} color="#FF9800" />
             <Text style={[styles.menuText, { color: colors.text }]}>Vehicles</Text>
           </TouchableOpacity>
           
@@ -66,7 +115,7 @@ const HomeScreen = () => {
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate('PartyList')}
           >
-            <Text style={styles.menuIcon}>🏢</Text>
+            <Icon name="domain" size={48} color="#9C27B0" />
             <Text style={[styles.menuText, { color: colors.text }]}>Parties</Text>
           </TouchableOpacity>
           
@@ -74,7 +123,7 @@ const HomeScreen = () => {
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate('TripList')}
           >
-            <Text style={styles.menuIcon}>📋</Text>
+            <Icon name="format-list-bulleted-square" size={48} color="#2196F3" />
             <Text style={[styles.menuText, { color: colors.text }]}>All Trips</Text>
           </TouchableOpacity>
         </View>
@@ -96,40 +145,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     paddingTop: 50,
-    elevation: 2,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
   },
   logoContainer: {
     flex: 1,
   },
-  logoPlaceholder: {
-    width: 80,
-    height: 50,
-    justifyContent: 'center',
+  logoIconWrapper: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
   },
-  logoText: {
-    fontSize: 12,
+  logoImage: {
+    width: 45,
+    height: 45,
+  },
+  logoAppName: {
+    fontSize: 20,
     fontWeight: 'bold',
+    marginLeft: 10,
+    letterSpacing: 0.5,
   },
   themeToggle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12,
   },
   customerListIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -143,10 +196,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
+  sliderContainer: {
+    width: '100%',
+    height: 200,
+    marginTop: 10,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  sliderImage: {
+    height: 200,
+    borderRadius: 12,
+  },
+  pagination: {
+    flexDirection: 'row',
+    position: 'absolute',
+    bottom: 10,
+    alignSelf: 'center',
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ccc',
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: '#FF6B35',
+    width: 24,
   },
   menuGrid: {
     flexDirection: 'row',
@@ -167,10 +243,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  menuIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
+
   menuText: {
     fontSize: 14,
     fontWeight: 'bold',

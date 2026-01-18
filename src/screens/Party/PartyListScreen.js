@@ -7,6 +7,7 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
@@ -17,6 +18,7 @@ const PartyListScreen = () => {
   const { colors } = useTheme();
   const [parties, setParties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadParties();
@@ -64,6 +66,10 @@ const PartyListScreen = () => {
     }
   };
 
+  const filteredParties = parties.filter(party =>
+    party.to.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const renderParty = ({ item }) => (
     <TouchableOpacity 
       style={[styles.partyCard, { backgroundColor: colors.surface }]}
@@ -95,13 +101,23 @@ const PartyListScreen = () => {
         <View style={styles.headerRight} />
       </View>
 
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.text }]}
+          placeholder="Search parties..."
+          placeholderTextColor={colors.textSecondary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
       {parties.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No parties found</Text>
         </View>
       ) : (
         <FlatList
-          data={parties}
+          data={filteredParties}
           renderItem={renderParty}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
@@ -142,6 +158,16 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  searchContainer: {
+    padding: 16,
+    paddingBottom: 8,
+  },
+  searchInput: {
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    elevation: 2,
   },
   listContent: {
     padding: 16,

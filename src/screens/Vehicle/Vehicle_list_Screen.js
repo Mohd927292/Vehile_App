@@ -200,29 +200,31 @@ const Vehicle_list_Screen = () => {
   );
 
   const renderRow = ({ item, index }) => {
-    // Recalculate srNo based on filtered list index
     const displaySrNo = index + 1;
+    const hasNoLoad = item.locations.some(loc => loc?.to?.toLowerCase() === 'no load');
+    const textColor = hasNoLoad ? 'red' : 'green';
+    
     return (
     <View style={[styles.row, index % 2 === 0 ? styles.evenRow : styles.oddRow]}>
-      <Text style={styles.cell}>{displaySrNo}</Text>
-      <Text style={styles.cell}>{item.date}</Text>
-      <Text style={styles.cell}>{item.vehicleNo}</Text>
-      <Text style={styles.cell}>{item.driverName}</Text>
+      <Text style={[styles.cell, { color: textColor }]}>{displaySrNo}</Text>
+      <Text style={[styles.cell, { color: textColor }]}>{item.date}</Text>
+      <Text style={[styles.cell, { color: textColor }]}>{item.vehicleNo}</Text>
+      <Text style={[styles.cell, { color: textColor }]}>{item.driverName}</Text>
       
       {Array.from({ length: maxLocations }, (_, i) => {
         const location = item.locations[i];
         return [
-          <Text key={`from-${i}`} style={styles.cell}>
+          <Text key={`from-${i}`} style={[styles.cell, { color: textColor }]}>
             {location?.from || 'N/A'}
           </Text>,
-          <Text key={`to-${i}`} style={styles.cell}>
+          <Text key={`to-${i}`} style={[styles.cell, { color: textColor }]}>
             {location?.to || 'N/A'}
           </Text>
         ];
       }).flat()}
       
-      <Text style={styles.cell}>{item.loadCount}</Text>
-      <Text style={styles.cell}>
+      <Text style={[styles.cell, { color: textColor }]}>{item.loadCount}</Text>
+      <Text style={[styles.cell, { color: textColor }]}>
         {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}
       </Text>
       

@@ -199,41 +199,32 @@ const TripList = () => {
 
   const renderTrip = useCallback(({ item, index }) => {
     const locationCells = [];
+    const hasNoLoad = item.locations.some(loc => loc?.to?.toLowerCase() === 'no load');
+    const textColor = hasNoLoad ? 'red' : 'green';
     for (let i = 0; i < maxLocations; i++) {
       locationCells.push(
-        <Text key={`from${i}`} style={[styles.cell, styles.locationCell]} numberOfLines={1}>
+        <Text key={`from${i}`} style={[styles.cell, styles.locationCell, { color: textColor }]} numberOfLines={1}>
           {item[`from${i + 1}`]}
         </Text>
       );
       locationCells.push(
-        <Text key={`to${i}`} style={[styles.cell, styles.locationCell]} numberOfLines={1}>
+        <Text key={`to${i}`} style={[styles.cell, styles.locationCell, { color: textColor }]} numberOfLines={1}>
           {item[`to${i + 1}`]}
         </Text>
       );
     }
 
-    // Check if any to field has "no load", "NO LOAD", or "IN LOCATION.TO"
-    const hasNoLoad = (() => {
-      for (let i = 1; i <= maxLocations; i++) {
-        const toValue = (item[`to${i}`] || '').toLowerCase();
-        if (toValue.includes('no load') || toValue.includes('in location.to')) {
-          return true;
-        }
-      }
-      return false;
-    })();
-
-    const rowStyle = hasNoLoad ? styles.redRow : styles.greenRow;
+    
 
     return (
-      <View style={[styles.row, rowStyle, index % 2 === 0 ? styles.evenRow : styles.oddRow]}>
-        <Text style={[styles.cell, styles.srCell]}>{item.srNo}</Text>
-        <Text style={[styles.cell, styles.dateCell]} numberOfLines={1}>{item.date}</Text>
-        <Text style={[styles.cell, styles.vehicleCell]} numberOfLines={1}>{item.vehicleNo}</Text>
-        <Text style={[styles.cell, styles.driverCell]} numberOfLines={1}>{item.driverName}</Text>
+      <View style={[styles.row, index % 2 === 0 ? styles.evenRow : styles.oddRow]}>
+        <Text style={[styles.cell, styles.srCell, { color: textColor }]}>{item.srNo}</Text>
+        <Text style={[styles.cell, styles.dateCell, { color: textColor }]} numberOfLines={1}>{item.date}</Text>
+        <Text style={[styles.cell, styles.vehicleCell, { color: textColor }]} numberOfLines={1}>{item.vehicleNo}</Text>
+        <Text style={[styles.cell, styles.driverCell, { color: textColor }]} numberOfLines={1}>{item.driverName}</Text>
         {locationCells}
-        <Text style={[styles.cell, styles.loadCell]}>{item.loadCount}</Text>
-        <Text style={[styles.cell, styles.createdCell]} numberOfLines={2}>
+        <Text style={[styles.cell, styles.loadCell, { color: textColor }]}>{item.loadCount}</Text>
+        <Text style={[styles.cell, styles.createdCell, { color: textColor }]} numberOfLines={2}>
           {item.createdAt ? item.createdAt.toLocaleString('en-GB', {
             day: '2-digit',
             month: '2-digit',

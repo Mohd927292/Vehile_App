@@ -7,6 +7,7 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
@@ -18,6 +19,7 @@ const VehicleList = () => {
   const navigation = useNavigation();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadVehicles();
@@ -49,6 +51,10 @@ const VehicleList = () => {
       setLoading(false);
     }
   };
+
+  const filteredVehicles = vehicles.filter(vehicle =>
+    vehicle.vehicleNo.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const renderVehicle = ({ item }) => (
     <TouchableOpacity 
@@ -83,13 +89,23 @@ const VehicleList = () => {
         <View style={styles.headerRight} />
       </View>
 
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.text }]}
+          placeholder="Search vehicles..."
+          placeholderTextColor={colors.textSecondary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
       {vehicles.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No vehicles found</Text>
         </View>
       ) : (
         <FlatList
-          data={vehicles}
+          data={filteredVehicles}
           renderItem={renderVehicle}
           keyExtractor={item => item.vehicleNo}
           contentContainerStyle={styles.listContent}
@@ -130,6 +146,16 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  searchContainer: {
+    padding: 16,
+    paddingBottom: 8,
+  },
+  searchInput: {
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    elevation: 2,
   },
   listContent: {
     padding: 16,
