@@ -10,6 +10,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Linking,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import RNFS from 'react-native-fs';
@@ -24,15 +25,7 @@ const isPDFModuleAvailable = () => {
   return generatePDF && typeof generatePDF === 'function';
 };
 
-/**
- * Professional Action Bar for Trip List: Excel, PDF, Calendar, Sort
- * 
- * Props:
- * @param {Array} data - Array of trip objects to export/filter/sort
- * @param {Function} onDataChange - Callback when filtered/sorted data changes: (newData) => void
- * @param {Function} onExcelExport - Optional custom Excel export handler
- * @param {Function} onPDFExport - Optional custom PDF export handler
- */
+
 const BUTTONS = [
   { key: 'excel', icon: 'microsoft-excel', color: '#388e3c', label: 'Export Excel' },
   { key: 'pdf', icon: 'file-pdf-box', color: '#d32f2f', label: 'Export PDF' },
@@ -46,8 +39,8 @@ const TripListExport = ({
   onExcelExport,
   onPDFExport,
 }) => {
-  console.log('🔧 TripListExport initialized with:', { 
-    dataLength: data.length, 
+  console.log('🔧 TripListExport initialized with:', {
+    dataLength: data.length,
     hasOnDataChange: !!onDataChange,
     onDataChangeType: typeof onDataChange,
     allProps: Object.keys(arguments[0] || {})
@@ -64,7 +57,7 @@ const TripListExport = ({
   // Convert date string to Date object for comparison
   const parseDate = useCallback((dateStr) => {
     if (!dateStr || dateStr === 'N/A') return null;
-    
+
     // Handle YYYY-MM-DD format (new format)
     if (dateStr.includes('-') && dateStr.length === 10) {
       const date = new Date(dateStr);
@@ -72,7 +65,7 @@ const TripListExport = ({
         return date;
       }
     }
-    
+
     // Handle DD/MM/YYYY format (legacy format)
     if (dateStr.includes('/')) {
       const parts = dateStr.split('/');
@@ -86,7 +79,7 @@ const TripListExport = ({
         }
       }
     }
-    
+
     // Fallback to standard Date parsing
     const date = new Date(dateStr);
     return isNaN(date.getTime()) ? null : date;
@@ -106,34 +99,34 @@ const TripListExport = ({
       console.log('❌ No date range selected, returning all trips');
       return trips;
     }
-    
+
     const filtered = trips.filter(trip => {
       const tripDate = parseDate(trip.date);
       if (!tripDate) {
         console.log('❌ Invalid trip date:', trip.date);
         return false;
       }
-      
+
       const startDateObj = new Date(start);
       const endDateObj = new Date(end);
-      
+
       // Set time to start/end of day for accurate comparison
       startDateObj.setHours(0, 0, 0, 0);
       endDateObj.setHours(23, 59, 59, 999);
       tripDate.setHours(0, 0, 0, 0); // Normalize trip date time
-      
+
       const inRange = tripDate >= startDateObj && tripDate <= endDateObj;
-      console.log('📅 Trip date check:', { 
+      console.log('📅 Trip date check:', {
         originalDate: trip.date,
-        tripDate: tripDate.toDateString(), 
-        startDate: startDateObj.toDateString(), 
-        endDate: endDateObj.toDateString(), 
-        inRange 
+        tripDate: tripDate.toDateString(),
+        startDate: startDateObj.toDateString(),
+        endDate: endDateObj.toDateString(),
+        inRange
       });
-      
+
       return inRange;
     });
-    
+
     console.log('✅ Calendar filtered trips:', filtered.length);
     return filtered;
   }, [parseDate]);
@@ -145,25 +138,25 @@ const TripListExport = ({
       console.log('❌ No sort field, returning original order');
       return trips;
     }
-    
+
     const sorted = [...trips].sort((a, b) => {
       let aValue, bValue;
-      
+
       if (field === 'date') {
         // Use dateTimestamp if available (better for sorting), fallback to date string
         if (a.dateTimestamp && b.dateTimestamp) {
           aValue = a.dateTimestamp.toDate ? a.dateTimestamp.toDate() : new Date(a.dateTimestamp);
           bValue = b.dateTimestamp.toDate ? b.dateTimestamp.toDate() : new Date(b.dateTimestamp);
-          console.log('📅 Sorting by dateTimestamp:', { 
-            aTimestamp: a.dateTimestamp, aParsed: aValue?.toDateString(), 
-            bTimestamp: b.dateTimestamp, bParsed: bValue?.toDateString() 
+          console.log('📅 Sorting by dateTimestamp:', {
+            aTimestamp: a.dateTimestamp, aParsed: aValue?.toDateString(),
+            bTimestamp: b.dateTimestamp, bParsed: bValue?.toDateString()
           });
         } else {
           aValue = parseDate(a.date);
           bValue = parseDate(b.date);
-          console.log('📅 Sorting by date string:', { 
-            aDate: a.date, aParsed: aValue?.toDateString(), 
-            bDate: b.date, bParsed: bValue?.toDateString() 
+          console.log('📅 Sorting by date string:', {
+            aDate: a.date, aParsed: aValue?.toDateString(),
+            bDate: b.date, bParsed: bValue?.toDateString()
           });
         }
         // Handle null dates (put them at the end)
@@ -174,9 +167,9 @@ const TripListExport = ({
         // createdAt is already a Date object from Firestore
         aValue = a.createdAt instanceof Date ? a.createdAt : (a.createdAt ? new Date(a.createdAt) : null);
         bValue = b.createdAt instanceof Date ? b.createdAt : (b.createdAt ? new Date(b.createdAt) : null);
-        console.log('⏰ Sorting by createdAt:', { 
-          aCreated: a.createdAt, aParsed: aValue?.toDateString(), 
-          bCreated: b.createdAt, bParsed: bValue?.toDateString() 
+        console.log('⏰ Sorting by createdAt:', {
+          aCreated: a.createdAt, aParsed: aValue?.toDateString(),
+          bCreated: b.createdAt, bParsed: bValue?.toDateString()
         });
         // Handle null dates (put them at the end)
         if (!aValue && !bValue) return 0;
@@ -186,27 +179,27 @@ const TripListExport = ({
         console.log('❌ Unknown sort field:', field);
         return 0;
       }
-      
+
       const result = order === 'asc' ? aValue - bValue : bValue - aValue;
       console.log('🔢 Sort comparison result:', result);
       return result;
     });
-    
+
     console.log('✅ Sorted trips count:', sorted.length);
     return sorted;
   }, [parseDate]);
 
   // Apply filters and sorting, then notify parent
   const applyFiltersAndSort = useCallback((trips, dateFilter = { start: startDate, end: endDate }, sort = sortConfig) => {
-    console.log('🚀 APPLY FILTERS AND SORT:', { 
-      originalTripsCount: trips.length, 
-      dateFilter, 
+    console.log('🚀 APPLY FILTERS AND SORT:', {
+      originalTripsCount: trips.length,
+      dateFilter,
       sort,
-      hasOnDataChange: !!onDataChange 
+      hasOnDataChange: !!onDataChange
     });
-    
+
     let filtered = [...trips];
-    
+
     // Apply date filter
     if (dateFilter.start && dateFilter.end) {
       console.log('📅 Applying date filter...');
@@ -214,7 +207,7 @@ const TripListExport = ({
     } else {
       console.log('⏭️ Skipping date filter (no date range)');
     }
-    
+
     // Apply sorting
     if (sort.field) {
       console.log('🔄 Applying sort...');
@@ -222,9 +215,9 @@ const TripListExport = ({
     } else {
       console.log('⏭️ Skipping sort (no sort field)');
     }
-    
+
     console.log('📊 Final result:', { finalCount: filtered.length });
-    
+
     // Notify parent component
     if (onDataChange) {
       console.log('📤 Sending data to parent component');
@@ -232,7 +225,7 @@ const TripListExport = ({
     } else {
       console.log('❌ No onDataChange callback provided');
     }
-    
+
     return filtered;
   }, [startDate, endDate, sortConfig, filterByDateRange, sortData, onDataChange]);
 
@@ -255,7 +248,7 @@ const TripListExport = ({
 
     try {
       setIsExporting(true);
-      
+
       // Prepare data for Excel
       const excelData = exportData.map((trip, index) => {
         const row = {
@@ -264,7 +257,7 @@ const TripListExport = ({
           'Vehicle No': trip.vehicleNo || 'N/A',
           'Driver Name': trip.driverName || 'N/A',
         };
-        
+
         // Add location columns dynamically
         if (trip.locations && Array.isArray(trip.locations)) {
           trip.locations.forEach((loc, idx) => {
@@ -272,12 +265,12 @@ const TripListExport = ({
             row[`To ${idx + 1}`] = loc.to || 'N/A';
           });
         }
-        
+
         row['Load Count'] = trip.loadCount || 'N/A';
-        row['Created At'] = trip.createdAt 
-          ? new Date(trip.createdAt).toLocaleString() 
+        row['Created At'] = trip.createdAt
+          ? new Date(trip.createdAt).toLocaleString()
           : 'N/A';
-        
+
         return row;
       });
 
@@ -288,7 +281,7 @@ const TripListExport = ({
 
       // Generate Excel file buffer
       const wbout = XLSX.write(wb, { type: 'binary', bookType: 'xlsx' });
-      
+
       // Convert to base64
       const base64 = btoa(
         wbout
@@ -300,10 +293,10 @@ const TripListExport = ({
       // Create temporary file for sharing
       const fileName = `TripReport_${new Date().getTime()}.xlsx`;
       const filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
-      
+
       // Write to temporary cache directory
       await RNFS.writeFile(filePath, base64, 'base64');
-      
+
       // Share directly without alert
       const shareOptions = {
         title: 'Share Excel File',
@@ -311,9 +304,9 @@ const TripListExport = ({
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         filename: fileName,
       };
-      
+
       await Share.open(shareOptions);
-      
+
       // Clean up temporary file after sharing
       try {
         await RNFS.unlink(filePath);
@@ -321,7 +314,7 @@ const TripListExport = ({
         // Ignore cleanup errors
         console.log('Cleanup error (non-critical):', unlinkError);
       }
-      
+
       setIsExporting(false);
     } catch (error) {
       setIsExporting(false);
@@ -351,147 +344,324 @@ const TripListExport = ({
     try {
       setIsExporting(true);
 
-      // Generate HTML table for PDF
+      // Calculate maximum number of locations from all trips
+      const maxLocations = Math.max(
+        ...exportData.map(trip => (trip.locations && Array.isArray(trip.locations)) ? trip.locations.length : 0),
+        1
+      );
+
+      // Generate dynamic location headers (From 1, To 1, From 2, To 2, etc.)
+      const generateLocationHeaders = () => {
+        let headers = '';
+        for (let i = 0; i < maxLocations; i++) {
+          const locationNum = i + 1;
+          headers += `<th style="width: 6%;">From ${locationNum}</th><th style="width: 6%;">To ${locationNum}</th>`;
+        }
+        return headers;
+      };
+
+      // Generate HTML table for PDF with dynamic location columns
       const generateTableRows = () => {
         return exportData.map((trip, index) => {
-          const locationsHtml = trip.locations && Array.isArray(trip.locations)
-            ? trip.locations.map((loc, idx) => 
-                `<td>${loc.from || 'N/A'}</td><td>${loc.to || 'N/A'}</td>`
-              ).join('')
-            : '<td>N/A</td><td>N/A</td>';
-          
-          const createdAt = trip.createdAt 
-            ? new Date(trip.createdAt).toLocaleString() 
-            : 'N/A';
-          
+          // Generate location cells based on max locations
+          let locationCells = '';
+          if (trip.locations && Array.isArray(trip.locations)) {
+            for (let i = 0; i < maxLocations; i++) {
+              const location = trip.locations[i];
+              const from = location ? (location.from || '') : '';
+              const to = location ? (location.to || '') : '';
+              locationCells += `<td>${from}</td><td>${to}</td>`;
+            }
+          } else {
+            // If no locations, fill with empty cells
+            for (let i = 0; i < maxLocations; i++) {
+              locationCells += `<td></td><td></td>`;
+            }
+          }
+
+          const createdAt = trip.createdAt
+            ? new Date(trip.createdAt).toLocaleString('en-GB', {
+              day: '2-digit',
+              month: '2-digit',
+              year: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+            : '';
+
           return `
             <tr>
-              <td>${index + 1}</td>
-              <td>${trip.date || 'N/A'}</td>
-              <td>${trip.vehicleNo || 'N/A'}</td>
-              <td>${trip.driverName || 'N/A'}</td>
-              ${locationsHtml}
-              <td>${trip.loadCount || 'N/A'}</td>
-              <td>${createdAt}</td>
+              <td style="text-align: center; font-weight: 500;">${index + 1}</td>
+              <td>${trip.date || ''}</td>
+              <td>${trip.vehicleNo || ''}</td>
+              <td>${trip.driverName || ''}</td>
+              ${locationCells}
+              <td style="text-align: center;">${trip.loadCount || 0}</td>
+              <td style="font-size: 9px;">${createdAt}</td>
             </tr>
           `;
         }).join('');
       };
+
+      const reportDate = new Date().toLocaleString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+
+      // Read signature image as base64
+      let signatureBase64 = '';
+      try {
+        // Use Image.resolveAssetSource to get the proper asset path
+        const signatureAsset = require('../../assets/images/SIGN.png');
+        const signPath = signatureAsset.uri;
+
+        console.log('🔍 Checking for signature at:', signPath);
+        const exists = await RNFS.exists(signPath);
+
+        if (exists) {
+          signatureBase64 = await RNFS.readFile(signPath, 'base64');
+          console.log('✅ Signature loaded successfully');
+        } else {
+          console.warn('⚠️ Signature file not found at:', signPath);
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not load signature:', e.message);
+      }
 
       const html = `
         <!DOCTYPE html>
         <html>
           <head>
             <meta charset="utf-8">
-            <title>Trip Report</title>
+            <title>Trip Ticket & Cash Credit Bill</title>
             <style>
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
               body {
                 font-family: Arial, sans-serif;
-                margin: 20px;
+                padding: 8px;
+                background-color: #fff;
+                margin: 4px;
               }
-              h1 {
-                color: #1976d2;
+              .document {
+                border: 3px solid #6e6d6d;
+              }
+              
+              /* HEADER */
+              .header {
+                border-bottom: 3px solid #000;
+                padding: 12px 10px;
                 text-align: center;
-                margin-bottom: 20px;
+                background-color: #fff;
               }
+              .company-name {
+                font-size: 22px;
+                font-weight: 900;
+                color: #2d5016;
+                margin-bottom: 3px;
+                letter-spacing: 0.5px;
+              }
+              .company-details {
+                font-size: 9px;
+                color: #333;
+                line-height: 1.3;
+                margin-bottom: 2px;
+              }
+              .company-address {
+                font-size: 8px;
+                color: #333;
+                line-height: 1.2;
+              }
+              
+              /* BILL TITLE */
+              .bill-title {
+                border-bottom: 3px solid #000;
+                padding: 8px;
+                text-align: center;
+                font-size: 13px;
+                font-weight: 700;
+                background-color: #f0f0f0;
+              }
+              
+              /* DATA SECTION */
+              .data-section {
+                padding: 8px;
+                border-bottom: 3px solid #000;
+              }
+              
               table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-top: 20px;
+                margin-top: 8px;
               }
-              th, td {
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: left;
-                font-size: 10px;
+              thead {
+                background-color: #4472c4;
+                color: white;
               }
               th {
-                background-color: #1976d2;
-                color: white;
-                font-weight: bold;
+                border: 1px solid #000;
+                padding: 6px 4px;
+                text-align: center;
+                font-weight: 600;
+                font-size: 9px;
+                text-transform: uppercase;
               }
-              tr:nth-child(even) {
-                background-color: #f2f2f2;
+              td {
+                border: 1px solid #ccc;
+                padding: 5px 4px;
+                font-size: 9px;
+                color: #333;
               }
-              .header-row {
-                background-color: #333;
-                color: white;
+              tbody tr:nth-child(odd) {
+                background-color: #f9f9f9;
+              }
+              tbody tr:nth-child(even) {
+                background-color: #fff;
+              }
+              
+              /* FOOTER */
+              .footer {
+                display: flex;
+                padding: 12px;
+                gap: 20px;
+              }
+              
+              .remark-box {
+                flex: 1;
+              }
+              .remark-label {
+                font-weight: 700;
+                font-size: 11px;
+                color: #d32f2f;
+                margin-bottom: 3px;
+              }
+              .remark-field {
+                border: 1px solid #999;
+                min-height: 35px;
+                background-color: #f9f9f9;
+              }
+              
+              .signature-box {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+              }
+              .signature-image {
+                max-width: 80px;
+                max-height: 50px;
+                margin-bottom: 3px;
+              }
+              .signature-text {
+                font-size: 9px;
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 2px;
+              }
+              .signature-subtext {
+                font-size: 8px;
+                color: #555;
               }
             </style>
           </head>
           <body>
-            <h1>Trip Report</h1>
-            <p>Generated on: ${new Date().toLocaleString()}</p>
-            <p>Total Records: ${exportData.length}</p>
-            <table>
-              <thead>
-                <tr class="header-row">
-                  <th>Sr No</th>
-                  <th>Date</th>
-                  <th>Vehicle No</th>
-                  <th>Driver Name</th>
-                  <th>From</th>
-                  <th>To</th>
-                  <th>Load Count</th>
-                  <th>Created At</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${generateTableRows()}
-              </tbody>
-            </table>
+            <div class="document">
+              <!-- HEADER -->
+              <div class="header">
+              <div class="company-name">RNA SERVICES</div>
+                <div class="company-name">VEHICLE TRANSPORT SYSTEM</div>
+                <div class="company-details">GSTIN:29AYLPR9800N1ZH/EMAIL:92RNASERVICES@GMAIL.COM / Ph. 9241598450/9845301473</div>
+                <div class="company-address">No. 73, 1st Main Road, 17th Cross, Bapujinagar, Mysore Road, Bangalore-560026, Karnataka, India.</div>
+              </div>
+
+              <!-- TITLE -->
+              <div class="bill-title">TRIP DETAILS</div>
+
+              <!-- DATA SECTION -->
+              <div class="data-section">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 3%;">Sr</th>
+                      <th style="width: 8%;">Date</th>
+                      <th style="width: 7%;">Vehicle</th>
+                      <th style="width: 8%;">Driver</th>
+                      ${generateLocationHeaders()}
+                      <th style="width: 5%; text-align: center;">Loads</th>
+                      <th style="width: 8%;">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${generateTableRows()}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- FOOTER -->
+              <div class="footer">
+                <div class="remark-box">
+                  <div class="remark-label">REMARK:</div>
+            
+                </div>
+               
+              </div>
+            </div>
           </body>
         </html>
       `;
 
       // Generate PDF to cache directory
       const fileName = `TripReport_${new Date().getTime()}.pdf`;
-      
+
       const options = {
         html: html,
         fileName: fileName.replace('.pdf', ''),
         directory: 'Cache',
         base64: false,
       };
-      
+
       const file = await generatePDF(options);
-      
+
       // Use the file path from the result
       let originalPdfPath = file?.filePath || file?.uri || file?.path;
-      
+
       if (!originalPdfPath) {
         console.error('PDF generation result:', JSON.stringify(file, null, 2));
         throw new Error('PDF file path not generated. File object: ' + JSON.stringify(file));
       }
-      
+
       // Remove file:// prefix if present
       let sourcePath = originalPdfPath.replace(/^file:\/\//, '');
-      
+
       // Verify source file exists
       const sourceExists = await RNFS.exists(sourcePath);
       if (!sourceExists) {
         console.error('Source PDF file not found:', sourcePath);
         throw new Error(`PDF file not found at path: ${sourcePath}`);
       }
-      
+
       // Copy to our cache directory to ensure consistent path format (like Excel export)
       const cacheFilePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
       await RNFS.copyFile(sourcePath, cacheFilePath);
-      
+
       // Verify copied file exists
       const copiedExists = await RNFS.exists(cacheFilePath);
       if (!copiedExists) {
         throw new Error(`Failed to copy PDF file to cache: ${cacheFilePath}`);
       }
-      
+
       // Use the cache file path for sharing
       const absolutePath = cacheFilePath;
-      
+
       // Verify URI is not null/empty before sharing
       if (!absolutePath) {
         throw new Error(`Invalid file path: ${absolutePath}`);
       }
-      
+
       // Try different approaches for Android vs iOS
       let shareOptions;
       if (Platform.OS === 'android') {
@@ -512,7 +682,7 @@ const TripListExport = ({
           filename: fileName,
         };
       }
-      
+
       // Log for debugging
       console.log('Sharing PDF:', {
         originalPath: originalPdfPath,
@@ -522,9 +692,9 @@ const TripListExport = ({
         sourceExists: sourceExists,
         copiedExists: copiedExists,
       });
-      
+
       await Share.open(shareOptions);
-      
+
       // Clean up temporary files after sharing
       try {
         // Remove the copied cache file
@@ -539,7 +709,7 @@ const TripListExport = ({
         // Ignore cleanup errors
         console.log('Cleanup error (non-critical):', unlinkError);
       }
-      
+
       setIsExporting(false);
     } catch (error) {
       setIsExporting(false);
@@ -561,7 +731,7 @@ const TripListExport = ({
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
-    
+
     const days = [];
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
@@ -571,7 +741,7 @@ const TripListExport = ({
     for (let day = 1; day <= daysInMonth; day++) {
       days.push(day);
     }
-    
+
     return { days, year, month };
   }, []);
 
@@ -606,15 +776,15 @@ const TripListExport = ({
     const dateStr = formatDateString(year, month, day);
     const today = new Date();
     const selectedDate = new Date(year, month, day);
-    
+
     // Don't allow future dates
     if (selectedDate > today) return;
-    
+
     // If no start date selected, or both dates selected, start fresh
     if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
       setSelectedStartDate(dateStr);
       setSelectedEndDate(null);
-    } 
+    }
     // If start date selected but not end date
     else if (selectedStartDate && !selectedEndDate) {
       // If selected date is before start date, make it the new start date
@@ -655,17 +825,17 @@ const TripListExport = ({
   // Apply date filter
   const applyDateFilter = useCallback(() => {
     console.log('📅 APPLY DATE FILTER:', { selectedStartDate, selectedEndDate });
-    
+
     if (!selectedStartDate || !selectedEndDate) {
       Alert.alert('Invalid Selection', 'Please select both start and end dates');
       return;
     }
-    
+
     if (selectedEndDate < selectedStartDate) {
       Alert.alert('Invalid Range', 'End date must be after start date');
       return;
     }
-    
+
     setStartDate(selectedStartDate);
     setEndDate(selectedEndDate);
     console.log('🎯 Applying calendar filter with data:', data.length, 'trips');
@@ -695,10 +865,10 @@ const TripListExport = ({
 
   // Handle sort selection (just update the config, don't apply immediately)
   const handleSort = useCallback((field) => {
-    const newOrder = sortConfig.field === field && sortConfig.order === 'asc' 
-      ? 'desc' 
+    const newOrder = sortConfig.field === field && sortConfig.order === 'asc'
+      ? 'desc'
       : 'asc';
-    
+
     setSortConfig({ field, order: newOrder });
   }, [sortConfig]);
 
@@ -712,7 +882,7 @@ const TripListExport = ({
 
   // Button handlers
   const handlers = {
-    excel: onExcelExport 
+    excel: onExcelExport
       ? () => onExcelExport(data)
       : () => exportToExcel(data),
     pdf: onPDFExport
@@ -762,7 +932,7 @@ const TripListExport = ({
                 <Icon name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.calendarContainer}>
               {/* Calendar Header */}
               <View style={styles.calendarHeader}>
@@ -788,7 +958,7 @@ const TripListExport = ({
                     size={24}
                     color={
                       new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1) >
-                      new Date()
+                        new Date()
                         ? '#ccc'
                         : '#1976d2'
                     }
@@ -847,10 +1017,10 @@ const TripListExport = ({
                       >
                         <Text
                           style={[
-                          styles.calendarDayText,
-                          isFuture && styles.calendarDayTextDisabled,
-                          (isStart || isEnd) && styles.calendarDayTextSelected,
-                          isToday && styles.calendarDayTextToday,
+                            styles.calendarDayText,
+                            isFuture && styles.calendarDayTextDisabled,
+                            (isStart || isEnd) && styles.calendarDayTextSelected,
+                            isToday && styles.calendarDayTextToday,
                           ]}
                         >
                           {day}
@@ -867,11 +1037,11 @@ const TripListExport = ({
                 {!selectedStartDate
                   ? 'Select start date'
                   : !selectedEndDate
-                  ? `Start: ${selectedStartDate} - Select end date`
-                  : `Selected Range: ${selectedStartDate} to ${selectedEndDate}`}
+                    ? `Start: ${selectedStartDate} - Select end date`
+                    : `Selected Range: ${selectedStartDate} to ${selectedEndDate}`}
               </Text>
             </View>
-            
+
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
@@ -905,114 +1075,113 @@ const TripListExport = ({
         </View>
       </Modal>
 
- {/* Sort Modal */}
-<Modal
-  visible={showSortModal}
-  transparent
-  animationType="slide"
-  onRequestClose={() => setShowSortModal(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalCard}>
+      {/* Sort Modal */}
+      <Modal
+        visible={showSortModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowSortModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Sort</Text>
-        <TouchableOpacity onPress={() => setShowSortModal(false)}>
-          <Icon name="close" size={22} color="#444" />
-        </TouchableOpacity>
-      </View>
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Sort</Text>
+              <TouchableOpacity onPress={() => setShowSortModal(false)}>
+                <Icon name="close" size={22} color="#444" />
+              </TouchableOpacity>
+            </View>
 
-      {/* Summary */}
-      <View style={styles.summary}>
-        <Text style={styles.summaryLabel}>Current selection</Text>
-        <Text style={styles.summaryValue}>
-          {sortConfig.field
-            ? `${sortConfig.field === 'date' ? 'Date' : 'Created At'} · ${
-                sortConfig.order === 'asc' ? 'Ascending' : 'Descending'
-              }`
-            : 'None'}
-        </Text>
-      </View>
+            {/* Summary */}
+            <View style={styles.summary}>
+              <Text style={styles.summaryLabel}>Current selection</Text>
+              <Text style={styles.summaryValue}>
+                {sortConfig.field
+                  ? `${sortConfig.field === 'date' ? 'Date' : 'Created At'} · ${sortConfig.order === 'asc' ? 'Ascending' : 'Descending'
+                  }`
+                  : 'None'}
+              </Text>
+            </View>
 
-      {/* Sort Field */}
-      <Text style={styles.sectionTitle}>Sort by</Text>
+            {/* Sort Field */}
+            <Text style={styles.sectionTitle}>Sort by</Text>
 
-      {[
-        { key: 'date', label: 'Date' },
-        { key: 'createdAt', label: 'Created At' },
-      ].map(item => (
-        <TouchableOpacity
-          key={item.key}
-          style={styles.radioRow}
-          onPress={() => handleSort(item.key)}
-        >
-          <View style={styles.radioOuter}>
-            {sortConfig.field === item.key && (
-              <View style={styles.radioInner} />
-            )}
+            {[
+              { key: 'date', label: 'Date' },
+              { key: 'createdAt', label: 'Created At' },
+            ].map(item => (
+              <TouchableOpacity
+                key={item.key}
+                style={styles.radioRow}
+                onPress={() => handleSort(item.key)}
+              >
+                <View style={styles.radioOuter}>
+                  {sortConfig.field === item.key && (
+                    <View style={styles.radioInner} />
+                  )}
+                </View>
+                <Text style={styles.radioLabel}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+
+            {/* Order */}
+            <Text style={styles.sectionTitle}>Order</Text>
+
+            <View style={styles.segment}>
+              {[
+                { key: 'asc', label: 'Ascending' },
+                { key: 'desc', label: 'Descending' },
+              ].map(item => (
+                <TouchableOpacity
+                  key={item.key}
+                  style={[
+                    styles.segmentButton,
+                    sortConfig.order === item.key && styles.segmentActive,
+                  ]}
+                  onPress={() =>
+                    setSortConfig(prev => ({ ...prev, order: item.key }))
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.segmentText,
+                      sortConfig.order === item.key && styles.segmentTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <TouchableOpacity onPress={clearSort}>
+                <Text style={styles.clearText}>Reset</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.applyButton}
+                onPress={() => {
+                  console.log('🔄 APPLY SORT BUTTON PRESSED:', sortConfig);
+                  if (sortConfig.field) {
+                    console.log('🎯 Applying sort with data:', data.length, 'trips');
+                    applyFiltersAndSort(data, { start: startDate, end: endDate }, sortConfig);
+                    Alert.alert('Sort Applied', `Sorted by ${sortConfig.field} (${sortConfig.order})`);
+                  } else {
+                    console.log('❌ No sort field selected');
+                    Alert.alert('No Sort Selected', 'Please select a field to sort by');
+                  }
+                  setShowSortModal(false);
+                }}
+              >
+                <Text style={styles.applyText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <Text style={styles.radioLabel}>{item.label}</Text>
-        </TouchableOpacity>
-      ))}
-
-      {/* Order */}
-      <Text style={styles.sectionTitle}>Order</Text>
-
-      <View style={styles.segment}>
-        {[
-          { key: 'asc', label: 'Ascending' },
-          { key: 'desc', label: 'Descending' },
-        ].map(item => (
-          <TouchableOpacity
-            key={item.key}
-            style={[
-              styles.segmentButton,
-              sortConfig.order === item.key && styles.segmentActive,
-            ]}
-            onPress={() =>
-              setSortConfig(prev => ({ ...prev, order: item.key }))
-            }
-          >
-            <Text
-              style={[
-                styles.segmentText,
-                sortConfig.order === item.key && styles.segmentTextActive,
-              ]}
-            >
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity onPress={clearSort}>
-          <Text style={styles.clearText}>Reset</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.applyButton}
-          onPress={() => {
-            console.log('🔄 APPLY SORT BUTTON PRESSED:', sortConfig);
-            if (sortConfig.field) {
-              console.log('🎯 Applying sort with data:', data.length, 'trips');
-              applyFiltersAndSort(data, { start: startDate, end: endDate }, sortConfig);
-              Alert.alert('Sort Applied', `Sorted by ${sortConfig.field} (${sortConfig.order})`);
-            } else {
-              console.log('❌ No sort field selected');
-              Alert.alert('No Sort Selected', 'Please select a field to sort by');
-            }
-            setShowSortModal(false);
-          }}
-        >
-          <Text style={styles.applyText}>Apply</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
+        </View>
+      </Modal>
 
 
     </>
@@ -1043,59 +1212,59 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   modalCard: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 20,
   },
-  
+
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  
+
   title: {
     fontSize: 18,
     fontWeight: '600',
     color: '#111',
   },
-  
+
   summary: {
     backgroundColor: '#f6f8fa',
     borderRadius: 8,
     padding: 12,
     marginBottom: 20,
   },
-  
+
   summaryLabel: {
     fontSize: 12,
     color: '#666',
     marginBottom: 4,
   },
-  
+
   summaryValue: {
     fontSize: 14,
     fontWeight: '500',
     color: '#111',
   },
-  
+
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 10,
     color: '#333',
   },
-  
+
   radioRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
   },
-  
+
   radioOuter: {
     width: 18,
     height: 18,
@@ -1106,19 +1275,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  
+
   radioInner: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: '#1976d2',
   },
-  
+
   radioLabel: {
     fontSize: 15,
     color: '#111',
   },
-  
+
   segment: {
     flexDirection: 'row',
     borderWidth: 1,
@@ -1127,52 +1296,52 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginTop: 6,
   },
-  
+
   segmentButton: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
   },
-  
+
   segmentActive: {
     backgroundColor: '#1976d2',
   },
-  
+
   segmentText: {
     fontSize: 14,
     color: '#444',
   },
-  
+
   segmentTextActive: {
     color: '#fff',
     fontWeight: '600',
   },
-  
+
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 24,
   },
-  
+
   clearText: {
     color: '#555',
     fontSize: 14,
   },
-  
+
   applyButton: {
     backgroundColor: '#1976d2',
     paddingHorizontal: 28,
     paddingVertical: 12,
     borderRadius: 8,
   },
-  
+
   applyText: {
     color: '#fff',
     fontWeight: '600',
     fontSize: 15,
   },
-  
+
   disabledButton: {
     backgroundColor: '#ccc',
     opacity: 0.6,
@@ -1319,7 +1488,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 20,
   },
-  
+
   calendarDayText: {
     fontSize: 15,
     color: '#333',

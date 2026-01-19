@@ -122,12 +122,13 @@ const TripEntryScreen = () => {
     })();
   }, []);
 
+   
   const formatDate = (date) => {
     const d = new Date(date);
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`; // YYYY-MM-DD format
+    return `${day}-${month}-${year}`; // DD-MM-YYYY format
   };
 
   const formatDateForDisplay = (date) => {
