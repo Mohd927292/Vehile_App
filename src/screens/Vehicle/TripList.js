@@ -120,6 +120,7 @@ const TripList = () => {
       setMaxLocations(maxLocs);
 
       const processedData = mergedData.map((item, index) => {
+      
         const processedItem = {
           ...item,
           srNo: index + 1,
@@ -127,6 +128,7 @@ const TripList = () => {
           dateTimestamp: item.dateTimestamp || null, // Add timestamp field
           vehicleNo: item.vehicleNo || 'N/A',
           driverName: item.driverName || 'N/A',
+          amount: item.amount !== undefined && item.amount !== null ? item.amount.toString() : '',
           loadCount: item.loadCount || 0,
           createdAt: item.createdAt || null,
         };
@@ -189,6 +191,7 @@ const TripList = () => {
         <Text style={[styles.cell, styles.dateCell, styles.headerText]}>Date</Text>
         <Text style={[styles.cell, styles.vehicleCell, styles.headerText]}>Vehicle</Text>
         <Text style={[styles.cell, styles.driverCell, styles.headerText]}>Driver</Text>
+        <Text style={[styles.cell, styles.amountCell, styles.headerText]}>Amount</Text>
         {locationHeaders}
         <Text style={[styles.cell, styles.loadCell, styles.headerText]}>Load</Text>
         <Text style={[styles.cell, styles.createdCell, styles.headerText]}>Created</Text>
@@ -222,6 +225,7 @@ const TripList = () => {
         <Text style={[styles.cell, styles.dateCell, { color: textColor }]} numberOfLines={1}>{item.date}</Text>
         <Text style={[styles.cell, styles.vehicleCell, { color: textColor }]} numberOfLines={1}>{item.vehicleNo}</Text>
         <Text style={[styles.cell, styles.driverCell, { color: textColor }]} numberOfLines={1}>{item.driverName}</Text>
+        <Text style={[styles.cell, styles.amountCell, { color: textColor }]} numberOfLines={1}>{item.amount || '-'}</Text>
         {locationCells}
         <Text style={[styles.cell, styles.loadCell, { color: textColor }]}>{item.loadCount}</Text>
         <Text style={[styles.cell, styles.createdCell, { color: textColor }]} numberOfLines={2}>
@@ -343,7 +347,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   tableContainer: {
-    minWidth: 980,
+    minWidth: 1060,
   },
   loadingContainer: {
     flex: 1,
@@ -416,6 +420,9 @@ const styles = StyleSheet.create({
   },
   driverCell: {
     width: 100,
+  },
+  amountCell: {
+    width: 80,
   },
   locationCell: {
     width: 90,

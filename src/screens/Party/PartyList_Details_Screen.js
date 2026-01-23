@@ -61,6 +61,7 @@ const PartyList_Details_Screen = () => {
           dateTimestamp: data.dateTimestamp || null, // Add timestamp field
           vehicleNo: data.vehicleNo || 'N/A',
           driverName: data.driverName || 'N/A',
+          amount: data.amount !== undefined && data.amount !== null ? data.amount.toString() : '',
           locations: data.locations || [],
           loadCount: data.loadCount || 'N/A',
           createdAt: data.createdAt?.toDate() || null,
@@ -180,7 +181,7 @@ const PartyList_Details_Screen = () => {
   };
 
   const generateColumns = () => {
-    const baseColumns = ['Sr No', 'Date', 'Vehicle No', 'Driver Name'];
+    const baseColumns = ['Sr No', 'Date', 'Vehicle No', 'Driver Name', 'Amount'];
     const locationColumns = [];
     
     for (let i = 1; i <= maxLocations; i++) {
@@ -211,6 +212,7 @@ const PartyList_Details_Screen = () => {
       <Text style={[styles.cell, { color: textColor }]}>{item.date}</Text>
       <Text style={[styles.cell, { color: textColor }]}>{item.vehicleNo}</Text>
       <Text style={[styles.cell, { color: textColor }]}>{item.driverName}</Text>
+      <Text style={[styles.cell, { color: textColor }]}>{item.amount || '-'}</Text>
       
       {Array.from({ length: maxLocations }, (_, i) => {
         const location = item.locations[i];

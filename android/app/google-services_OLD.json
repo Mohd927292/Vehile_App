@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "92315082747",
-    "project_id": "vehicle2-79fd6",
-    "storage_bucket": "vehicle2-79fd6.firebasestorage.app"
+    "project_number": "168600806434",
+    "project_id": "rnavehicle",
+    "storage_bucket": "rnavehicle.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:92315082747:android:f1a66a001d7dd23e76355e",
+        "mobilesdk_app_id": "1:168600806434:android:a1e121314464c432fd567b",
         "android_client_info": {
           "package_name": "com.rna.vehicle"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDlQk9o4q_mLWesLkyXEuk__EbEd4qWIbI"
+          "current_key": "AIzaSyDis-AFo1qxgJ5Synp4igCI_Ai93NaJd3I"
         }
       ],
       "services": {

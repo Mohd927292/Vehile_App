@@ -7,7 +7,9 @@ import {
   Platform,
   KeyboardAvoidingView,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import {
   TextInput,
@@ -68,6 +70,7 @@ const TripEntryScreen = () => {
   const [trips, setTrips] = useState([{
     vehicleNo: '',
     driverName: '',
+    amount: '',
     locations: [{ from: '', to: '' }],
     date: new Date(),
   }]);
@@ -153,6 +156,7 @@ const TripEntryScreen = () => {
     setTrips([...trips, {
       vehicleNo: '',
       driverName: '',
+      amount: '',
       locations: [{ from: '', to: '' }],
       date: new Date(),
     }]);
@@ -317,6 +321,7 @@ const TripEntryScreen = () => {
           const tripData = {
             vehicleNo: trips[i].vehicleNo.toUpperCase().trim(),
             driverName: trips[i].driverName.trim(),
+            amount: trips[i].amount ? parseFloat(trips[i].amount) : null,
             locations: trips[i].locations.map(loc => ({
               from: loc.from.trim(),
               to: loc.to.trim()
@@ -365,9 +370,14 @@ const TripEntryScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
       >
-        <Appbar.Header style={{ backgroundColor: colors.surface }}>
-          <Appbar.BackAction onPress={() => navigation.goBack()} />
-          <Appbar.Content title={`Trip ${currentTripIndex + 1} of ${trips.length}`} titleStyle={{ color: colors.text }} />
+        <Appbar.Header style={{ backgroundColor: colors.primary }}>
+          <TouchableOpacity
+          onPress={() => navigation.goBack()}
+           style={styles.backButtonContainer}
+          >
+             <Icon name="chevron-left" size={28} color="#fff" />
+          </TouchableOpacity>
+          <Appbar.Content title={`Trip ${currentTripIndex + 1} of ${trips.length}`} titleStyle={{ color: '#fff' }} />
           <View style={styles.headerButtons}>
              <Button
               mode="contained"
@@ -465,6 +475,22 @@ const TripEntryScreen = () => {
                       onChangeText={(text) => updateTrip(tripIndex, 'driverName', text)}
                       placeholder="Enter driver name"
                       autoCapitalize="characters"
+                      mode="outlined"
+                      style={[styles.input, { zIndex: 1, backgroundColor: colors.surface }]}
+                      theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                      outlineColor={colors.border}
+                      activeOutlineColor={colors.primary}
+                      selectionColor={colors.primary}
+                      textColor={colors.text}
+                      placeholderTextColor={colors.textSecondary}
+                    />
+
+                    <TextInput
+                      label="Amount"
+                      value={trip.amount}
+                      onChangeText={(text) => updateTrip(tripIndex, 'amount', text)}
+                      placeholder="Enter amount (optional)"
+                      keyboardType="numeric"
                       mode="outlined"
                       style={[styles.input, { zIndex: 1, backgroundColor: colors.surface }]}
                       theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
@@ -622,9 +648,16 @@ const styles = StyleSheet.create({
   },
   tripsContainer: {
     flexDirection: 'row',
+    padding: 4,
+    gap: 8,
   },
   tripCard: {
-    width: Dimensions.get('window').width,
+    width:  Dimensions.get('window').width - 8,   
+    elevation: 3,
+    shadowColor: '#334155',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
 
   },
   submitContainer: {
@@ -651,6 +684,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   locationCard: {
+   
+    borderColor: '#d1d5db',
+    marginBottom: 16,
+    borderWidth: 1,
 
 
   },
@@ -712,10 +749,17 @@ const styles = StyleSheet.create({
     height: 20,
     height: 20,
     marginTop: 6,
-
-
-
-
+  },
+  backButtonContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: 12,
   },
   addLocationButton: {
     borderRadius: 6,

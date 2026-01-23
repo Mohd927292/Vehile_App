@@ -132,6 +132,7 @@ const vehicleTripService = {
           id: doc.id,
           vehicleNo: tripData.vehicleNo,
           driverName: tripData.driverName,
+          amount: tripData.amount,
           date: tripData.date,
           dateTimestamp: tripData.dateTimestamp,
           locations: tripData.locations,

@@ -256,6 +256,7 @@ const TripListExport = ({
           'Date': trip.date || 'N/A',
           'Vehicle No': trip.vehicleNo || 'N/A',
           'Driver Name': trip.driverName || 'N/A',
+          'Amount': trip.amount || 'N/A',
         };
 
         // Add location columns dynamically
@@ -395,6 +396,7 @@ const TripListExport = ({
               <td>${trip.date || ''}</td>
               <td>${trip.vehicleNo || ''}</td>
               <td>${trip.driverName || ''}</td>
+              <td style="text-align: center;">${trip.amount || '-'}</td>
               ${locationCells}
               <td style="text-align: center;">${trip.loadCount || 0}</td>
               <td style="font-size: 9px;">${createdAt}</td>
@@ -573,7 +575,7 @@ const TripListExport = ({
               <!-- HEADER -->
               <div class="header">
               <div class="company-name">RNA SERVICES</div>
-                <div class="company-name">VEHICLE TRANSPORT SYSTEM</div>
+               
                 <div class="company-details">GSTIN:29AYLPR9800N1ZH/EMAIL:92RNASERVICES@GMAIL.COM / Ph. 9241598450/9845301473</div>
                 <div class="company-address">No. 73, 1st Main Road, 17th Cross, Bapujinagar, Mysore Road, Bangalore-560026, Karnataka, India.</div>
               </div>
@@ -590,6 +592,7 @@ const TripListExport = ({
                       <th style="width: 8%;">Date</th>
                       <th style="width: 7%;">Vehicle</th>
                       <th style="width: 8%;">Driver</th>
+                      <th style="width: 6%;">Amount</th>
                       ${generateLocationHeaders()}
                       <th style="width: 5%; text-align: center;">Loads</th>
                       <th style="width: 8%;">Created</th>

@@ -25,6 +25,7 @@ const EditTrip = () => {
     date: '',
     vehicleNo: '',
     driverName: '',
+    amount: '',
     locations: []
   });
 
@@ -43,6 +44,7 @@ const EditTrip = () => {
           date: data.date || '',
           vehicleNo: data.vehicleNo || '',
           driverName: data.driverName || '',
+          amount: data.amount ? data.amount.toString() : '',
           locations: data.locations || []
         });
       }
@@ -62,6 +64,7 @@ const EditTrip = () => {
         date: tripData.date,
         vehicleNo: tripData.vehicleNo,
         driverName: tripData.driverName,
+        amount: tripData.amount ? parseFloat(tripData.amount) : null,
         locations: tripData.locations,
         updatedAt: serverTimestamp()
       });
@@ -165,6 +168,18 @@ const EditTrip = () => {
             onChangeText={(text) => setTripData({ ...tripData, driverName: text })}
             placeholder="Enter driver name"
             placeholderTextColor="#888"
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Amount</Text>
+          <TextInput
+            style={styles.input}
+            value={tripData.amount}
+            onChangeText={(text) => setTripData({ ...tripData, amount: text })}
+            placeholder="Enter amount (optional)"
+            placeholderTextColor="#888"
+            keyboardType="numeric"
           />
         </View>
 

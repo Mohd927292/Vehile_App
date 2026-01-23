@@ -9,6 +9,7 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
@@ -82,10 +83,19 @@ const VehicleList = () => {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          style={styles.backButtonContainer}
+        >
+          <Icon name="chevron-left" size={28} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Vehicles</Text>
+        <View style={styles.headerContent}>
+          <View style={styles.titleContainer}>
+            <Icon name="car" size={24} color="#fff" style={styles.headerIcon} />
+            <Text style={styles.headerTitle}>Vehicles</Text>
+          </View>
+          <Text style={styles.headerSubtitle}>{vehicles.length} vehicle{vehicles.length !== 1 ? 's' : ''} registered</Text>
+        </View>
         <View style={styles.headerRight} />
       </View>
 
@@ -128,24 +138,51 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     padding: 16,
     paddingTop: 50,
-    elevation: 4,
+    paddingBottom: 20,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+  },
+  backButtonContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIcon: {
+    marginRight: 10,
   },
   headerRight: {
-    width: 60, // Same as back button for alignment
-  },
-  backButton: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
+    width: 44,
   },
   headerTitle: {
     color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+    letterSpacing: 0.3,
   },
   searchContainer: {
     padding: 16,
