@@ -1,4 +1,4 @@
-package com.rna.vehicle
+package com.rna.vehicle_details_v2
 
 import android.os.Build
 import android.os.Bundle

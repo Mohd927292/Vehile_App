@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:92315082747:android:f1a66a001d7dd23e76355e",
+        "mobilesdk_app_id": "1:92315082747:android:60afbbc4d5aa3a1f76355e",
         "android_client_info": {
-          "package_name": "com.rna.vehicle"
+          "package_name": "com.rna.vehicle_details_v2"
         }
       },
       "oauth_client": [],

@@ -209,21 +209,26 @@ const TripEntryScreen = () => {
   };
 
   const handleVehicleSuggestion = (tripIndex, suggestion) => {
-    const value = suggestion.vehicleNo || suggestion.name || suggestion.label;
+    const rawValue = suggestion.vehicleNo || suggestion.name || suggestion.label || '';
+    const value = rawValue.replace(/\s+/g, ' ').trim();
     updateTrip(tripIndex, 'vehicleNo', value);
   };
 
   const handleLocationSuggestion = (tripIndex, locationIndex, field, suggestion) => {
-    const value = suggestion.label || suggestion.name || suggestion.vehicleNo;
+    const rawValue = suggestion.label || suggestion.name || suggestion.vehicleNo || '';
+    const value = rawValue.replace(/\s+/g, ' ').trim();
     updateLocation(tripIndex, locationIndex, field, value);
   };
 
   // Validate customer exists in Firestore
   const validateCustomer = async (customerName) => {
     try {
+      const trimmedName = customerName.replace(/\s+/g, ' ').trim();
+      if (!trimmedName) return false;
+      
       const db = getFirestore();
       const customersRef = collection(db, 'customers');
-      const q = query(customersRef, where('msName', '==', customerName), limit(1));
+      const q = query(customersRef, where('msName', '==', trimmedName), limit(1));
       const snapshot = await getDocs(q);
       return !snapshot.empty;
     } catch (error) {
@@ -240,15 +245,16 @@ const TripEntryScreen = () => {
 
   // Validate location on blur
   const handleLocationBlur = async (tripIndex, locationIndex, field, value) => {
-    if (value.trim() && value.length > 0) {
-      const isValid = await validateCustomer(value);
+    const trimmedValue = value.replace(/\s+/g, ' ').trim();
+    if (trimmedValue && trimmedValue.length > 0) {
+      const isValid = await validateCustomer(trimmedValue);
       if (!isValid) {
         setCustomerDialog({
           visible: true,
           field,
           tripIndex,
           locationIndex,
-          customerName: value
+          customerName: trimmedValue
         });
       }
     }
@@ -301,10 +307,11 @@ const TripEntryScreen = () => {
     for (let i = 0; i < trips.length; i++) {
       for (let j = 0; j < trips[i].locations.length; j++) {
         const { to } = trips[i].locations[j];
-        if (to.trim()) {
-          const isValid = await validateCustomer(to);
+        const trimmedTo = to.replace(/\s+/g, ' ').trim();
+        if (trimmedTo) {
+          const isValid = await validateCustomer(trimmedTo);
           if (!isValid) {
-            Alert.alert('Customer Not Found', `Customer "${to}" in trip ${i + 1} not found. Please add customer first.`);
+            Alert.alert('Customer Not Found', `Customer "${trimmedTo}" in trip ${i + 1} not found. Please add customer first.`);
             return;
           }
         }
@@ -323,8 +330,8 @@ const TripEntryScreen = () => {
             driverName: trips[i].driverName.trim(),
             amount: trips[i].amount ? parseFloat(trips[i].amount) : null,
             locations: trips[i].locations.map(loc => ({
-              from: loc.from.trim(),
-              to: loc.to.trim()
+              from: loc.from.replace(/\s+/g, ' ').trim(),
+              to: loc.to.replace(/\s+/g, ' ').trim()
             })),
             date: formatDate(trips[i].date), // YYYY-MM-DD format
             dateTimestamp: Timestamp.fromDate(trips[i].date), // For optimal sorting
