@@ -361,23 +361,33 @@ const TripListExport = ({
         return headers;
       };
 
-      // Generate HTML table for PDF with dynamic location columns
-      const generateTableRows = () => {
+      // Generate vertical card layout for PDF
+      const generateVerticalCards = () => {
         return exportData.map((trip, index) => {
-          // Generate location cells based on max locations
-          let locationCells = '';
+          // Generate location rows
+          let locationRows = '';
+          let rowIndex = 3; // Start at 3 (Driver=1, Vehicle=2, so From 1 should be 3=odd)
           if (trip.locations && Array.isArray(trip.locations)) {
-            for (let i = 0; i < maxLocations; i++) {
-              const location = trip.locations[i];
+            trip.locations.forEach((location, i) => {
               const from = location ? (location.from || '') : '';
               const to = location ? (location.to || '') : '';
-              locationCells += `<td>${from}</td><td>${to}</td>`;
-            }
-          } else {
-            // If no locations, fill with empty cells
-            for (let i = 0; i < maxLocations; i++) {
-              locationCells += `<td></td><td></td>`;
-            }
+              if (from || to) {
+                locationRows += `
+                  <div class="trip-row ${rowIndex % 2 === 1 ? 'odd-row' : 'even-row'}">
+                    <span class="trip-label">From ${i + 1}:</span>
+                    <span class="trip-value">${from}</span>
+                  </div>
+                `;
+                rowIndex++;
+                locationRows += `
+                  <div class="trip-row ${rowIndex % 2 === 1 ? 'odd-row' : 'even-row'}">
+                    <span class="trip-label">To ${i + 1}:</span>
+                    <span class="trip-value">${to}</span>
+                  </div>
+                `;
+                rowIndex++;
+              }
+            });
           }
 
           const createdAt = trip.createdAt
@@ -391,16 +401,26 @@ const TripListExport = ({
             : '';
 
           return `
-            <tr>
-              <td style="text-align: center; font-weight: 500;">${index + 1}</td>
-              <td>${trip.date || ''}</td>
-              <td>${trip.vehicleNo || ''}</td>
-              <td>${trip.driverName || ''}</td>
-              <td style="text-align: center;">${trip.amount || '-'}</td>
-              ${locationCells}
-              <td style="text-align: center;">${trip.loadCount || 0}</td>
-              <td style="font-size: 9px;">${createdAt}</td>
-            </tr>
+            <div class="trip-card">
+              <div class="trip-header">
+                <span class="trip-number">SL ${index + 1}</span>
+                <span class="trip-date">${trip.date || ''}</span>
+              </div>
+              <div class="trip-row odd-row">
+                <span class="trip-label">Driver:</span>
+                <span class="trip-value">${trip.driverName || ''}</span>
+              </div>
+              <div class="trip-row even-row">
+                <span class="trip-label">Vehicle:</span>
+                <span class="trip-value">${trip.vehicleNo || ''}</span>
+              </div>
+              ${locationRows}
+              <div class="trip-row ${rowIndex % 2 === 1 ? 'odd-row' : 'even-row'}">
+                <span class="trip-label">Amount:</span>
+                <span class="trip-value">${trip.amount || 'PARTY PAYMENT'}</span>
+              </div>
+              ${createdAt ? `<div class="trip-row ${(rowIndex + 1) % 2 === 1 ? 'odd-row' : 'even-row'}"><span class="trip-label">Created:</span><span class="trip-value">${createdAt}</span></div>` : ''}
+            </div>
           `;
         }).join('');
       };
@@ -450,101 +470,178 @@ const TripListExport = ({
                 margin: 4px;
               }
               .document {
-                border: 3px solid #6e6d6d;
+                border: 2px solid #2c5aa0;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                border-radius: 8px;
+                overflow: hidden;
               }
               
               /* HEADER */
               .header {
-                border-bottom: 3px solid #000;
-                padding: 12px 10px;
+                border-bottom: 2px solid #2c5aa0;
+                padding: 16px 12px;
                 text-align: center;
-                background-color: #fff;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
               }
               .company-name {
-                font-size: 22px;
+                font-size: 24px;
                 font-weight: 900;
-                color: #2d5016;
-                margin-bottom: 3px;
-                letter-spacing: 0.5px;
+                color: #1a472a;
+                margin-bottom: 4px;
+                letter-spacing: 1px;
+                text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
               }
               .company-details {
-                font-size: 9px;
-                color: #333;
-                line-height: 1.3;
-                margin-bottom: 2px;
+                font-size: 10px;
+                color: #495057;
+                line-height: 1.4;
+                margin-bottom: 3px;
+                font-weight: 500;
               }
               .company-address {
-                font-size: 8px;
-                color: #333;
-                line-height: 1.2;
+                font-size: 9px;
+                color: #6c757d;
+                line-height: 1.3;
+                font-style: italic;
               }
               
               /* BILL TITLE */
               .bill-title {
-                border-bottom: 3px solid #000;
-                padding: 8px;
+                border-bottom: 2px solid #2c5aa0;
+                padding: 10px;
                 text-align: center;
-                font-size: 13px;
-                font-weight: 700;
-                background-color: #f0f0f0;
+                font-size: 14px;
+                font-weight: 800;
+                background: linear-gradient(135deg, #2c5aa0 0%, #1e3a8a 100%);
+                color: white;
+                text-transform: uppercase;
+                letter-spacing: 2px;
               }
               
               /* DATA SECTION */
               .data-section {
-                padding: 8px;
-                border-bottom: 3px solid #000;
+                padding: 12px;
+                background-color: #fafbfc;
               }
               
-              table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-top: 8px;
-              }
-              thead {
-                background-color: #4472c4;
-                color: white;
-              }
-              th {
-                border: 1px solid #000;
-                padding: 6px 4px;
-                text-align: center;
-                font-weight: 600;
-                font-size: 9px;
-                text-transform: uppercase;
-              }
-              td {
-                border: 1px solid #ccc;
-                padding: 5px 4px;
-                font-size: 9px;
-                color: #333;
-              }
-              tbody tr:nth-child(odd) {
-                background-color: #f9f9f9;
-              }
-              tbody tr:nth-child(even) {
+              .trip-card {
+                border: 1px solid #d1d9e0;
+                margin-bottom: 16px;
                 background-color: #fff;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                overflow: hidden;
+                transition: all 0.2s ease;
+              }
+              
+              .trip-card:hover {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+                transform: translateY(-1px);
+              }
+              
+              .trip-row.odd-row {
+                background-color: #f8f9fa;
+                border-left: 3px solid #e9ecef;
+              }
+              
+              .trip-row.even-row {
+                background-color: #ffffff;
+                border-left: 3px solid #dee2e6;
+              }
+              
+              .trip-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 0;
+                padding: 12px 16px;
+                background: linear-gradient(135deg, #2c5aa0 0%, #1e3a8a 100%);
+                color: white;
+                border-bottom: 2px solid #1e3a8a;
+              }
+              
+              .trip-number {
+                font-weight: 800;
+                font-size: 13px;
+                color: #fff;
+                background-color: rgba(255,255,255,0.2);
+                padding: 4px 10px;
+                border-radius: 20px;
+                border: 1px solid rgba(255,255,255,0.3);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              }
+              
+              .trip-date {
+                font-weight: 600;
+                font-size: 12px;
+                color: #fff;
+                background-color: rgba(255,255,255,0.1);
+                padding: 4px 8px;
+                border-radius: 4px;
+              }
+              
+              .trip-row {
+                display: flex;
+                align-items: flex-start;
+                padding: 8px 16px;
+                border-bottom: 1px solid #f1f3f4;
+                transition: all 0.2s ease;
+              }
+              
+              .trip-row:last-child {
+                border-bottom: none;
+              }
+              
+              .trip-row:hover {
+                background-color: #e3f2fd !important;
+              }
+              
+              .trip-label {
+                font-weight: 700;
+                font-size: 11px;
+                color: #2c5aa0;
+                min-width: 85px;
+                margin-right: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              
+              .trip-value {
+                font-size: 11px;
+                color: #212529;
+                flex: 1;
+                word-wrap: break-word;
+                font-weight: 500;
+                line-height: 1.4;
               }
               
               /* FOOTER */
               .footer {
                 display: flex;
-                padding: 12px;
-                gap: 20px;
+                padding: 16px;
+                gap: 24px;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border-top: 2px solid #2c5aa0;
               }
               
               .remark-box {
                 flex: 1;
               }
               .remark-label {
-                font-weight: 700;
-                font-size: 11px;
-                color: #d32f2f;
-                margin-bottom: 3px;
+                font-weight: 800;
+                font-size: 12px;
+                color: #dc3545;
+                margin-bottom: 6px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
               }
               .remark-field {
-                border: 1px solid #999;
-                min-height: 35px;
-                background-color: #f9f9f9;
+                border: 2px solid #ced4da;
+                min-height: 40px;
+                background-color: #fff;
+                border-radius: 6px;
+                box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
               }
               
               .signature-box {
@@ -585,23 +682,7 @@ const TripListExport = ({
 
               <!-- DATA SECTION -->
               <div class="data-section">
-                <table>
-                  <thead>
-                    <tr>
-                      <th style="width: 3%;">Sr</th>
-                      <th style="width: 8%;">Date</th>
-                      <th style="width: 7%;">Vehicle</th>
-                      <th style="width: 8%;">Driver</th>
-                      <th style="width: 6%;">Amount</th>
-                      ${generateLocationHeaders()}
-                      <th style="width: 5%; text-align: center;">Loads</th>
-                      <th style="width: 8%;">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${generateTableRows()}
-                  </tbody>
-                </table>
+                ${generateVerticalCards()}
               </div>
 
               <!-- FOOTER -->

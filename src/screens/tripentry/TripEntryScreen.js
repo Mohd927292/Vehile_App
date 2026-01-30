@@ -545,18 +545,15 @@ const TripEntryScreen = () => {
                             </View>
                           </View>
 
-                          <TextInput
+                          <AutoSuggestInput
                             label="From Location *"
                             value={location.from}
                             onChangeText={(text) => handleLocationChange(tripIndex, locationIndex, 'from', text)}
-                            // onSuggestionSelect={(suggestion) => handleLocationSuggestion(tripIndex, locationIndex, 'from', suggestion)}
-                            // onBlur={(value) => handleLocationBlur(tripIndex, locationIndex, 'from', value)}
-                            // getSuggestions={getCustomerSuggestions}
-                            mode="outlined"
-
+                            onSuggestionSelect={(suggestion) => handleLocationSuggestion(tripIndex, locationIndex, 'from', suggestion)}
+                            //onBlur={(value) => handleLocationBlur(tripIndex, locationIndex, 'from', value)}
+                            getSuggestions={getCustomerSuggestions}
                             placeholder="Enter from location"
                             autoCapitalize="characters"
-                            multiline
                             style={[styles.input, { zIndex: 20, backgroundColor: colors.surface }]}
                             theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
                             outlineColor={colors.border}
