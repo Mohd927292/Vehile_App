@@ -1,4 +1,4 @@
-import { getFirestore, collection, query, orderBy, startAt, endAt, limit, getDocs } from '@react-native-firebase/firestore';
+import { getFirestore, collection, query, orderBy, startAt, endAt, limit, getDocs, addDoc } from '@react-native-firebase/firestore';
 
 // Get Firestore instance
 const db = getFirestore();
@@ -29,18 +29,62 @@ export const getVehicleSuggestions = async searchText => {
   }
 };
 
-// Fetch customer suggestions from Firestore (using parties collection)
-export const getCustomerSuggestions = async searchText => {
-  console.log('🔍 getCustomerSuggestions called with:', searchText);
-  if (!searchText.trim()) {
-    console.log('❌ Empty search text, returning empty array');
-    return [];
-  }
+// Fetch driver suggestions from Firestore
+export const getDriverSuggestions = async searchText => {
+  if (!searchText.trim()) return [];
 
   try {
     const searchLower = searchText.toLowerCase();
-    console.log('🔍 Searching for:', searchLower);
+    const driverRef = collection(db, 'drivers');
+    const q = query(
+      driverRef,
+      orderBy('driverName'),
+      startAt(searchLower),
+      endAt(searchLower + '\uf8ff'),
+      limit(10)
+    );
 
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      driverName: doc.data().driverName,
+      label: doc.data().driverName,
+    }));
+  } catch (error) {
+    console.error('Error fetching driver suggestions:', error);
+    return [];
+  }
+}
+
+// Save driver name to Firestore collection
+export const saveDriverName = async (driverName) => {
+  if (!driverName.trim()) return;
+  
+  try {
+    const trimmedName = driverName.trim().toLowerCase();
+    const driversRef = collection(db, 'drivers');
+    
+    // Check if driver already exists
+    const q = query(driversRef, orderBy('driverName'), startAt(trimmedName), endAt(trimmedName + '\uf8ff'), limit(1));
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      await addDoc(driversRef, {
+        driverName: trimmedName,
+        createdAt: new Date()
+      });
+    }
+  } catch (error) {
+    console.error('Error saving driver name:', error);
+  }
+};
+
+// Fetch customer suggestions from Firestore (using parties collection)
+export const getCustomerSuggestions = async searchText => {
+  if (!searchText.trim()) return [];
+
+  try {
+    const searchLower = searchText.toLowerCase();
     const customersRef = collection(db, 'customers');
     const q = query(
       customersRef,
@@ -51,21 +95,14 @@ export const getCustomerSuggestions = async searchText => {
     );
     const snapshot = await getDocs(q);
 
-    console.log('📊 Firestore query returned:', snapshot.size, 'documents');
-
-    const results = snapshot.docs.map(doc => ({
+    return snapshot.docs.map(doc => ({
       id: doc.id,
       name: doc.data().msName,
-      label: doc.data().msName, // UI reads this
-      value: doc.id, // optional, if component expects value
+      label: doc.data().msName,
+      value: doc.id,
     }));
-
-    
-
-    console.log('✅ Customer suggestions:', results);
-    return results;
   } catch (error) {
-    console.error('❌ Error fetching customer suggestions:', error);
+    console.error('Error fetching customer suggestions:', error);
     return [];
   }
 };

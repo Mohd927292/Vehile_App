@@ -27,7 +27,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { tripService } from '../../config/firebase';
 import AutoSuggestInput from '../../components/AutoSuggestInput';
-import { getVehicleSuggestions, getCustomerSuggestions } from '../../services/firestoreService';
+import { getVehicleSuggestions, getCustomerSuggestions, getDriverSuggestions, saveDriverName } from '../../services/firestoreService';
 import { getFirestore, collection, query, where, limit, getDocs, Timestamp } from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../hooks/useTheme';
@@ -208,6 +208,12 @@ const TripEntryScreen = () => {
     setTrips(newTrips);
   };
 
+  const handleDriverSuggestion = (tripIndex, suggestion) => {
+    const rawValue = suggestion.driverName || suggestion.label || '';
+    const value = rawValue.replace(/\s+/g, ' ').trim();
+    updateTrip(tripIndex, 'driverName', value);
+  };
+
   const handleVehicleSuggestion = (tripIndex, suggestion) => {
     const rawValue = suggestion.vehicleNo || suggestion.name || suggestion.label || '';
     const value = rawValue.replace(/\s+/g, ' ').trim();
@@ -329,16 +335,17 @@ const TripEntryScreen = () => {
             vehicleNo: trips[i].vehicleNo.toUpperCase().trim(),
             driverName: trips[i].driverName.trim(),
             amount: trips[i].amount ? parseFloat(trips[i].amount) : null,
-            locations: trips[i].locations.map(loc => ({
-              from: loc.from.replace(/\s+/g, ' ').trim(),
-              to: loc.to.replace(/\s+/g, ' ').trim()
-            })),
+            locations: trips[i].locations?.map(loc => ({
+              from: loc?.from?.replace(/\s+/g, ' ').trim() || '',
+              to: loc?.to?.replace(/\s+/g, ' ').trim() || ''
+            })) || [],
             date: formatDate(trips[i].date), // YYYY-MM-DD format
             dateTimestamp: Timestamp.fromDate(trips[i].date), // For optimal sorting
           };
 
           console.log(`Submitting trip ${i + 1}:`, JSON.stringify(tripData, null, 2));
           await tripService.addTrip(tripData);
+          
           console.log(`Trip ${i + 1} saved successfully`);
           results.success++;
         } catch (error) {
@@ -476,14 +483,15 @@ const TripEntryScreen = () => {
                       placeholderTextColor={colors.textSecondary}
                     />
 
-                    <TextInput
+                    <AutoSuggestInput
                       label="Driver Name *"
                       value={trip.driverName}
                       onChangeText={(text) => updateTrip(tripIndex, 'driverName', text)}
+                      onSuggestionSelect={(suggestion) => handleDriverSuggestion(tripIndex, suggestion)}
+                      getSuggestions={getDriverSuggestions}
                       placeholder="Enter driver name"
                       autoCapitalize="characters"
-                      mode="outlined"
-                      style={[styles.input, { zIndex: 1, backgroundColor: colors.surface }]}
+                      style={[styles.input, { zIndex: 20, backgroundColor: colors.surface }]}
                       theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
                       outlineColor={colors.border}
                       activeOutlineColor={colors.primary}

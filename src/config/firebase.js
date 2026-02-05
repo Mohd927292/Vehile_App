@@ -15,6 +15,8 @@ const authInstance = getAuth();
 export const tripEntriesCollection = collection(db, 'tripEntries');
 export const vehiclesCollection = collection(db, 'vehicles');
 export const partiesCollection = collection(db, 'parties');
+export const driversCollection = collection(db, 'drivers');
+export const fromcustomersCollection1 = collection(db, 'fromcustomers');
 export const customersCollection = collection(db, 'customers');
 
 // Trip service with batch operations
@@ -40,8 +42,32 @@ const tripService = {
         loadCount: increment(1),
         lastTripAt: serverTimestamp(),
       }, { merge: true });
-      
-      // 3. Update parties collection for each location
+
+      //3. Update drivers collection
+      if (tripData.driverName) {
+        const driverRef = doc(driversCollection, tripData.driverName.toLowerCase());
+        batch.set(driverRef,{
+          
+          driverName: tripData.driverName.toLowerCase(),
+
+        }, { merge: true });
+      }
+
+      // 4. Update fromcustomers collection for each location
+      if (tripData.locations && tripData.locations.length > 0) {
+        for (const location of tripData.locations) {
+          if (location.from) {
+            const fromcustomerRef = doc(fromcustomersCollection1, location.from);
+            batch.set(fromcustomerRef, {
+              from: location.from,
+              loadCount: increment(1),
+              lastTripAt: serverTimestamp(),
+            }, { merge: true });
+          }
+        }
+      }
+
+      // 5. Update parties collection for each location
       if (tripData.locations && tripData.locations.length > 0) {
         for (const location of tripData.locations) {
           if (location.to) {

@@ -404,7 +404,12 @@ const TripListExport = ({
             <div class="trip-card">
               <div class="trip-header">
                 <span class="trip-number">SL ${index + 1}</span>
-                <span class="trip-date">${trip.date || ''}</span>
+                
+                <span class="trip-amount">${createdAt}</span>
+              </div>
+               <div class="trip-row even-row">
+                <span class="trip-label">Trip Date:</span>
+                <span class="trip-value">${trip.date || ''}</span>
               </div>
               <div class="trip-row odd-row">
                 <span class="trip-label">Driver:</span>
@@ -419,7 +424,7 @@ const TripListExport = ({
                 <span class="trip-label">Amount:</span>
                 <span class="trip-value">${trip.amount || 'PARTY PAYMENT'}</span>
               </div>
-              ${createdAt ? `<div class="trip-row ${(rowIndex + 1) % 2 === 1 ? 'odd-row' : 'even-row'}"><span class="trip-label">Created:</span><span class="trip-value">${createdAt}</span></div>` : ''}
+             
             </div>
           `;
         }).join('');
@@ -470,178 +475,132 @@ const TripListExport = ({
                 margin: 4px;
               }
               .document {
-                border: 2px solid #2c5aa0;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                border-radius: 8px;
-                overflow: hidden;
+                border: 1px solid #333;
+                background-color: #fff;
               }
               
               /* HEADER */
               .header {
-                border-bottom: 2px solid #2c5aa0;
-                padding: 16px 12px;
+                border-bottom: 2px solid #333;
+                padding: 15px;
                 text-align: center;
-                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                background-color: #f8f9fa;
               }
               .company-name {
-                font-size: 24px;
-                font-weight: 900;
-                color: #1a472a;
-                margin-bottom: 4px;
-                letter-spacing: 1px;
-                text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+                font-size: 20px;
+                font-weight: bold;
+                color: #000;
+                margin-bottom: 5px;
               }
               .company-details {
                 font-size: 10px;
-                color: #495057;
+                color: #444;
                 line-height: 1.4;
                 margin-bottom: 3px;
-                font-weight: 500;
               }
               .company-address {
                 font-size: 9px;
-                color: #6c757d;
+                color: #666;
                 line-height: 1.3;
-                font-style: italic;
               }
               
               /* BILL TITLE */
               .bill-title {
-                border-bottom: 2px solid #2c5aa0;
+                border-bottom: 1px solid #333;
                 padding: 10px;
                 text-align: center;
                 font-size: 14px;
-                font-weight: 800;
-                background: linear-gradient(135deg, #2c5aa0 0%, #1e3a8a 100%);
-                color: white;
-                text-transform: uppercase;
-                letter-spacing: 2px;
+                font-weight: bold;
+                background-color: #e9ecef;
+                color: #000;
               }
               
               /* DATA SECTION */
               .data-section {
-                padding: 12px;
-                background-color: #fafbfc;
+                padding: 10px;
               }
               
               .trip-card {
-                border: 1px solid #d1d9e0;
-                margin-bottom: 16px;
+                border: 1px solid #ccc;
+                margin-bottom: 15px;
                 background-color: #fff;
-                border-radius: 8px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-                overflow: hidden;
-                transition: all 0.2s ease;
-              }
-              
-              .trip-card:hover {
-                box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-                transform: translateY(-1px);
+                border-radius: 4px;
               }
               
               .trip-row.odd-row {
-                background-color: #f8f9fa;
-                border-left: 3px solid #e9ecef;
+                background-color: #f9f9f9;
               }
               
               .trip-row.even-row {
                 background-color: #ffffff;
-                border-left: 3px solid #dee2e6;
               }
               
               .trip-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 0;
-                padding: 12px 16px;
-                background: linear-gradient(135deg, #2c5aa0 0%, #1e3a8a 100%);
+                padding: 8px 12px;
+                background-color: #343a40;
                 color: white;
-                border-bottom: 2px solid #1e3a8a;
+                font-weight: bold;
               }
               
               .trip-number {
-                font-weight: 800;
-                font-size: 13px;
+                font-size: 12px;
                 color: #fff;
-                background-color: rgba(255,255,255,0.2);
-                padding: 4px 10px;
-                border-radius: 20px;
-                border: 1px solid rgba(255,255,255,0.3);
-                text-transform: uppercase;
-                letter-spacing: 1px;
               }
               
               .trip-date {
-                font-weight: 600;
-                font-size: 12px;
+                font-size: 11px;
                 color: #fff;
-                background-color: rgba(255,255,255,0.1);
-                padding: 4px 8px;
-                border-radius: 4px;
               }
               
               .trip-row {
                 display: flex;
-                align-items: flex-start;
-                padding: 8px 16px;
-                border-bottom: 1px solid #f1f3f4;
-                transition: all 0.2s ease;
+                padding: 6px 12px;
+                border-bottom: 1px solid #eee;
               }
               
               .trip-row:last-child {
                 border-bottom: none;
               }
               
-              .trip-row:hover {
-                background-color: #e3f2fd !important;
-              }
-              
               .trip-label {
-                font-weight: 700;
+                font-weight: bold;
                 font-size: 11px;
-                color: #2c5aa0;
-                min-width: 85px;
-                margin-right: 12px;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
+                color: #333;
+                min-width: 70px;
+                margin-right: 10px;
               }
               
               .trip-value {
                 font-size: 11px;
-                color: #212529;
+                color: #000;
                 flex: 1;
-                word-wrap: break-word;
-                font-weight: 500;
-                line-height: 1.4;
               }
               
               /* FOOTER */
               .footer {
                 display: flex;
-                padding: 16px;
-                gap: 24px;
-                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                border-top: 2px solid #2c5aa0;
+                padding: 15px;
+                gap: 20px;
+                border-top: 1px solid #333;
+                background-color: #f8f9fa;
               }
               
               .remark-box {
                 flex: 1;
               }
               .remark-label {
-                font-weight: 800;
+                font-weight: bold;
                 font-size: 12px;
-                color: #dc3545;
-                margin-bottom: 6px;
-                text-transform: uppercase;
-                letter-spacing: 1px;
+                color: #000;
+                margin-bottom: 5px;
               }
               .remark-field {
-                border: 2px solid #ced4da;
+                border: 1px solid #ccc;
                 min-height: 40px;
                 background-color: #fff;
-                border-radius: 6px;
-                box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
               }
               
               .signature-box {
