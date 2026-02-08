@@ -27,7 +27,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { tripService } from '../../config/firebase';
 import AutoSuggestInput from '../../components/AutoSuggestInput';
-import { getVehicleSuggestions, getCustomerSuggestions, getDriverSuggestions, saveDriverName } from '../../services/firestoreService';
+import { getVehicleSuggestions, getCustomerSuggestions, getDriverSuggestions, saveDriverName, getFromLocationSuggestions } from '../../services/firestoreService';
 import { getFirestore, collection, query, where, limit, getDocs, Timestamp } from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../hooks/useTheme';
@@ -558,8 +558,7 @@ const TripEntryScreen = () => {
                             value={location.from}
                             onChangeText={(text) => handleLocationChange(tripIndex, locationIndex, 'from', text)}
                             onSuggestionSelect={(suggestion) => handleLocationSuggestion(tripIndex, locationIndex, 'from', suggestion)}
-                            //onBlur={(value) => handleLocationBlur(tripIndex, locationIndex, 'from', value)}
-                            getSuggestions={getCustomerSuggestions}
+                            getSuggestions={getFromLocationSuggestions}
                             placeholder="Enter from location"
                             autoCapitalize="characters"
                             style={[styles.input, { zIndex: 20, backgroundColor: colors.surface }]}

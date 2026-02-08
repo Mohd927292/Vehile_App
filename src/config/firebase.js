@@ -60,6 +60,7 @@ const tripService = {
             const fromcustomerRef = doc(fromcustomersCollection1, location.from);
             batch.set(fromcustomerRef, {
               from: location.from,
+              fromlower: location.from.toLowerCase(),
               loadCount: increment(1),
               lastTripAt: serverTimestamp(),
             }, { merge: true });

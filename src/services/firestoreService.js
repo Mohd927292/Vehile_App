@@ -79,6 +79,34 @@ export const saveDriverName = async (driverName) => {
   }
 };
 
+// Fetch from location suggestions from Firestore (using fromcustomers collection)
+export const getFromLocationSuggestions = async searchText => {
+  if (!searchText.trim()) return [];
+
+  try {
+    const searchLower = searchText.toLowerCase();
+    const fromcustomersRef = collection(db, 'fromcustomers');
+    const q = query(
+      fromcustomersRef,
+      orderBy('fromlower'),
+      startAt(searchLower),
+      endAt(searchLower + '\uf8ff'),
+      limit(10)
+    );
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      name: doc.data().from,
+      label: doc.data().from,
+      value: doc.id,
+    }));
+  } catch (error) {
+    console.error('Error fetching from location suggestions:', error);
+    return [];
+  }
+};
+
 // Fetch customer suggestions from Firestore (using parties collection)
 export const getCustomerSuggestions = async searchText => {
   if (!searchText.trim()) return [];
