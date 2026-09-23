@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,14 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
-  ScrollView,
   TextInput,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { vehicleTripService, tripService } from '../../config/firebase';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
+import TripCard from '../../components/TripCard';
 import { useTheme } from '../../hooks/useTheme';
+import { filterTripsByQuery } from '../../utils/tripData';
 
 const TripList = () => {
   const navigation = useNavigation();
@@ -21,13 +22,12 @@ const TripList = () => {
   const [trips, setTrips] = useState([]);
   const [filteredTrips, setFilteredTrips] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [maxLocations, setMaxLocations] = useState(2);
   const [searchText, setSearchText] = useState('');
+  const searchRef = useRef('');
   const [displayedTrips, setDisplayedTrips] = useState([]);
 
   // Create stable callback function
   const handleDataChange = useCallback((newData) => {
-    console.log('📨 TripList Screen received data:', newData.length, 'trips');
     setDisplayedTrips(newData);
   }, []);
 
@@ -56,24 +56,14 @@ const TripList = () => {
 
   const handleSearch = useCallback((text) => {
     setSearchText(text);
-    if (text.trim() === '') {
-      setFilteredTrips(trips);
-    } else {
-      const filtered = trips.filter(trip =>
-        trip.vehicleNo.toLowerCase().includes(text.toLowerCase())
-      );
-      setFilteredTrips(filtered);
-    }
+    searchRef.current = text;
+    setFilteredTrips(filterTripsByQuery(trips, text));
   }, [trips]);
 
-  const loadTrips = async () => {
+  const loadTrips = useCallback(async () => {
     try {
       setLoading(true);
       const mergedData = await vehicleTripService.getVehicleTripsData();
-
-      // Find maximum number of locations
-      const maxLocs = Math.max(...mergedData.map(item => item.locations?.length || 0), 2);
-      setMaxLocations(maxLocs);
 
       const processedData = mergedData.map((item, index) => {
       
@@ -89,115 +79,20 @@ const TripList = () => {
           createdAt: item.createdAt || null,
         };
 
-        // Add dynamic location fields
-        for (let i = 0; i < maxLocs; i++) {
-          processedItem[`from${i + 1}`] = item.locations?.[i]?.from || (i === 0 ? 'N/A' : '');
-          processedItem[`to${i + 1}`] = item.locations?.[i]?.to || (i === 0 ? 'N/A' : '');
-        }
-
         return processedItem;
       });
 
       setTrips(processedData);
-      setFilteredTrips(processedData);
+      setFilteredTrips(filterTripsByQuery(processedData, searchRef.current));
     } catch (error) {
       console.error('Error loading trips:', error);
       Alert.alert('Error', 'Failed to load trips. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadTrips();
   }, []);
 
-  useEffect(() => {
-    // Reload trips when screen comes into focus
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadTrips();
-    });
-    return unsubscribe;
-  }, [navigation]);
-
-  const renderHeader = useCallback(() => {
-    const locationHeaders = [];
-    for (let i = 0; i < maxLocations; i++) {
-      locationHeaders.push(
-        <Text key={`from${i}`} style={[styles.cell, styles.locationCell, styles.headerText]}>
-          {i === 0 ? 'From' : `From${i + 1}`}
-        </Text>
-      );
-      locationHeaders.push(
-        <Text key={`to${i}`} style={[styles.cell, styles.locationCell, styles.headerText]}>
-          {i === 0 ? 'To' : `To${i + 1}`}
-        </Text>
-      );
-    }
-
-    return (
-      <View style={[styles.row, styles.headerRow]}>
-        <Text style={[styles.cell, styles.srCell, styles.headerText]}>Sr</Text>
-        <Text style={[styles.cell, styles.dateCell, styles.headerText]}>Date</Text>
-        <Text style={[styles.cell, styles.vehicleCell, styles.headerText]}>Vehicle</Text>
-        <Text style={[styles.cell, styles.driverCell, styles.headerText]}>Driver</Text>
-        <Text style={[styles.cell, styles.amountCell, styles.headerText]}>Amount</Text>
-        {locationHeaders}
-        <Text style={[styles.cell, styles.loadCell, styles.headerText]}>Load</Text>
-        <Text style={[styles.cell, styles.createdCell, styles.headerText]}>Created</Text>
-        <Text style={[styles.cell, styles.actionCell, styles.headerText]}>Actions</Text>
-      </View>
-    );
-  }, [maxLocations]);
-
-  const renderTrip = ({ item, index }) => {
-    const locationCells = [];
-    const hasNoLoad = item.locations.some(loc => loc?.to?.toLowerCase() === 'no load');
-    const textColor = hasNoLoad ? 'red' : 'green';
-    for (let i = 0; i < maxLocations; i++) {
-      locationCells.push(
-        <Text key={`from${i}`} style={[styles.cell, styles.locationCell, { color: textColor }]} numberOfLines={1}>
-          {item[`from${i + 1}`]}
-        </Text>
-      );
-      locationCells.push(
-        <Text key={`to${i}`} style={[styles.cell, styles.locationCell, { color: textColor }]} numberOfLines={1}>
-          {item[`to${i + 1}`]}
-        </Text>
-      );
-    }
-
-    
-
-    return (
-      <View style={[styles.row, index % 2 === 0 ? styles.evenRow : styles.oddRow]}>
-        <Text style={[styles.cell, styles.srCell, { color: textColor }]}>{item.srNo}</Text>
-        <Text style={[styles.cell, styles.dateCell, { color: textColor }]} numberOfLines={1}>{item.date}</Text>
-        <Text style={[styles.cell, styles.vehicleCell, { color: textColor }]} numberOfLines={1}>{item.vehicleNo}</Text>
-        <Text style={[styles.cell, styles.driverCell, { color: textColor }]} numberOfLines={1}>{item.driverName}</Text>
-        <Text style={[styles.cell, styles.amountCell, { color: textColor }]} numberOfLines={1}>{item.amount || '-'}</Text>
-        {locationCells}
-        <Text style={[styles.cell, styles.loadCell, { color: textColor }]}>{item.loadCount}</Text>
-        <Text style={[styles.cell, styles.createdCell, { color: textColor }]} numberOfLines={2}>
-          {item.createdAt ? item.createdAt.toLocaleString('en-GB', {
-            day: '2-digit',
-            month: '2-digit',
-            year: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-          }) : 'N/A'}
-        </Text>
-        <View style={[styles.cell, styles.actionCell]}>
-          <TouchableOpacity style={styles.cell} onPress={() => handleEdit(item)}>
-            <Text style={styles.actionIcon}>✏️</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.cell} onPress={() => handleDelete(item.id)}>
-            <Text style={styles.actionIcon}>🗑️</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  };
+  useFocusEffect(useCallback(() => { loadTrips(); }, [loadTrips]));
 
   if (loading) {
     return (
@@ -216,7 +111,6 @@ const TripList = () => {
           data={filteredTrips} 
           onDataChange={handleDataChange}
         />
-        <View style={styles.headerRight} />
       </View>
 
       <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
@@ -224,7 +118,7 @@ const TripList = () => {
           <Text style={[styles.searchIcon, { color: colors.textSecondary }]}>🔍</Text>
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search by Vehicle No..."
+            placeholder="Search vehicles, parties, drivers, dates..."
             value={searchText}
             onChangeText={handleSearch}
             placeholderTextColor={colors.textSecondary}
@@ -237,29 +131,24 @@ const TripList = () => {
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No trips found</Text>
         </View>
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.tableContainer}>
-            <FlatList
-              data={displayedTrips}
-              renderItem={renderTrip}
-              keyExtractor={keyExtractor}
-              ListHeaderComponent={renderHeader}
-              stickyHeaderIndices={[0]}
-              refreshing={loading}
-              onRefresh={loadTrips}
-              removeClippedSubviews={true}
-              maxToRenderPerBatch={20}
-              windowSize={5}
-              initialNumToRender={20}
-            />
-          </View>
-        </ScrollView>
+        <FlatList
+          data={displayedTrips}
+          renderItem={({ item }) => <TripCard trip={item} onEdit={handleEdit} onDelete={handleDelete} />}
+          keyExtractor={keyExtractor}
+          refreshing={loading}
+          onRefresh={loadTrips}
+          contentContainerStyle={styles.listContent}
+          maxToRenderPerBatch={12}
+          windowSize={5}
+          initialNumToRender={12}
+        />
       )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  listContent: { paddingBottom: 24 },
   container: {
     flex: 1,
   },
@@ -288,9 +177,6 @@ const styles = StyleSheet.create({
     height: 44,
     fontSize: 14,
   },
-  tableContainer: {
-    minWidth: 1060,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -307,83 +193,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-  },
-  headerRight: {
-    width: 60,
-  },
-  backButton: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  row: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e1e5e9',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-  },
-  headerRow: {
-    backgroundColor: '#343a40',
-    borderBottomWidth: 2,
-    borderBottomColor: '#495057',
-  },
-  evenRow: {
-    backgroundColor: '#ffffff',
-  },
-  oddRow: {
-    backgroundColor: '#f8f9fa',
-  },
-  cell: {
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-    fontSize: 11,
-    color: '#495057',
-    textAlign: 'center',
-  },
-  headerText: {
-    fontWeight: 'bold',
-    color: '#ffffff',
-    fontSize: 10,
-  },
-  srCell: {
-    width: 50,
-  },
-  dateCell: {
-    width: 90,
-  },
-  vehicleCell: {
-    width: 80,
-  },
-  driverCell: {
-    width: 100,
-  },
-  amountCell: {
-    width: 80,
-  },
-  locationCell: {
-    width: 90,
-  },
-  loadCell: {
-    width: 60,
-  },
-  createdCell: {
-    width: 120,
-  },
-  actionCell: {
-    width: 110,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  actionIcon: {
-    fontSize: 16,
-    textAlign: 'center',
   },
   emptyContainer: {
     flex: 1,

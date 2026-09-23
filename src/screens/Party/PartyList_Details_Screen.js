@@ -7,13 +7,13 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
-  ScrollView,
   TextInput,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { tripEntriesCollection, tripService } from '../../config/firebase';
 import { getDocs, query, orderBy } from '@react-native-firebase/firestore';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
+import TripCard from '../../components/TripCard';
 import { matchingPartyLocations, filterTripsByQuery } from '../../utils/tripData';
 
 const PartyList_Details_Screen = () => {
@@ -23,7 +23,6 @@ const PartyList_Details_Screen = () => {
   const [trips, setTrips] = useState([]);
   const [filteredTrips, setFilteredTrips] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [maxLocations, setMaxLocations] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const searchRef = useRef('');
 
@@ -63,8 +62,6 @@ const PartyList_Details_Screen = () => {
         };
       });
 
-      const maxLoc = Math.max(...tripsData.map(trip => trip.locations.length), 0);
-      setMaxLocations(maxLoc);
       setTrips(tripsData);
       // Reapply search filter if there's an active search query
       setFilteredTrips(filterTripsByQuery(tripsData, searchRef.current));
@@ -109,74 +106,6 @@ const PartyList_Details_Screen = () => {
     ]);
   };
 
-  const generateColumns = () => {
-    const baseColumns = ['Sr No', 'Date', 'Vehicle No', 'Driver Name', 'Amount'];
-    const locationColumns = [];
-    
-    for (let i = 1; i <= maxLocations; i++) {
-      locationColumns.push(`From${i}`, `To${i}`);
-    }
-    
-    return [...baseColumns, ...locationColumns, 'Load Count', 'Created At', 'Edit', 'Delete'];
-  };
-
-  const renderHeader = () => (
-    <View style={styles.headerRow}>
-      {generateColumns().map((column, index) => (
-        <Text key={index} style={styles.headerCell}>
-          {column}
-        </Text>
-      ))}
-    </View>
-  );
-
-  const renderRow = ({ item, index }) => {
-    // Recalculate srNo based on filtered list index
-    const displaySrNo = index + 1;
-    const hasNoLoad = item.locations.some(loc => loc?.to?.toLowerCase() === 'no load');
-    const textColor = hasNoLoad ? 'red' : 'green';
-    return (
-    <View style={[styles.row, index % 2 === 0 ? styles.evenRow : styles.oddRow]}>
-      <Text style={[styles.cell, { color: textColor }]}>{displaySrNo}</Text>
-      <Text style={[styles.cell, { color: textColor }]}>{item.date}</Text>
-      <Text style={[styles.cell, { color: textColor }]}>{item.vehicleNo}</Text>
-      <Text style={[styles.cell, { color: textColor }]}>{item.driverName}</Text>
-      <Text style={[styles.cell, { color: textColor }]}>{item.amount || '-'}</Text>
-      
-      {Array.from({ length: maxLocations }, (_, i) => {
-        const location = item.locations[i];
-        return [
-          <Text key={`from-${i}`} style={[styles.cell, { color: textColor }]}>
-            {location?.from || 'N/A'}
-          </Text>,
-          <Text key={`to-${i}`} style={[styles.cell, { color: textColor }]}>
-            {location?.to || 'N/A'}
-          </Text>
-        ];
-      }).flat()}
-      
-      <Text style={[styles.cell, { color: textColor }]}>{item.loadCount}</Text>
-      <Text style={[styles.cell, { color: textColor }]}>
-        {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}
-      </Text>
-      
-      <TouchableOpacity style={styles.cell} onPress={() => handleEdit(item)}>
-        <Text style={styles.actionIcon}>✏️</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity style={styles.cell} onPress={() => handleDelete(item.id)}>
-        <Text style={styles.actionIcon}>🗑️</Text>
-      </TouchableOpacity>
-    </View>
-    );
-  };
-
-  const getItemLayout = (data, index) => ({
-    length: 60,
-    offset: 60 * index,
-    index,
-  });
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -210,25 +139,23 @@ const PartyList_Details_Screen = () => {
           <Text style={styles.emptyText}>No trips found</Text>
         </View>
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <FlatList
-            data={displayedTrips}
-            renderItem={renderRow}
-            keyExtractor={item => item.id}
-            ListHeaderComponent={renderHeader}
-            getItemLayout={getItemLayout}
-            windowSize={10}
-            maxToRenderPerBatch={5}
-            updateCellsBatchingPeriod={50}
-            removeClippedSubviews={true}
-          />
-        </ScrollView>
+        <FlatList
+          data={displayedTrips}
+          renderItem={({ item }) => <TripCard trip={item} onEdit={handleEdit} onDelete={handleDelete} />}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContent}
+          onRefresh={loadTrips}
+          refreshing={loading}
+          windowSize={5}
+          maxToRenderPerBatch={12}
+        />
       )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  listContent: { paddingBottom: 24 },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -277,38 +204,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
-  headerRow: {
-    flexDirection: 'row',
-    backgroundColor: '#333',
-    padding: 10,
-  },
-  headerCell: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 12,
-    textAlign: 'center',
-    width: 100,
-    paddingHorizontal: 8,
-  },
-  row: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    minHeight: 60,
-    alignItems: 'center',
-  },
-  evenRow: {
-    backgroundColor: 'white',
-  },
-  oddRow: {
-    backgroundColor: '#f9f9f9',
-  },
-  cell: {
-    fontSize: 12,
-    textAlign: 'center',
-    width: 100,
-    paddingHorizontal: 8,
-    color: '#333',
-  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -317,10 +212,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#666',
-  },
-  actionIcon: {
-    fontSize: 16,
-    textAlign: 'center',
   },
 });
 
