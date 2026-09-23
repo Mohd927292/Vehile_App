@@ -11,10 +11,8 @@ import {
   TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { vehicleTripService } from '../../config/firebase';
+import { vehicleTripService, tripService } from '../../config/firebase';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
-import {getFirestore, getDoc, deleteDoc, updateDoc, doc, increment, limit, startAfter } from '@react-native-firebase/firestore';
-import { db } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
 
 const TripList = () => {
@@ -38,62 +36,20 @@ const TripList = () => {
   };
 
   const handleDelete = (tripId) => {
-    Alert.alert(
-      'Delete Trip',
-      'Are you sure you want to delete this trip?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Get trip data first to access locations
-              const db = getFirestore();
-              const tripDocRef = doc(db, 'tripEntries', tripId);
-              const tripDoc = await getDoc(tripDocRef);
-              const tripData = tripDoc.data();
-             // console.log('Trip data:', tripData);
-              const vehicleNo = tripData?.vehicleNo;
-            //  console.log('Vehicle no:', vehicleNo);
-              await deleteDoc(tripDocRef);
-              
-              // Decrease loadCount in vehicles collection
-              const vehicleDocRef = doc(db, 'vehicles', vehicleNo);
-              await updateDoc(vehicleDocRef, {
-                loadCount: increment(-1)
-              });
-
-              // Decrease loadCount in parties collection for each location
-              if (tripData?.locations) {
-                for (const location of tripData.locations) {
-                  if (location.to) {
-                    try {
-                      const partyDocRef = doc(db, 'parties', location.to);
-                      const partyDoc = await getDoc(partyDocRef);
-                      if (partyDoc.exists()) {
-                        await updateDoc(partyDocRef, {
-                          loadCount: increment(-1)
-                        });
-                      }
-                    } catch (partyError) {
-                      console.warn(`Error updating party ${location.to}:`, partyError);
-                      // Continue with other locations even if one fails
-                    }
-                  }
-                }
-              }
-              
-              await loadTrips();
-              Alert.alert('Success', 'Trip deleted successfully');
-            } catch (error) {
-              console.error('Error deleting trip:', error);
-              Alert.alert('Error', 'Failed to delete trip');
-            }
-          },
+    Alert.alert('Delete Trip', 'Are you sure you want to delete this trip?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            await tripService.deleteTrip(tripId);
+            await loadTrips();
+            Alert.alert('Success', 'Trip deleted successfully');
+          } catch (error) {
+            Alert.alert('Error', error.message || 'Failed to delete trip');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const keyExtractor = useCallback((item) => item.id, []);
@@ -164,12 +120,6 @@ const TripList = () => {
     return unsubscribe;
   }, [navigation]);
 
-  useEffect(() => {
-    // Update displayed trips when filteredTrips changes
-    console.log('🔄 TripList Screen: filteredTrips changed:', filteredTrips.length);
-    setDisplayedTrips(filteredTrips);
-  }, [filteredTrips]);
-
   const renderHeader = useCallback(() => {
     const locationHeaders = [];
     for (let i = 0; i < maxLocations; i++) {
@@ -200,7 +150,7 @@ const TripList = () => {
     );
   }, [maxLocations]);
 
-  const renderTrip = useCallback(({ item, index }) => {
+  const renderTrip = ({ item, index }) => {
     const locationCells = [];
     const hasNoLoad = item.locations.some(loc => loc?.to?.toLowerCase() === 'no load');
     const textColor = hasNoLoad ? 'red' : 'green';
@@ -247,7 +197,7 @@ const TripList = () => {
         </View>
       </View>
     );
-  }, [maxLocations, handleEdit, handleDelete]);
+  };
 
   if (loading) {
     return (
@@ -264,10 +214,7 @@ const TripList = () => {
         {/* Export Buttons */}
         <TripListExport 
           data={filteredTrips} 
-          onDataChange={(newData) => {
-            console.log('📨 DIRECT CALLBACK TripList Screen received data:', newData.length, 'trips');
-            setDisplayedTrips(newData);
-          }}
+          onDataChange={handleDataChange}
         />
         <View style={styles.headerRight} />
       </View>
@@ -304,11 +251,6 @@ const TripList = () => {
               maxToRenderPerBatch={20}
               windowSize={5}
               initialNumToRender={20}
-              getItemLayout={(data, index) => ({
-                length: 48,
-                offset: 48 * index,
-                index,
-              })}
             />
           </View>
         </ScrollView>

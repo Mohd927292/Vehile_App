@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { customerService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
-import { navigateWithParams } from '../../utils/navigation';
 
 const CustomerList = () => {
   const { colors } = useTheme();

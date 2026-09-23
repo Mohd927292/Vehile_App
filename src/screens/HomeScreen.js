@@ -5,20 +5,20 @@ import { getAuth, signOut } from '@react-native-firebase/auth';
 import { useTheme } from '../hooks/useTheme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
+const images = [
+  require('../../assets/images/home-1.webp'),
+  require('../../assets/images/home-2.webp'),
+  require('../../assets/images/home-3.webp'),
+  require('../../assets/images/home-4.webp'),
+  require('../../assets/images/home-5.webp'),
+];
+
 const HomeScreen = () => {
   const { colors, toggleTheme, isDark } = useTheme();
   const navigation = useNavigation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = useRef(null);
   const screenWidth = Dimensions.get('window').width;
-  
-  const images = [
-    require('../../assets/images/1.jpg'),
-    require('../../assets/images/2.png'),
-    require('../../assets/images/3.png'),
-    require('../../assets/images/4.jpg'),
-    require('../../assets/images/5.jpg'),
-  ];
   
   useEffect(() => {
     const interval = setInterval(() => {
@@ -29,7 +29,7 @@ const HomeScreen = () => {
       });
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [screenWidth]);
   
   const handleLogout = async () => {
     try {

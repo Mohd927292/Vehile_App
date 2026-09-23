@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,9 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import firestore, { getFirestore, collection, doc, getDoc, updateDoc, serverTimestamp } from '@react-native-firebase/firestore';
+import { getFirestore, doc, getDoc, Timestamp } from '@react-native-firebase/firestore';
+import { tripService } from '../../config/firebase';
+import { parseTripDate } from '../../utils/tripData';
 
 const EditTrip = () => {
   const navigation = useNavigation();
@@ -29,11 +31,7 @@ const EditTrip = () => {
     locations: []
   });
 
-  useEffect(() => {
-    fetchTripData();
-  }, []);
-
-  const fetchTripData = async () => {
+  const fetchTripData = useCallback(async () => {
     try {
       const db = getFirestore();
       const tripDoc = await getDoc(doc(db, 'tripEntries', tripId));
@@ -54,19 +52,33 @@ const EditTrip = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tripId]);
+
+  useEffect(() => { fetchTripData(); }, [fetchTripData]);
 
   const updateTrip = async () => {
     try {
+      const date = parseTripDate(tripData.date);
+      const vehicleNo = tripData.vehicleNo.trim().toUpperCase();
+      const locations = tripData.locations.map(location => ({
+        from: location.from?.replace(/\s+/g, ' ').trim() || '',
+        to: location.to?.replace(/\s+/g, ' ').trim() || '',
+      }));
+      const amount = tripData.amount.trim() ? Number(tripData.amount) : null;
+      if (!date || !vehicleNo || !tripData.driverName.trim() ||
+          !locations.length || locations.some(location => !location.from || !location.to) ||
+          (amount !== null && (!Number.isFinite(amount) || amount < 0))) {
+        Alert.alert('Check trip', 'Enter a valid date (DD-MM-YYYY), vehicle, driver, locations, and amount.');
+        return;
+      }
       setSaving(true);
-      const db = getFirestore();
-      await updateDoc(doc(db, 'tripEntries', tripId), {
+      await tripService.updateTrip(tripId, {
         date: tripData.date,
-        vehicleNo: tripData.vehicleNo,
-        driverName: tripData.driverName,
-        amount: tripData.amount ? parseFloat(tripData.amount) : null,
-        locations: tripData.locations,
-        updatedAt: serverTimestamp()
+        dateTimestamp: Timestamp.fromDate(date),
+        vehicleNo,
+        driverName: tripData.driverName.trim(),
+        amount,
+        locations,
       });
       
         Alert.alert('Success', 'Trip updated successfully', [

@@ -9,8 +9,6 @@ import {
   Text,
   ScrollView,
   ActivityIndicator,
-  Linking,
-  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import RNFS from 'react-native-fs';
@@ -19,6 +17,7 @@ import Share from 'react-native-share';
 
 // Import PDF module - it exports generatePDF function
 import { generatePDF } from 'react-native-html-to-pdf';
+import { parseTripDate, escapeHtml } from '../utils/tripData';
 
 // Check if module is available
 const isPDFModuleAvailable = () => {
@@ -39,12 +38,6 @@ const TripListExport = ({
   onExcelExport,
   onPDFExport,
 }) => {
-  console.log('🔧 TripListExport initialized with:', {
-    dataLength: data.length,
-    hasOnDataChange: !!onDataChange,
-    onDataChangeType: typeof onDataChange,
-    allProps: Object.keys(arguments[0] || {})
-  });
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
   const [startDate, setStartDate] = useState(null);
@@ -55,89 +48,29 @@ const TripListExport = ({
   const [isExporting, setIsExporting] = useState(false);
 
   // Convert date string to Date object for comparison
-  const parseDate = useCallback((dateStr) => {
-    if (!dateStr || dateStr === 'N/A') return null;
-
-    // Handle YYYY-MM-DD format (new format)
-    if (dateStr.includes('-') && dateStr.length === 10) {
-      const date = new Date(dateStr);
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
-    }
-
-    // Handle DD/MM/YYYY format (legacy format)
-    if (dateStr.includes('/')) {
-      const parts = dateStr.split('/');
-      if (parts.length === 3) {
-        const day = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1;
-        const year = parseInt(parts[2], 10);
-        const date = new Date(year, month, day);
-        if (!isNaN(date.getTime())) {
-          return date;
-        }
-      }
-    }
-
-    // Fallback to standard Date parsing
-    const date = new Date(dateStr);
-    return isNaN(date.getTime()) ? null : date;
-  }, []);
-
-  // Format date for display
-  const formatDate = useCallback((date) => {
-    if (!date) return '';
-    const d = new Date(date);
-    return d.toISOString().split('T')[0]; // YYYY-MM-DD
-  }, []);
+  const parseDate = useCallback(parseTripDate, []);
 
   // Filter data by date range
   const filterByDateRange = useCallback((trips, start, end) => {
-    console.log('🗓️ CALENDAR FILTER:', { start, end, tripsCount: trips.length });
-    if (!start || !end) {
-      console.log('❌ No date range selected, returning all trips');
-      return trips;
-    }
+    if (!start || !end) return trips;
+
+    const startDateObj = parseTripDate(start);
+    const endDateObj = parseTripDate(end);
+    if (!startDateObj || !endDateObj) return trips;
+    startDateObj.setHours(0, 0, 0, 0);
+    endDateObj.setHours(23, 59, 59, 999);
 
     const filtered = trips.filter(trip => {
       const tripDate = parseDate(trip.date);
-      if (!tripDate) {
-        console.log('❌ Invalid trip date:', trip.date);
-        return false;
-      }
-
-      const startDateObj = new Date(start);
-      const endDateObj = new Date(end);
-
-      // Set time to start/end of day for accurate comparison
-      startDateObj.setHours(0, 0, 0, 0);
-      endDateObj.setHours(23, 59, 59, 999);
-      tripDate.setHours(0, 0, 0, 0); // Normalize trip date time
-
-      const inRange = tripDate >= startDateObj && tripDate <= endDateObj;
-      console.log('📅 Trip date check:', {
-        originalDate: trip.date,
-        tripDate: tripDate.toDateString(),
-        startDate: startDateObj.toDateString(),
-        endDate: endDateObj.toDateString(),
-        inRange
-      });
-
-      return inRange;
+      return tripDate && tripDate >= startDateObj && tripDate <= endDateObj;
     });
 
-    console.log('✅ Calendar filtered trips:', filtered.length);
     return filtered;
   }, [parseDate]);
 
   // Sort data
   const sortData = useCallback((trips, field, order) => {
-    console.log('🔄 SORT DATA:', { field, order, tripsCount: trips.length });
-    if (!field) {
-      console.log('❌ No sort field, returning original order');
-      return trips;
-    }
+    if (!field) return trips;
 
     const sorted = [...trips].sort((a, b) => {
       let aValue, bValue;
@@ -147,17 +80,9 @@ const TripListExport = ({
         if (a.dateTimestamp && b.dateTimestamp) {
           aValue = a.dateTimestamp.toDate ? a.dateTimestamp.toDate() : new Date(a.dateTimestamp);
           bValue = b.dateTimestamp.toDate ? b.dateTimestamp.toDate() : new Date(b.dateTimestamp);
-          console.log('📅 Sorting by dateTimestamp:', {
-            aTimestamp: a.dateTimestamp, aParsed: aValue?.toDateString(),
-            bTimestamp: b.dateTimestamp, bParsed: bValue?.toDateString()
-          });
         } else {
           aValue = parseDate(a.date);
           bValue = parseDate(b.date);
-          console.log('📅 Sorting by date string:', {
-            aDate: a.date, aParsed: aValue?.toDateString(),
-            bDate: b.date, bParsed: bValue?.toDateString()
-          });
         }
         // Handle null dates (put them at the end)
         if (!aValue && !bValue) return 0;
@@ -167,77 +92,45 @@ const TripListExport = ({
         // createdAt is already a Date object from Firestore
         aValue = a.createdAt instanceof Date ? a.createdAt : (a.createdAt ? new Date(a.createdAt) : null);
         bValue = b.createdAt instanceof Date ? b.createdAt : (b.createdAt ? new Date(b.createdAt) : null);
-        console.log('⏰ Sorting by createdAt:', {
-          aCreated: a.createdAt, aParsed: aValue?.toDateString(),
-          bCreated: b.createdAt, bParsed: bValue?.toDateString()
-        });
         // Handle null dates (put them at the end)
         if (!aValue && !bValue) return 0;
         if (!aValue) return 1;
         if (!bValue) return -1;
       } else {
-        console.log('❌ Unknown sort field:', field);
         return 0;
       }
 
-      const result = order === 'asc' ? aValue - bValue : bValue - aValue;
-      console.log('🔢 Sort comparison result:', result);
-      return result;
+      return order === 'asc' ? aValue - bValue : bValue - aValue;
     });
 
-    console.log('✅ Sorted trips count:', sorted.length);
     return sorted;
   }, [parseDate]);
 
   // Apply filters and sorting, then notify parent
   const applyFiltersAndSort = useCallback((trips, dateFilter = { start: startDate, end: endDate }, sort = sortConfig) => {
-    console.log('🚀 APPLY FILTERS AND SORT:', {
-      originalTripsCount: trips.length,
-      dateFilter,
-      sort,
-      hasOnDataChange: !!onDataChange
-    });
-
     let filtered = [...trips];
 
     // Apply date filter
     if (dateFilter.start && dateFilter.end) {
-      console.log('📅 Applying date filter...');
       filtered = filterByDateRange(filtered, dateFilter.start, dateFilter.end);
-    } else {
-      console.log('⏭️ Skipping date filter (no date range)');
     }
 
     // Apply sorting
     if (sort.field) {
-      console.log('🔄 Applying sort...');
       filtered = sortData(filtered, sort.field, sort.order);
-    } else {
-      console.log('⏭️ Skipping sort (no sort field)');
     }
-
-    console.log('📊 Final result:', { finalCount: filtered.length });
 
     // Notify parent component
     if (onDataChange) {
-      console.log('📤 Sending data to parent component');
       onDataChange(filtered);
-    } else {
-      console.log('❌ No onDataChange callback provided');
     }
 
     return filtered;
   }, [startDate, endDate, sortConfig, filterByDateRange, sortData, onDataChange]);
 
-  // Note: Filters are only applied when user explicitly sets them via the modals
-  // Initial data is passed through onDataChange on first render if no filters are set
   React.useEffect(() => {
-    if (onDataChange && !startDate && !sortConfig.field) {
-      // If no filters are set, pass original data
-      onDataChange(data || []);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+    applyFiltersAndSort(data);
+  }, [data, applyFiltersAndSort]);
 
   // Excel Export Helper
   const exportToExcel = useCallback(async (exportData) => {
@@ -256,7 +149,7 @@ const TripListExport = ({
           'Date': trip.date || 'N/A',
           'Vehicle No': trip.vehicleNo || 'N/A',
           'Driver Name': trip.driverName || 'N/A',
-          'Amount': trip.amount || 'N/A',
+          'Amount': trip.amount ?? 'N/A',
         };
 
         // Add location columns dynamically
@@ -267,7 +160,7 @@ const TripListExport = ({
           });
         }
 
-        row['Load Count'] = trip.loadCount || 'N/A';
+        row['Load Count'] = trip.loadCount ?? 'N/A';
         row['Created At'] = trip.createdAt
           ? new Date(trip.createdAt).toLocaleString()
           : 'N/A';
@@ -281,15 +174,7 @@ const TripListExport = ({
       XLSX.utils.book_append_sheet(wb, ws, 'Trip Report');
 
       // Generate Excel file buffer
-      const wbout = XLSX.write(wb, { type: 'binary', bookType: 'xlsx' });
-
-      // Convert to base64
-      const base64 = btoa(
-        wbout
-          .split('')
-          .map(c => String.fromCharCode(c.charCodeAt(0) & 0xff))
-          .join('')
-      );
+      const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
 
       // Create temporary file for sharing
       const fileName = `TripReport_${new Date().getTime()}.xlsx`;
@@ -345,22 +230,6 @@ const TripListExport = ({
     try {
       setIsExporting(true);
 
-      // Calculate maximum number of locations from all trips
-      const maxLocations = Math.max(
-        ...exportData.map(trip => (trip.locations && Array.isArray(trip.locations)) ? trip.locations.length : 0),
-        1
-      );
-
-      // Generate dynamic location headers (From 1, To 1, From 2, To 2, etc.)
-      const generateLocationHeaders = () => {
-        let headers = '';
-        for (let i = 0; i < maxLocations; i++) {
-          const locationNum = i + 1;
-          headers += `<th style="width: 6%;">From ${locationNum}</th><th style="width: 6%;">To ${locationNum}</th>`;
-        }
-        return headers;
-      };
-
       // Generate vertical card layout for PDF
       const generateVerticalCards = () => {
         return exportData.map((trip, index) => {
@@ -369,8 +238,8 @@ const TripListExport = ({
           let rowIndex = 3; // Start at 3 (Driver=1, Vehicle=2, so From 1 should be 3=odd)
           if (trip.locations && Array.isArray(trip.locations)) {
             trip.locations.forEach((location, i) => {
-              const from = location ? (location.from || '') : '';
-              const to = location ? (location.to || '') : '';
+              const from = escapeHtml(location?.from);
+              const to = escapeHtml(location?.to);
               if (from || to) {
                 locationRows += `
                   <div class="trip-row ${rowIndex % 2 === 1 ? 'odd-row' : 'even-row'}">
@@ -409,52 +278,26 @@ const TripListExport = ({
               </div>
                <div class="trip-row even-row">
                 <span class="trip-label">Trip Date:</span>
-                <span class="trip-value">${trip.date || ''}</span>
+                <span class="trip-value">${escapeHtml(trip.date)}</span>
               </div>
               <div class="trip-row odd-row">
                 <span class="trip-label">Driver:</span>
-                <span class="trip-value">${trip.driverName || ''}</span>
+                <span class="trip-value">${escapeHtml(trip.driverName)}</span>
               </div>
               <div class="trip-row even-row">
                 <span class="trip-label">Vehicle:</span>
-                <span class="trip-value">${trip.vehicleNo || ''}</span>
+                <span class="trip-value">${escapeHtml(trip.vehicleNo)}</span>
               </div>
               ${locationRows}
               <div class="trip-row ${rowIndex % 2 === 1 ? 'odd-row' : 'even-row'}">
                 <span class="trip-label">Amount:</span>
-                <span class="trip-value">${trip.amount || 'PARTY PAYMENT'}</span>
+                <span class="trip-value">${escapeHtml(trip.amount ?? 'PARTY PAYMENT')}</span>
               </div>
              
             </div>
           `;
         }).join('');
       };
-
-      const reportDate = new Date().toLocaleString('en-GB', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-
-      // Read signature image as base64
-      let signatureBase64 = '';
-      try {
-        // Use Image.resolveAssetSource to get the proper asset path
-        const signatureAsset = require('../../assets/images/SIGN.png');
-        const signPath = signatureAsset.uri;
-
-        console.log('🔍 Checking for signature at:', signPath);
-        const exists = await RNFS.exists(signPath);
-
-        if (exists) {
-          signatureBase64 = await RNFS.readFile(signPath, 'base64');
-          console.log('✅ Signature loaded successfully');
-        } else {
-          console.warn('⚠️ Signature file not found at:', signPath);
-        }
-      } catch (e) {
-        console.warn('⚠️ Could not load signature:', e.message);
-      }
 
       const html = `
         <!DOCTYPE html>
@@ -1589,23 +1432,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#1976d2',
     backgroundColor: '#fff3e0',
-  },
-  calendarDayText: {
-    fontSize: 15,
-    color: '#333',
-    fontWeight: '500',
-  },
-  calendarDayTextDisabled: {
-    color: '#bdbdbd',
-    fontWeight: '300',
-  },
-  calendarDayTextSelected: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  calendarDayTextToday: {
-    color: '#1976d2',
-    fontWeight: '700',
   },
 })
 

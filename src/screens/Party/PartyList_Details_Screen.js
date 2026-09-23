@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,11 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { tripEntriesCollection } from '../../config/firebase';
-import {getFirestore,getDoc, getDocs, query, orderBy, deleteDoc,updateDoc, doc, increment } from '@react-native-firebase/firestore';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { tripEntriesCollection, tripService } from '../../config/firebase';
+import { getDocs, query, orderBy } from '@react-native-firebase/firestore';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
+import { matchingPartyLocations, filterTripsByQuery } from '../../utils/tripData';
 
 const PartyList_Details_Screen = () => {
   const navigation = useNavigation();
@@ -24,6 +25,7 @@ const PartyList_Details_Screen = () => {
   const [loading, setLoading] = useState(true);
   const [maxLocations, setMaxLocations] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const searchRef = useRef('');
 
   const [displayedTrips, setDisplayedTrips] = useState([]);
 
@@ -32,15 +34,7 @@ const PartyList_Details_Screen = () => {
     setDisplayedTrips(newData);
   }, []);
 
-  useEffect(() => {
-    loadTrips();
-  }, []);
-
-  useEffect(() => {
-    setDisplayedTrips(filteredTrips);
-  }, [filteredTrips]);
-
-  const loadTrips = async () => {
+  const loadTrips = useCallback(async () => {
     try {
       setLoading(true);
       const q = query(tripEntriesCollection, orderBy('createdAt', 'desc'));
@@ -49,7 +43,7 @@ const PartyList_Details_Screen = () => {
       // Filter trips that have the party name in any location's to field
       const filteredDocs = querySnapshot.docs.filter(doc => {
         const locations = doc.data().locations || [];
-        return locations.some(loc => loc.to === to);
+        return matchingPartyLocations({ locations }, to).length > 0;
       });
 
       const tripsData = filteredDocs.map((doc, index) => {
@@ -61,9 +55,10 @@ const PartyList_Details_Screen = () => {
           dateTimestamp: data.dateTimestamp || null, // Add timestamp field
           vehicleNo: data.vehicleNo || 'N/A',
           driverName: data.driverName || 'N/A',
-          amount: data.amount !== undefined && data.amount !== null ? data.amount.toString() : '',
-          locations: data.locations || [],
-          loadCount: data.loadCount || 'N/A',
+          amount: (data.locations || []).length === matchingPartyLocations(data, to).length && data.amount != null
+            ? data.amount.toString() : 'Shared trip',
+          locations: matchingPartyLocations(data, to),
+          loadCount: matchingPartyLocations(data, to).length,
           createdAt: data.createdAt?.toDate() || null,
         };
       });
@@ -72,112 +67,46 @@ const PartyList_Details_Screen = () => {
       setMaxLocations(maxLoc);
       setTrips(tripsData);
       // Reapply search filter if there's an active search query
-      filterTrips(searchQuery, tripsData);
+      setFilteredTrips(filterTripsByQuery(tripsData, searchRef.current));
     } catch (error) {
       console.error('Error loading trips:', error);
       Alert.alert('Error', 'Failed to load trips. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [to]);
+
+  useFocusEffect(useCallback(() => { loadTrips(); }, [loadTrips]));
 
   const handleEdit = (trip) => {
     navigation.navigate('EditTrip', { tripId: trip.id });
   };
 
   const filterTrips = (query, tripsToFilter = null) => {
-    const tripsData = tripsToFilter || trips;
-    if (!query.trim()) {
-      setFilteredTrips(tripsData);
-      return;
-    }
-
-    const lowerQuery = query.toLowerCase().trim();
-    const filtered = tripsData.filter(trip => {
-      // Search in party names (from/to fields in locations)
-      const hasMatchingParty = trip.locations.some(loc => 
-        loc.from?.toLowerCase().includes(lowerQuery) ||
-        loc.to?.toLowerCase().includes(lowerQuery)
-      );
-      
-      // Also search in other fields
-      const matchesVehicle = trip.vehicleNo?.toLowerCase().includes(lowerQuery);
-      const matchesDriver = trip.driverName?.toLowerCase().includes(lowerQuery);
-      const matchesDate = trip.date?.toLowerCase().includes(lowerQuery);
-      const matchesLoadCount = trip.loadCount?.toString().toLowerCase().includes(lowerQuery);
-
-      return hasMatchingParty || matchesVehicle || matchesDriver || matchesDate || matchesLoadCount;
-    });
-
-    setFilteredTrips(filtered);
+    setFilteredTrips(filterTripsByQuery(tripsToFilter || trips, query));
   };
 
   const handleSearchChange = (text) => {
     setSearchQuery(text);
+    searchRef.current = text;
     filterTrips(text);
   };
 
   const handleDelete = (tripId) => {
-    Alert.alert(
-      'Delete Trip',
-      'Are you sure you want to delete this trip?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Get trip data first to access locations
-              const db = getFirestore();
-              const tripDocRef = doc(db, 'tripEntries', tripId);
-              const tripDoc = await getDoc(tripDocRef);
-              const tripData = tripDoc.data();
-              
-              await deleteDoc(tripDocRef);
-              console.log('Trip deleted with ID:', tripData);
-
-              const vehicleNo = tripData?.vehicleNo;
-              
-              // Decrease loadCount in vehicles collection
-              const vehicleDocRef = doc(db, 'vehicles', vehicleNo);
-              await updateDoc(vehicleDocRef, {
-                loadCount: increment(-1)
-              });
-
-              console.log('Decreased loadCount for vehicle:', vehicleNo);
-
-              // Decrease loadCount in parties collection for each location
-              if (tripData?.locations) {
-                for (const location of tripData.locations) {
-                  if (location.to) {
-                    try {
-                      const partyDocRef = doc(db, 'parties', location.to);
-                      const partyDoc = await getDoc(partyDocRef);
-                      if (partyDoc.exists()) {
-                        await updateDoc(partyDocRef, {
-                          loadCount: increment(-1)
-                        });
-                      }
-                      console.log('Decreased loadCount for party:', location.to);
-                    } catch (partyError) {
-                      console.warn(`Error updating party ${location.to}:`, partyError);
-                      // Continue with other locations even if one fails
-                    }
-                  }
-                }
-              }
-              
-              await loadTrips();
-              Alert.alert('Success', 'Trip deleted successfully');
-            } catch (error) {
-              console.error('Error deleting trip:', error);
-              Alert.alert('Error', 'Failed to delete trip');
-            }
-          },
+    Alert.alert('Delete Trip', 'Are you sure you want to delete this trip?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            await tripService.deleteTrip(tripId);
+            await loadTrips();
+            Alert.alert('Success', 'Trip deleted successfully');
+          } catch (error) {
+            Alert.alert('Error', error.message || 'Failed to delete trip');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const generateColumns = () => {

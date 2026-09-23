@@ -13,6 +13,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
+import { partyKey } from '../../utils/tripData';
 
 const PartyListScreen = () => {
   const navigation = useNavigation();
@@ -39,15 +40,16 @@ const PartyListScreen = () => {
         if (trip.locations && trip.locations.length > 0) {
           trip.locations.forEach(location => {
             if (location.to) {
-              const partyName = location.to;
-              if (partyMap.has(partyName)) {
-                partyMap.set(partyName, {
-                  ...partyMap.get(partyName),
-                  loadCount: partyMap.get(partyName).loadCount + 1
+              const partyName = location.to.replace(/\s+/g, ' ').trim();
+              const key = partyKey(partyName);
+              if (partyMap.has(key)) {
+                partyMap.set(key, {
+                  ...partyMap.get(key),
+                  loadCount: partyMap.get(key).loadCount + 1
                 });
               } else {
-                partyMap.set(partyName, {
-                  id: partyName,
+                partyMap.set(key, {
+                  id: key,
                   to: partyName,
                   loadCount: 1,
                   createdAt: trip.createdAt

@@ -18,7 +18,6 @@ import {
   Title,
   Appbar,
   Provider as PaperProvider,
-  IconButton,
   Dialog,
   Portal,
   Paragraph,
@@ -27,7 +26,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { tripService } from '../../config/firebase';
 import AutoSuggestInput from '../../components/AutoSuggestInput';
-import { getVehicleSuggestions, getCustomerSuggestions, getDriverSuggestions, saveDriverName, getFromLocationSuggestions } from '../../services/firestoreService';
+import { getVehicleSuggestions, getCustomerSuggestions, getDriverSuggestions, getFromLocationSuggestions } from '../../services/firestoreService';
 import { getFirestore, collection, query, where, limit, getDocs, Timestamp } from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../hooks/useTheme';
@@ -123,7 +122,7 @@ const TripEntryScreen = () => {
       }
       setHydrated(true);
     })();
-  }, []);
+  }, [screenWidth]);
 
    
   const formatDate = (date) => {
@@ -234,7 +233,7 @@ const TripEntryScreen = () => {
       
       const db = getFirestore();
       const customersRef = collection(db, 'customers');
-      const q = query(customersRef, where('msName', '==', trimmedName), limit(1));
+      const q = query(customersRef, where('msnamelower', '==', trimmedName.toLowerCase()), limit(1));
       const snapshot = await getDocs(q);
       return !snapshot.empty;
     } catch (error) {
@@ -251,6 +250,7 @@ const TripEntryScreen = () => {
 
   // Validate location on blur
   const handleLocationBlur = async (tripIndex, locationIndex, field, value) => {
+    if (field !== 'to') return;
     const trimmedValue = value.replace(/\s+/g, ' ').trim();
     if (trimmedValue && trimmedValue.length > 0) {
       const isValid = await validateCustomer(trimmedValue);
@@ -283,6 +283,12 @@ const TripEntryScreen = () => {
     }
     if (!trip.driverName.trim()) {
       return `Driver name is required for trip ${tripIndex + 1}`;
+    }
+    if (trip.amount && (!Number.isFinite(Number(trip.amount)) || Number(trip.amount) < 0)) {
+      return `Enter a valid amount for trip ${tripIndex + 1}`;
+    }
+    if (isNaN(new Date(trip.date).getTime())) {
+      return `Enter a valid date for trip ${tripIndex + 1}`;
     }
     for (let i = 0; i < trip.locations.length; i++) {
       if (!trip.locations[i].from.trim()) {
@@ -327,6 +333,7 @@ const TripEntryScreen = () => {
 
     setLoading(true);
     const results = { success: 0, failed: 0, errors: [] };
+    const failedTrips = [];
 
     try {
       for (let i = 0; i < trips.length; i++) {
@@ -352,6 +359,7 @@ const TripEntryScreen = () => {
           console.error(`Trip ${i + 1} failed:`, error);
           console.error('Error details:', error.message, error.code, error.stack);
           results.failed++;
+          failedTrips.push(trips[i]);
           results.errors.push(`Trip ${i + 1}: ${error.message}`);
         }
       }
@@ -363,6 +371,9 @@ const TripEntryScreen = () => {
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);
       } else {
+        setTrips(failedTrips);
+        setCurrentTripIndex(0);
+        await saveDraft({ trips: failedTrips, currentTripIndex: 0 });
         const message = `${results.success} trips saved, ${results.failed} failed.\n${results.errors.join('\n')}`;
         Alert.alert('Partial Success', message);
       }
@@ -757,7 +768,6 @@ const styles = StyleSheet.create({
   headerButtonLabel: {
     fontSize: 25,
     fontWeight: '600',
-    height: 20,
     height: 20,
     marginTop: 6,
   },

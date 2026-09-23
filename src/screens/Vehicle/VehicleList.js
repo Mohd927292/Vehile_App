@@ -13,7 +13,6 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
-import { navigateWithParams } from '../../utils/navigation';
 
 const VehicleList = () => {
   const { colors } = useTheme();
@@ -34,13 +33,16 @@ const VehicleList = () => {
       // Group by vehicle and get unique vehicles
       const vehicleMap = new Map();
       mergedData.forEach(trip => {
-        if (!vehicleMap.has(trip.vehicleNo)) {
-          vehicleMap.set(trip.vehicleNo, {
+        const key = trip.vehicleNo;
+        if (!key) return;
+        if (!vehicleMap.has(key)) {
+          vehicleMap.set(key, {
             vehicleNo: trip.vehicleNo,
-          
-            loadCount: trip.loadCount,
-            createdAt: trip.createdAt
+            loadCount: 1,
+            createdAt: trip.createdAt,
           });
+        } else {
+          vehicleMap.get(key).loadCount += 1;
         }
       });
       

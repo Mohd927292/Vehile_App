@@ -16,7 +16,7 @@ import {
 } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { db } from '../../config/firebase';
-import { collection, addDoc, serverTimestamp } from '@react-native-firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, limit, getDocs } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
 
 const AddCustomer = () => {
@@ -76,11 +76,18 @@ const AddCustomer = () => {
 
     try {
       setIsSaving(true);
+      const name = customerData.msName.replace(/\s+/g, ' ').trim();
+      const customersRef = collection(db, 'customers');
+      const existing = await getDocs(query(customersRef, where('msnamelower', '==', name.toLowerCase()), limit(1)));
+      if (!existing.empty) {
+        Alert.alert('Customer already exists', 'Choose the existing customer or use a different name.');
+        return;
+      }
       
       // Save customer data to Firestore
       const customerDataToSave = {
-        msName: customerData.msName.trim(),
-        msnamelower: customerData.msName.trim().toLowerCase(),
+        msName: name,
+        msnamelower: name.toLowerCase(),
         address1: customerData.address1.trim(),
         address2: customerData.address2?.trim() || '',
         gstin: customerData.gstin.trim(),
@@ -90,8 +97,7 @@ const AddCustomer = () => {
         updatedAt: serverTimestamp(),
       };
       
-      const customersRef = collection(db, 'customers');
-      const docRef = await addDoc(customersRef, customerDataToSave);
+      await addDoc(customersRef, customerDataToSave);
       
         Alert.alert('Success', 'Customer saved successfully!', [
         { 
