@@ -45,6 +45,7 @@ const TripListExport = ({
   const [selectedStartDate, setSelectedStartDate] = useState(null);
   const [selectedEndDate, setSelectedEndDate] = useState(null);
   const [sortConfig, setSortConfig] = useState({ field: null, order: 'asc' });
+  const [pendingSort, setPendingSort] = useState({ field: null, order: 'asc' });
   const [isExporting, setIsExporting] = useState(false);
 
   // Convert date string to Date object for comparison
@@ -710,8 +711,6 @@ const TripListExport = ({
 
   // Apply date filter
   const applyDateFilter = useCallback(() => {
-    console.log('📅 APPLY DATE FILTER:', { selectedStartDate, selectedEndDate });
-
     if (!selectedStartDate || !selectedEndDate) {
       Alert.alert('Invalid Selection', 'Please select both start and end dates');
       return;
@@ -724,7 +723,6 @@ const TripListExport = ({
 
     setStartDate(selectedStartDate);
     setEndDate(selectedEndDate);
-    console.log('🎯 Applying calendar filter with data:', data.length, 'trips');
     applyFiltersAndSort(data, { start: selectedStartDate, end: selectedEndDate }, sortConfig);
     setShowCalendarModal(false);
     Alert.alert('Filter Applied', `Showing trips from ${selectedStartDate} to ${selectedEndDate}`);
@@ -751,31 +749,41 @@ const TripListExport = ({
 
   // Handle sort selection (just update the config, don't apply immediately)
   const handleSort = useCallback((field) => {
-    const newOrder = sortConfig.field === field && sortConfig.order === 'asc'
+    const newOrder = pendingSort.field === field && pendingSort.order === 'asc'
       ? 'desc'
       : 'asc';
 
-    setSortConfig({ field, order: newOrder });
-  }, [sortConfig]);
+    setPendingSort({ field, order: newOrder });
+  }, [pendingSort]);
 
   // Clear sort
   const clearSort = useCallback(() => {
     setSortConfig({ field: null, order: 'asc' });
+    setPendingSort({ field: null, order: 'asc' });
     applyFiltersAndSort(data, { start: startDate, end: endDate }, { field: null, order: 'asc' });
     setShowSortModal(false);
     Alert.alert('Sort Cleared', 'Default order restored');
   }, [data, startDate, endDate, applyFiltersAndSort]);
 
+  const visibleData = React.useMemo(() => {
+    const filtered = startDate && endDate
+      ? filterByDateRange(data, startDate, endDate)
+      : data;
+    return sortConfig.field
+      ? sortData(filtered, sortConfig.field, sortConfig.order)
+      : filtered;
+  }, [data, startDate, endDate, sortConfig, filterByDateRange, sortData]);
+
   // Button handlers
   const handlers = {
     excel: onExcelExport
-      ? () => onExcelExport(data)
-      : () => exportToExcel(data),
+      ? () => onExcelExport(visibleData)
+      : () => exportToExcel(visibleData),
     pdf: onPDFExport
-      ? () => onPDFExport(data)
-      : () => exportToPDF(data),
+      ? () => onPDFExport(visibleData)
+      : () => exportToPDF(visibleData),
     calendar: openCalendarModal,
-    sort: () => setShowSortModal(true),
+    sort: () => { setPendingSort(sortConfig); setShowSortModal(true); },
   };
 
   return (
@@ -792,10 +800,12 @@ const TripListExport = ({
             style={[styles.actionBtn, { backgroundColor: color }]}
             onPress={handlers[key]}
             activeOpacity={0.8}
-            accessibilityLabel={label}
+            accessibilityRole="button"
+            accessibilityLabel={`${label}${((key === 'calendar' && startDate && endDate) || (key === 'sort' && sortConfig.field)) ? ', active' : ''}`}
             disabled={isExporting}
           >
             <Icon name={icon} size={26} color="#fff" />
+            {((key === 'calendar' && startDate && endDate) || (key === 'sort' && sortConfig.field)) && <View style={styles.activeDot} />}
           </TouchableOpacity>
         ))}
       </View>
@@ -983,8 +993,8 @@ const TripListExport = ({
             <View style={styles.summary}>
               <Text style={styles.summaryLabel}>Current selection</Text>
               <Text style={styles.summaryValue}>
-                {sortConfig.field
-                  ? `${sortConfig.field === 'date' ? 'Date' : 'Created At'} · ${sortConfig.order === 'asc' ? 'Ascending' : 'Descending'
+                {pendingSort.field
+                  ? `${pendingSort.field === 'date' ? 'Date' : 'Created At'} · ${pendingSort.order === 'asc' ? 'Ascending' : 'Descending'
                   }`
                   : 'None'}
               </Text>
@@ -1003,7 +1013,7 @@ const TripListExport = ({
                 onPress={() => handleSort(item.key)}
               >
                 <View style={styles.radioOuter}>
-                  {sortConfig.field === item.key && (
+                  {pendingSort.field === item.key && (
                     <View style={styles.radioInner} />
                   )}
                 </View>
@@ -1023,16 +1033,16 @@ const TripListExport = ({
                   key={item.key}
                   style={[
                     styles.segmentButton,
-                    sortConfig.order === item.key && styles.segmentActive,
+                    pendingSort.order === item.key && styles.segmentActive,
                   ]}
                   onPress={() =>
-                    setSortConfig(prev => ({ ...prev, order: item.key }))
+                    setPendingSort(prev => ({ ...prev, order: item.key }))
                   }
                 >
                   <Text
                     style={[
                       styles.segmentText,
-                      sortConfig.order === item.key && styles.segmentTextActive,
+                      pendingSort.order === item.key && styles.segmentTextActive,
                     ]}
                   >
                     {item.label}
@@ -1050,14 +1060,12 @@ const TripListExport = ({
               <TouchableOpacity
                 style={styles.applyButton}
                 onPress={() => {
-                  console.log('🔄 APPLY SORT BUTTON PRESSED:', sortConfig);
-                  if (sortConfig.field) {
-                    console.log('🎯 Applying sort with data:', data.length, 'trips');
-                    applyFiltersAndSort(data, { start: startDate, end: endDate }, sortConfig);
-                    Alert.alert('Sort Applied', `Sorted by ${sortConfig.field} (${sortConfig.order})`);
+                  if (pendingSort.field) {
+                    setSortConfig(pendingSort);
+                    applyFiltersAndSort(data, { start: startDate, end: endDate }, pendingSort);
                   } else {
-                    console.log('❌ No sort field selected');
                     Alert.alert('No Sort Selected', 'Please select a field to sort by');
+                    return;
                   }
                   setShowSortModal(false);
                 }}
@@ -1091,6 +1099,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: '#fff',
+  },
+  activeDot: {
+    position: 'absolute',
+    right: -2,
+    top: -2,
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    backgroundColor: '#1b1b1b',
+    borderColor: '#fff',
+    borderWidth: 1,
   },
   modalOverlay: {
     flex: 1,
