@@ -1,4 +1,4 @@
-import { getFirestore, collection, query, orderBy, startAt, endAt, limit, getDocs, addDoc } from '@react-native-firebase/firestore';
+import { getFirestore, collection, query, orderBy, startAt, endAt, limit, getDocs } from '@react-native-firebase/firestore';
 
 // Get Firestore instance
 const db = getFirestore();
@@ -55,29 +55,6 @@ export const getDriverSuggestions = async searchText => {
     return [];
   }
 }
-
-// Save driver name to Firestore collection
-export const saveDriverName = async (driverName) => {
-  if (!driverName.trim()) return;
-  
-  try {
-    const trimmedName = driverName.trim().toLowerCase();
-    const driversRef = collection(db, 'drivers');
-    
-    // Check if driver already exists
-    const q = query(driversRef, orderBy('driverName'), startAt(trimmedName), endAt(trimmedName + '\uf8ff'), limit(1));
-    const snapshot = await getDocs(q);
-    
-    if (snapshot.empty) {
-      await addDoc(driversRef, {
-        driverName: trimmedName,
-        createdAt: new Date()
-      });
-    }
-  } catch (error) {
-    console.error('Error saving driver name:', error);
-  }
-};
 
 // Fetch from location suggestions from Firestore (using fromcustomers collection)
 export const getFromLocationSuggestions = async searchText => {

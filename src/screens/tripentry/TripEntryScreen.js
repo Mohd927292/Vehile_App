@@ -24,18 +24,18 @@ import {
 } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-import { tripService } from '../../config/firebase';
+import { auth, tripService } from '../../config/firebase';
 import AutoSuggestInput from '../../components/AutoSuggestInput';
 import { getVehicleSuggestions, getCustomerSuggestions, getDriverSuggestions, getFromLocationSuggestions } from '../../services/firestoreService';
 import { getFirestore, collection, query, where, limit, getDocs, Timestamp } from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../hooks/useTheme';
 
-const DRAFT_KEY = 'tripEntryDraft';
+const draftKey = () => `tripEntryDraft:${auth.currentUser?.uid || 'signed-out'}`;
 
 export const saveDraft = async (data) => {
   try {
-    await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    await AsyncStorage.setItem(draftKey(), JSON.stringify(data));
   } catch (e) {
     console.warn('Failed to save trip draft:', e);
   }
@@ -43,7 +43,7 @@ export const saveDraft = async (data) => {
 
 export const loadDraft = async () => {
   try {
-    const value = await AsyncStorage.getItem(DRAFT_KEY);
+    const value = await AsyncStorage.getItem(draftKey());
     if (value) {
       return JSON.parse(value);
     }
@@ -55,7 +55,7 @@ export const loadDraft = async () => {
 
 export const clearDraft = async () => {
   try {
-    await AsyncStorage.removeItem(DRAFT_KEY);
+    await AsyncStorage.removeItem(draftKey());
   } catch (e) {
     console.warn('Failed to clear trip draft:', e);
   }
@@ -82,9 +82,11 @@ const TripEntryScreen = () => {
 
   // Step 3: Debounced auto-save logic
   const draftSaveTimeout = useRef();
+  const submittingRef = useRef(false);
+  const completedRef = useRef(false);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || completedRef.current) return;
     if (draftSaveTimeout.current) clearTimeout(draftSaveTimeout.current);
 
     draftSaveTimeout.current = setTimeout(() => {
@@ -100,13 +102,13 @@ const TripEntryScreen = () => {
       const data = await loadDraft();
       if (
         data &&
-        Array.isArray(data.trips) &&
+        Array.isArray(data.trips) && data.trips.length > 0 &&
         typeof data.currentTripIndex === 'number'
       ) {
         // Fix: convert date field back to Date (if restored as string)
         const tripsWithDateObjs = data.trips.map(trip => ({
           ...trip,
-          date: typeof trip.date === 'string' ? new Date(trip.date) : trip.date,
+          date: trip.date && !isNaN(new Date(trip.date).getTime()) ? new Date(trip.date) : new Date(),
         }));
         setTrips(tripsWithDateObjs);
         setCurrentTripIndex(
@@ -144,9 +146,9 @@ const TripEntryScreen = () => {
   const onDateChange = (event, selectedDate) => {
     setDatePickerState({ show: false, tripIndex: -1 });
     if (selectedDate && datePickerState.tripIndex >= 0) {
-      const newTrips = [...trips];
-      newTrips[datePickerState.tripIndex].date = selectedDate;
-      setTrips(newTrips);
+      setTrips(previous => previous.map((trip, index) =>
+        index === datePickerState.tripIndex ? { ...trip, date: selectedDate } : trip
+      ));
     }
   };
 
@@ -177,34 +179,41 @@ const TripEntryScreen = () => {
 
   const removeTrip = (tripIndex) => {
     if (trips.length > 1) {
-      setTrips(trips.filter((_, i) => i !== tripIndex));
+      setTrips(previous => previous.filter((_, i) => i !== tripIndex));
+      setCurrentTripIndex(index => Math.min(index, trips.length - 2));
     }
   };
 
   const updateTrip = (tripIndex, field, value) => {
-    const newTrips = [...trips];
-    newTrips[tripIndex][field] = value;
-    setTrips(newTrips);
+    setTrips(previous => previous.map((trip, index) =>
+      index === tripIndex ? { ...trip, [field]: value } : trip
+    ));
   };
 
   const addLocationPair = (tripIndex) => {
-    const newTrips = [...trips];
-    newTrips[tripIndex].locations.push({ from: '', to: '' });
-    setTrips(newTrips);
+    setTrips(previous => previous.map((trip, index) =>
+      index === tripIndex
+        ? { ...trip, locations: [...trip.locations, { from: '', to: '' }] }
+        : trip
+    ));
   };
 
   const removeLocationPair = (tripIndex, locationIndex) => {
-    const newTrips = [...trips];
-    if (newTrips[tripIndex].locations.length > 1) {
-      newTrips[tripIndex].locations = newTrips[tripIndex].locations.filter((_, i) => i !== locationIndex);
-      setTrips(newTrips);
-    }
+    setTrips(previous => previous.map((trip, index) =>
+      index === tripIndex && trip.locations.length > 1
+        ? { ...trip, locations: trip.locations.filter((_, i) => i !== locationIndex) }
+        : trip
+    ));
   };
 
   const updateLocation = (tripIndex, locationIndex, field, value) => {
-    const newTrips = [...trips];
-    newTrips[tripIndex].locations[locationIndex][field] = value;
-    setTrips(newTrips);
+    setTrips(previous => previous.map((trip, index) =>
+      index === tripIndex
+        ? { ...trip, locations: trip.locations.map((location, i) =>
+          i === locationIndex ? { ...location, [field]: value } : location
+        ) }
+        : trip
+    ));
   };
 
   const handleDriverSuggestion = (tripIndex, suggestion) => {
@@ -244,7 +253,6 @@ const TripEntryScreen = () => {
 
   // Handle location text change
   const handleLocationChange = (tripIndex, locationIndex, field, value) => {
-    console.log(`📝 Location change - Trip:${tripIndex}, Location:${locationIndex}, Field:${field}, Value:${value}`);
     updateLocation(tripIndex, locationIndex, field, value);
   };
 
@@ -278,23 +286,27 @@ const TripEntryScreen = () => {
   };
 
   const validateTrip = (trip, tripIndex) => {
-    if (!trip.vehicleNo.trim()) {
+    if (!trip.vehicleNo?.trim()) {
       return `Vehicle number is required for trip ${tripIndex + 1}`;
     }
-    if (!trip.driverName.trim()) {
+    if (!trip.driverName?.trim()) {
       return `Driver name is required for trip ${tripIndex + 1}`;
     }
-    if (trip.amount && (!Number.isFinite(Number(trip.amount)) || Number(trip.amount) < 0)) {
+    const amountText = String(trip.amount ?? '').trim();
+    if (amountText && (!Number.isFinite(Number(amountText)) || Number(amountText) < 0)) {
       return `Enter a valid amount for trip ${tripIndex + 1}`;
     }
     if (isNaN(new Date(trip.date).getTime())) {
       return `Enter a valid date for trip ${tripIndex + 1}`;
     }
+    if (!Array.isArray(trip.locations) || trip.locations.length === 0) {
+      return `Add a route for trip ${tripIndex + 1}`;
+    }
     for (let i = 0; i < trip.locations.length; i++) {
-      if (!trip.locations[i].from.trim()) {
+      if (!trip.locations[i]?.from?.trim()) {
         return `From location is required for trip ${tripIndex + 1}, pair ${i + 1}`;
       }
-      if (!trip.locations[i].to.trim()) {
+      if (!trip.locations[i]?.to?.trim()) {
         return `To location is required for trip ${tripIndex + 1}, pair ${i + 1}`;
       }
     }
@@ -302,15 +314,17 @@ const TripEntryScreen = () => {
   };
 
   const handleSubmit = async () => {
-    console.log('=== SUBMIT STARTED ===');
-    console.log('Total trips to submit:', trips.length);
+    if (submittingRef.current || completedRef.current) return;
+    submittingRef.current = true;
+    setLoading(true);
 
     // Validate all trips
     for (let i = 0; i < trips.length; i++) {
       const error = validateTrip(trips[i], i);
       if (error) {
-        console.log('Validation failed for trip', i + 1, ':', error);
         Alert.alert('Validation Error', error);
+        submittingRef.current = false;
+        setLoading(false);
         return;
       }
     }
@@ -324,14 +338,13 @@ const TripEntryScreen = () => {
           const isValid = await validateCustomer(trimmedTo);
           if (!isValid) {
             Alert.alert('Customer Not Found', `Customer "${trimmedTo}" in trip ${i + 1} not found. Please add customer first.`);
+            submittingRef.current = false;
+            setLoading(false);
             return;
           }
         }
       }
     }
-    console.log('All trips and customers validated successfully');
-
-    setLoading(true);
     const results = { success: 0, failed: 0, errors: [] };
     const failedTrips = [];
 
@@ -341,7 +354,7 @@ const TripEntryScreen = () => {
           const tripData = {
             vehicleNo: trips[i].vehicleNo.toUpperCase().trim(),
             driverName: trips[i].driverName.trim(),
-            amount: trips[i].amount ? parseFloat(trips[i].amount) : null,
+            amount: String(trips[i].amount ?? '').trim() ? Number(trips[i].amount.trim()) : null,
             locations: trips[i].locations?.map(loc => ({
               from: loc?.from?.replace(/\s+/g, ' ').trim() || '',
               to: loc?.to?.replace(/\s+/g, ' ').trim() || ''
@@ -350,22 +363,19 @@ const TripEntryScreen = () => {
             dateTimestamp: Timestamp.fromDate(trips[i].date), // For optimal sorting
           };
 
-          console.log(`Submitting trip ${i + 1}:`, JSON.stringify(tripData, null, 2));
           await tripService.addTrip(tripData);
-          
-          console.log(`Trip ${i + 1} saved successfully`);
           results.success++;
         } catch (error) {
           console.error(`Trip ${i + 1} failed:`, error);
-          console.error('Error details:', error.message, error.code, error.stack);
           results.failed++;
           failedTrips.push(trips[i]);
           results.errors.push(`Trip ${i + 1}: ${error.message}`);
         }
       }
 
-      console.log('Final results:', results);
       if (results.success === trips.length) {
+        completedRef.current = true;
+        if (draftSaveTimeout.current) clearTimeout(draftSaveTimeout.current);
         await clearDraft();
         Alert.alert('Success', `All ${results.success} trips added successfully!`, [
           { text: 'OK', onPress: () => navigation.goBack() }
@@ -379,11 +389,10 @@ const TripEntryScreen = () => {
       }
     } catch (error) {
       console.error('Submit function error:', error);
-      console.error('Error details:', error.message, error.code, error.stack);
       Alert.alert('Error', 'Failed to save trips. Please try again.');
     } finally {
       setLoading(false);
-      console.log('=== SUBMIT ENDED ===');
+      submittingRef.current = false;
     }
   };
 
@@ -420,7 +429,7 @@ const TripEntryScreen = () => {
               <Button
                 mode="contained"
                 compact
-                onPress={() => removeTrip(trips.length - 1)}
+                onPress={() => removeTrip(currentTripIndex)}
                 buttonColor="#dc2626"
                 textColor="#ffffff"
                 contentStyle={styles.headerButtonContent}

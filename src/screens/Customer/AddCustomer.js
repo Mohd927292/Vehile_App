@@ -18,6 +18,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { db } from '../../config/firebase';
 import { collection, addDoc, serverTimestamp, query, where, limit, getDocs } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
+import { normalizeCustomerName, validateCustomerInput } from '../../utils/customerValidation';
 
 const AddCustomer = () => {
   const navigation = useNavigation();
@@ -41,42 +42,21 @@ const AddCustomer = () => {
     }));
   };
 
-  const validateGSTIN = (gstin) => {
-    // GSTIN validation regex (simplified version)
-    const gstinRegex = /^[0-9]/
-    
-    //{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-  
-    return gstinRegex.test(gstin);
-  };
-
-  const validatePhone = (phone) => {
-    // Phone number validation (10 digits, starting with 6-9)
-    const phoneRegex = /^[6-9]\d{9}$/;
-    return phoneRegex.test(phone);
-  };
-
-  const validateEmail = (email) => {
-    if (!email) return true; // Email is optional
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveCustomer = async () => {
     if (isSaving) return; // Prevent multiple submissions
     
-    // Validate required fields
-    if (!customerData.msName?.trim()) {
-      Alert.alert('Error', 'Customer name is required');
+    const validationError = validateCustomerInput(customerData);
+    if (validationError) {
+      Alert.alert('Check customer', validationError);
       return;
     }
   
 
     try {
       setIsSaving(true);
-      const name = customerData.msName.replace(/\s+/g, ' ').trim();
+      const name = normalizeCustomerName(customerData.msName);
       const customersRef = collection(db, 'customers');
       const existing = await getDocs(query(customersRef, where('msnamelower', '==', name.toLowerCase()), limit(1)));
       if (!existing.empty) {
@@ -90,7 +70,7 @@ const AddCustomer = () => {
         msnamelower: name.toLowerCase(),
         address1: customerData.address1.trim(),
         address2: customerData.address2?.trim() || '',
-        gstin: customerData.gstin.trim(),
+        gstin: customerData.gstin.trim().toUpperCase(),
         phoneNo: customerData.phoneNo.trim(),
         email: customerData.email?.trim() || '',
         createdAt: serverTimestamp(),

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,10 @@ import {
   TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
-import { partyKey } from '../../utils/tripData';
+import { partyKey, parseTripDate } from '../../utils/tripData';
 
 const PartyListScreen = () => {
   const navigation = useNavigation();
@@ -22,11 +22,7 @@ const PartyListScreen = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    loadParties();
-  }, []);
-
-  const loadParties = async () => {
+  const loadParties = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -52,7 +48,7 @@ const PartyListScreen = () => {
                   id: key,
                   to: partyName,
                   loadCount: 1,
-                  createdAt: trip.createdAt
+                  createdAt: trip.createdAt || parseTripDate(trip.date)
                 });
               }
             }
@@ -67,7 +63,9 @@ const PartyListScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(useCallback(() => { loadParties(); }, [loadParties]));
 
   const filteredParties = parties.filter(party =>
     party.to.toLowerCase().includes(searchQuery.toLowerCase())
@@ -82,7 +80,7 @@ const PartyListScreen = () => {
         <Text style={[styles.partyName, { color: colors.text }]}>{item.to || 'N/A'}</Text>
       </View>
       <Text style={[styles.partyInfo, { color: colors.textSecondary }]}>Load: {item.loadCount }</Text>
-      <Text style={[styles.partyInfo, { color: colors.textSecondary }]}>CreatedAt: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
+      <Text style={[styles.partyInfo, { color: colors.textSecondary }]}>Last Trip: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
     </TouchableOpacity>
   );
 
@@ -123,7 +121,7 @@ const PartyListScreen = () => {
         />
       </View>
 
-      {parties.length === 0 ? (
+      {filteredParties.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No parties found</Text>
         </View>

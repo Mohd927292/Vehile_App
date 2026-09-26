@@ -10,11 +10,10 @@ import {
   TextInput,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import { getFirestore, collection, query, where, orderBy, limit, getDocs } from '@react-native-firebase/firestore';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
 import TripCard from '../../components/TripCard';
 import { tripService } from '../../config/firebase';
-import { filterTripsByQuery } from '../../utils/tripData';
+import { filterTripsByQuery, parseTripDate } from '../../utils/tripData';
 
 const Vehicle_list_Screen = () => {
   const navigation = useNavigation();
@@ -30,26 +29,16 @@ const Vehicle_list_Screen = () => {
 
   // Create stable callback function
   const handleDataChange = useCallback((newData) => {
-    console.log('📨 Vehicle Screen received data:', newData.length, 'trips');
     setDisplayedTrips(newData);
   }, []);
 
   const loadTrips = useCallback(async () => {
     try {
       setLoading(true);
-      const db = getFirestore();
-      const q = query(
-        collection(db, 'tripEntries'),
-        where('vehicleNo', '==', vehicleNo),
-        orderBy('createdAt', 'desc'),
-        limit(1000)
-      );
-      const querySnapshot = await getDocs(q);
-
-      const tripsData = querySnapshot.docs.map((doc, index) => {
-        const data = doc.data();
+      const vehicleTrips = await tripService.getTripsByVehicle(vehicleNo);
+      const tripsData = vehicleTrips.map((data, index) => {
         return {
-          id: doc.id,
+          id: data.id,
           srNo: index + 1,
           date: data.date || 'N/A',
           dateTimestamp: data.dateTimestamp || null, // Add timestamp field
@@ -58,7 +47,7 @@ const Vehicle_list_Screen = () => {
           amount: data.amount !== undefined && data.amount !== null ? data.amount.toString() : '',
           locations: data.locations || [],
           loadCount: data.locations?.length || 0,
-          createdAt: data.createdAt?.toDate() || null,
+          createdAt: parseTripDate(data.createdAt),
         };
       });
 

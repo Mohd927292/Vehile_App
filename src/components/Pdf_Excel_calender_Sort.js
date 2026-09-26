@@ -17,7 +17,7 @@ import Share from 'react-native-share';
 
 // Import PDF module - it exports generatePDF function
 import { generatePDF } from 'react-native-html-to-pdf';
-import { parseTripDate, escapeHtml } from '../utils/tripData';
+import { parseTripDate, escapeHtml, safeSpreadsheetText } from '../utils/tripData';
 
 // Check if module is available
 const isPDFModuleAvailable = () => {
@@ -148,16 +148,16 @@ const TripListExport = ({
         const row = {
           'Sr No': index + 1,
           'Date': trip.date || 'N/A',
-          'Vehicle No': trip.vehicleNo || 'N/A',
-          'Driver Name': trip.driverName || 'N/A',
+          'Vehicle No': safeSpreadsheetText(trip.vehicleNo || 'N/A'),
+          'Driver Name': safeSpreadsheetText(trip.driverName || 'N/A'),
           'Amount': trip.amount ?? 'N/A',
         };
 
         // Add location columns dynamically
         if (trip.locations && Array.isArray(trip.locations)) {
           trip.locations.forEach((loc, idx) => {
-            row[`From ${idx + 1}`] = loc.from || 'N/A';
-            row[`To ${idx + 1}`] = loc.to || 'N/A';
+            row[`From ${idx + 1}`] = safeSpreadsheetText(loc.from || 'N/A');
+            row[`To ${idx + 1}`] = safeSpreadsheetText(loc.to || 'N/A');
           });
         }
 
@@ -533,7 +533,9 @@ const TripListExport = ({
 
       // Copy to our cache directory to ensure consistent path format (like Excel export)
       const cacheFilePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
-      await RNFS.copyFile(sourcePath, cacheFilePath);
+      if (sourcePath !== cacheFilePath) {
+        await RNFS.copyFile(sourcePath, cacheFilePath);
+      }
 
       // Verify copied file exists
       const copiedExists = await RNFS.exists(cacheFilePath);
@@ -569,16 +571,6 @@ const TripListExport = ({
           filename: fileName,
         };
       }
-
-      // Log for debugging
-      console.log('Sharing PDF:', {
-        originalPath: originalPdfPath,
-        sourcePath: sourcePath,
-        cacheFilePath: cacheFilePath,
-        absolutePath: absolutePath,
-        sourceExists: sourceExists,
-        copiedExists: copiedExists,
-      });
 
       await Share.open(shareOptions);
 

@@ -1,7 +1,7 @@
 import { getApps, initializeApp } from '@react-native-firebase/app';
-import { getFirestore, collection, doc, writeBatch, runTransaction, serverTimestamp, increment, getDocs, query, where, orderBy } from '@react-native-firebase/firestore';
+import { getFirestore, collection, doc, writeBatch, runTransaction, serverTimestamp, increment, getDocs } from '@react-native-firebase/firestore';
 import { getAuth } from '@react-native-firebase/auth';
-import { partyKey, vehicleKey, countLocations, locationCountChanges } from '../utils/tripData';
+import { partyKey, vehicleKey, countLocations, locationCountChanges, tripSortTime, parseTripDate } from '../utils/tripData';
 
 // Initialize Firebase if not already initialized
 if (getApps().length === 0) {
@@ -12,26 +12,38 @@ if (getApps().length === 0) {
 const db = getFirestore();
 const authInstance = getAuth();
 
-const applySummaryChanges = (transaction, previous, next) => {
+const applySummaryChanges = async (transaction, previous, next) => {
+  const changes = [];
+  const addChange = (reference, delta, fields = {}) => {
+    changes.push({ reference, delta, fields });
+  };
   const oldVehicle = previous?.vehicleNo?.trim();
   const newVehicle = next?.vehicleNo?.trim();
   if (oldVehicle !== newVehicle) {
-    if (oldVehicle) transaction.set(doc(vehiclesCollection, oldVehicle), { loadCount: increment(-1) }, { merge: true });
-    if (newVehicle) transaction.set(doc(vehiclesCollection, newVehicle), {
-      vehicleNo: newVehicle, loadCount: increment(1), lastTripAt: serverTimestamp(),
-    }, { merge: true });
+    if (oldVehicle) addChange(doc(vehiclesCollection, oldVehicle), -1);
+    if (newVehicle) addChange(doc(vehiclesCollection, newVehicle), 1, { vehicleNo: newVehicle });
   }
 
   for (const [name, delta] of locationCountChanges(previous, next, 'to')) {
-    transaction.set(doc(partiesCollection, name), {
-      to: name, loadCount: increment(delta), lastTripAt: serverTimestamp(),
-    }, { merge: true });
+    addChange(doc(partiesCollection, name), delta, { to: name });
   }
 
   for (const [name, delta] of locationCountChanges(previous, next, 'from')) {
-    transaction.set(doc(fromcustomersCollection1, name), {
-      from: name, fromlower: name.toLowerCase(),
-      loadCount: increment(delta), lastTripAt: serverTimestamp(),
+    addChange(doc(fromcustomersCollection1, name), delta, { from: name, fromlower: name.toLowerCase() });
+  }
+
+  // Firestore transactions require all reads before any writes.
+  const summaries = [];
+  for (const change of changes) {
+    const snapshot = await transaction.get(change.reference);
+    const current = Number(snapshot.data()?.loadCount) || 0;
+    summaries.push({ ...change, count: Math.max(0, current + change.delta) });
+  }
+  for (const summary of summaries) {
+    transaction.set(summary.reference, {
+      ...summary.fields,
+      loadCount: summary.count,
+      ...(summary.delta > 0 ? { lastTripAt: serverTimestamp() } : {}),
     }, { merge: true });
   }
 };
@@ -110,7 +122,7 @@ const tripService = {
     const tripRef = doc(tripEntriesCollection, tripId);
     const snapshot = await transaction.get(tripRef);
     if (!snapshot.exists()) throw new Error('Trip no longer exists. Refresh the list.');
-    applySummaryChanges(transaction, snapshot.data(), null);
+    await applySummaryChanges(transaction, snapshot.data(), null);
     transaction.delete(tripRef);
   }),
 
@@ -120,7 +132,7 @@ const tripService = {
     if (!snapshot.exists()) throw new Error('Trip no longer exists. Refresh the list.');
     const previous = snapshot.data();
     const next = { ...previous, ...changes };
-    applySummaryChanges(transaction, previous, next);
+    await applySummaryChanges(transaction, previous, next);
     transaction.update(tripRef, {
       ...changes,
       vehicleKey: vehicleKey(next.vehicleNo),
@@ -132,9 +144,11 @@ const tripService = {
   // Get trips by vehicle
   getTripsByVehicle: async (vehicleNo) => {
     try {
-      const q = query(tripEntriesCollection, where('vehicleNo', '==', vehicleNo), orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Legacy trips have no vehicleKey. Keep spelling variants together until backfill.
+      const querySnapshot = await getDocs(tripEntriesCollection);
+      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(trip => vehicleKey(trip.vehicleNo) === vehicleKey(vehicleNo))
+        .sort((a, b) => tripSortTime(b) - tripSortTime(a));
     } catch (error) {
       throw error;
     }
@@ -144,33 +158,11 @@ const tripService = {
   getTripsByParty: async (to) => {
     try {
       // Legacy records have no partyKeys, so retain them until a backfill is complete.
-      const q = query(tripEntriesCollection, orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getDocs(tripEntriesCollection);
       return querySnapshot.docs
         .map(snapshot => ({ id: snapshot.id, ...snapshot.data() }))
-        .filter(trip => (trip.locations || []).some(location => partyKey(location.to) === partyKey(to)));
-    } catch (error) {
-      throw error;
-    }
-  },
-  
-  // Get all vehicles
-  getVehicles: async () => {
-    try {
-      const q = query(vehiclesCollection, orderBy('lastTripAt', 'desc'));
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    } catch (error) {
-      throw error;
-    }
-  },
-  
-  // Get all parties
-  getParties: async () => {
-    try {
-      const q = query(partiesCollection, orderBy('lastTripAt', 'desc'));
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        .filter(trip => (trip.locations || []).some(location => partyKey(location?.to) === partyKey(to)))
+        .sort((a, b) => tripSortTime(b) - tripSortTime(a));
     } catch (error) {
       throw error;
     }
@@ -181,7 +173,7 @@ const tripService = {
 const vehicleTripService = {
   getVehicleTripsData: async () => {
     try {
-      const tripsSnapshot = await getDocs(query(tripEntriesCollection, orderBy('createdAt', 'desc')));
+      const tripsSnapshot = await getDocs(tripEntriesCollection);
 
       const mergedData = tripsSnapshot.docs.map(doc => {
         const tripData = doc.data();
@@ -194,39 +186,16 @@ const vehicleTripService = {
           date: tripData.date,
           dateTimestamp: tripData.dateTimestamp,
           locations: tripData.locations,
-          createdAt: tripData.createdAt?.toDate() || null,
+          createdAt: parseTripDate(tripData.createdAt),
           loadCount: tripData.locations?.length || 0
         };
       });
       
-      return mergedData;
+      return mergedData.sort((a, b) => tripSortTime(b) - tripSortTime(a));
     } catch (error) {
       throw error;
     }
   },
-
-  
-  getPartyTripData: async () => {
-    try {
-      const partySnapshot = await getDocs(query(partiesCollection, where('loadCount', '>', 0), orderBy('lastTripAt', 'desc')));
-      
-      const parties = partySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          to: data.to,
-          loadCount: data.loadCount || 0,
-          createdAt: data.lastTripAt?.toDate() || null
-        };
-      });
-      
-      return parties;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-
 };
 
 // Customer service

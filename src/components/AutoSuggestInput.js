@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { TextInput, Text, Card } from 'react-native-paper';
 import { useDebounce } from '../hooks/useDebounce';
@@ -21,6 +21,8 @@ const AutoSuggestInput = ({
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [lastSelectedValue, setLastSelectedValue] = useState('');
+  const selectedDuringBlur = useRef(false);
   
   const debouncedValue = useDebounce(value);
 
@@ -48,13 +50,12 @@ const AutoSuggestInput = ({
 
   const handleSuggestionPress = (suggestion) => {
     const selectedValue = suggestion.vehicleNo || suggestion.name || suggestion.label;
+    selectedDuringBlur.current = true;
     setLastSelectedValue(selectedValue);
     setShowSuggestions(false);
     setSuggestions([]);
     onSuggestionSelect(suggestion);
   };
-
-  const [lastSelectedValue, setLastSelectedValue] = useState('');
 
   const handleTextChange = (text) => {
     onChangeText(text);
@@ -98,7 +99,10 @@ const AutoSuggestInput = ({
         }}
         onBlur={() => {
           setTimeout(() => setShowSuggestions(false), 200);
-          if (onBlur) onBlur(value);
+          setTimeout(() => {
+            if (!selectedDuringBlur.current && onBlur) onBlur(value);
+            selectedDuringBlur.current = false;
+          }, 200);
         }}
         {...props}
       />

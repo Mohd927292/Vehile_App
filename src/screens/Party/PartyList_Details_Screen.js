@@ -10,11 +10,10 @@ import {
   TextInput,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import { tripEntriesCollection, tripService } from '../../config/firebase';
-import { getDocs, query, orderBy } from '@react-native-firebase/firestore';
+import { tripService } from '../../config/firebase';
 import TripListExport from '../../components/Pdf_Excel_calender_Sort';
 import TripCard from '../../components/TripCard';
-import { matchingPartyLocations, filterTripsByQuery } from '../../utils/tripData';
+import { matchingPartyLocations, filterTripsByQuery, parseTripDate } from '../../utils/tripData';
 
 const PartyList_Details_Screen = () => {
   const navigation = useNavigation();
@@ -36,19 +35,10 @@ const PartyList_Details_Screen = () => {
   const loadTrips = useCallback(async () => {
     try {
       setLoading(true);
-      const q = query(tripEntriesCollection, orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
-      
-      // Filter trips that have the party name in any location's to field
-      const filteredDocs = querySnapshot.docs.filter(doc => {
-        const locations = doc.data().locations || [];
-        return matchingPartyLocations({ locations }, to).length > 0;
-      });
-
-      const tripsData = filteredDocs.map((doc, index) => {
-        const data = doc.data();
+      const partyTrips = await tripService.getTripsByParty(to);
+      const tripsData = partyTrips.map((data, index) => {
         return {
-          id: doc.id,
+          id: data.id,
           srNo: index + 1,
           date: data.date || 'N/A',
           dateTimestamp: data.dateTimestamp || null, // Add timestamp field
@@ -58,7 +48,7 @@ const PartyList_Details_Screen = () => {
             ? data.amount.toString() : 'Shared trip',
           locations: matchingPartyLocations(data, to),
           loadCount: matchingPartyLocations(data, to).length,
-          createdAt: data.createdAt?.toDate() || null,
+          createdAt: parseTripDate(data.createdAt),
         };
       });
 

@@ -1,4 +1,4 @@
-import { matchingPartyLocations, parseTripDate, partyKey, vehicleKey, locationCountChanges, escapeHtml } from '../src/utils/tripData';
+import { matchingPartyLocations, parseTripDate, partyKey, vehicleKey, locationCountChanges, escapeHtml, safeSpreadsheetText, tripSortTime } from '../src/utils/tripData';
 
 describe('trip identity and dates', () => {
   test('a party sees only its own locations from a shared trip', () => {
@@ -19,6 +19,11 @@ describe('trip identity and dates', () => {
     expect(parseTripDate('31-02-2026')).toBeNull();
   });
 
+  test('sorts legacy trips that have no creation timestamp', () => {
+    expect(tripSortTime({ date: '23-09-2026' })).toBeGreaterThan(tripSortTime({ date: '22-09-2026' }));
+    expect(tripSortTime({})).toBe(0);
+  });
+
   test('edits and deletes adjust repeated party locations exactly once', () => {
     const original = { locations: [{ to: 'Acme' }, { to: 'Acme' }, { to: 'Beta' }] };
     const edited = { locations: [{ to: 'Acme' }, { to: 'Gamma' }] };
@@ -32,5 +37,11 @@ describe('trip identity and dates', () => {
 
   test('escapes business names in PDF HTML', () => {
     expect(escapeHtml('A & B <C>')).toBe('A &amp; B &lt;C&gt;');
+  });
+
+  test('keeps spreadsheet names from being interpreted as formulas', () => {
+    expect(safeSpreadsheetText('=1+1')).toBe("'=1+1");
+    expect(safeSpreadsheetText('  +SUM(A1)')).toBe("'  +SUM(A1)");
+    expect(safeSpreadsheetText('ACME')).toBe('ACME');
   });
 });

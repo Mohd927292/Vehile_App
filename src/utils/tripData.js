@@ -31,6 +31,11 @@ export const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, chara
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[character]);
 
+export const safeSpreadsheetText = value => {
+  const text = String(value ?? '');
+  return /^[\s]*[=+\-@]/.test(text) ? `'${text}` : text;
+};
+
 export const parseTripDate = value => {
   if (!value || value === 'N/A') return null;
   if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
@@ -47,3 +52,6 @@ export const parseTripDate = value => {
   if (iso) return parseTripDate(`${iso[3]}-${iso[2]}-${iso[1]}`);
   return null;
 };
+
+export const tripSortTime = trip =>
+  (parseTripDate(trip.createdAt) || parseTripDate(trip.dateTimestamp) || parseTripDate(trip.date))?.getTime() || 0;

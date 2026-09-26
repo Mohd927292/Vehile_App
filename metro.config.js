@@ -8,7 +8,7 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
  */
 const config = {
   resolver: {
-    // Disable Fast Refresh during development to prevent navigation resets
+    // Review this compatibility override when dependencies are upgraded.
     unstable_enablePackageExports: false,
   },
 };

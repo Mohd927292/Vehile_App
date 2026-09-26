@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,10 @@ import {
   TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
+import { vehicleKey, parseTripDate } from '../../utils/tripData';
 
 const VehicleList = () => {
   const { colors } = useTheme();
@@ -21,11 +22,7 @@ const VehicleList = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    loadVehicles();
-  }, []);
-
-  const loadVehicles = async () => {
+  const loadVehicles = useCallback(async () => {
     try {
       setLoading(true);
       const mergedData = await vehicleTripService.getVehicleTripsData();
@@ -33,13 +30,13 @@ const VehicleList = () => {
       // Group by vehicle and get unique vehicles
       const vehicleMap = new Map();
       mergedData.forEach(trip => {
-        const key = trip.vehicleNo;
+        const key = vehicleKey(trip.vehicleNo);
         if (!key) return;
         if (!vehicleMap.has(key)) {
           vehicleMap.set(key, {
             vehicleNo: trip.vehicleNo,
             loadCount: 1,
-            createdAt: trip.createdAt,
+            createdAt: trip.createdAt || parseTripDate(trip.date),
           });
         } else {
           vehicleMap.get(key).loadCount += 1;
@@ -53,7 +50,9 @@ const VehicleList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(useCallback(() => { loadVehicles(); }, [loadVehicles]));
 
   const filteredVehicles = vehicles.filter(vehicle =>
     vehicle.vehicleNo.toLowerCase().includes(searchQuery.toLowerCase())
@@ -68,7 +67,7 @@ const VehicleList = () => {
         <Text style={[styles.vehicleNumber, { color: colors.text }]}>{item.vehicleNo || 'N/A'}</Text>
       </View>
       
-      <Text style={[styles.vehicleInfo, { color: colors.textSecondary }]}>Load Count: {item.loadCount || 'N/A'}</Text>
+      <Text style={[styles.vehicleInfo, { color: colors.textSecondary }]}>Trip Count: {item.loadCount}</Text>
       <Text style={[styles.vehicleInfo, { color: colors.textSecondary }]}>Last Trip: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
     </TouchableOpacity>
   );
@@ -111,7 +110,7 @@ const VehicleList = () => {
         />
       </View>
 
-      {vehicles.length === 0 ? (
+      {filteredVehicles.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No vehicles found</Text>
         </View>

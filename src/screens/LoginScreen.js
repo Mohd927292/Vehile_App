@@ -4,6 +4,17 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } f
 import { useTheme } from '../hooks/useTheme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
+const authMessage = code => ({
+  'auth/invalid-email': 'Enter a valid email address.',
+  'auth/invalid-credential': 'The email or password is incorrect.',
+  'auth/user-not-found': 'The email or password is incorrect.',
+  'auth/wrong-password': 'The email or password is incorrect.',
+  'auth/email-already-in-use': 'An account already uses this email address.',
+  'auth/weak-password': 'Use a stronger password with at least six characters.',
+  'auth/network-request-failed': 'Check your connection and try again.',
+  'auth/too-many-requests': 'Too many attempts. Wait a moment and try again.',
+})[code] || 'Unable to complete this request. Please try again.';
+
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +32,7 @@ const LoginScreen = () => {
       const auth = getAuth();
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-      Alert.alert('Login Failed', `${error.code}: ${error.message}`);
+      Alert.alert('Sign in failed', authMessage(error.code));
     }
     setLoading(false);
   };
@@ -37,7 +48,7 @@ const LoginScreen = () => {
       const auth = getAuth();
       await createUserWithEmailAndPassword(auth, email, password);
     } catch (error) {
-      Alert.alert('Sign Up Failed', `${error.code}: ${error.message}`);
+      Alert.alert('Account creation failed', authMessage(error.code));
     }
     setLoading(false);
   };

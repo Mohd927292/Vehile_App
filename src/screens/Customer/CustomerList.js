@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   FlatList,
   ActivityIndicator,
@@ -10,49 +11,44 @@ import {
   Modal,
   StatusBar,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { customerService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
 
 const CustomerList = () => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const navigation = useNavigation();
   const [customers, setCustomers] = useState([]);
-  const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [menuVisible, setMenuVisible] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
-  useEffect(() => {
-    loadCustomers();
-  }, []);
-
-  const loadCustomers = async () => {
+  const loadCustomers = useCallback(async () => {
     try {
       setLoading(true);
       const customerData = await customerService.getCustomers();
       setCustomers(customerData);
-      setFilteredCustomers(customerData);
     } catch (error) {
       console.error('Error loading customers:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(useCallback(() => { loadCustomers(); }, [loadCustomers]));
+
+  const filteredCustomers = useMemo(() => {
+    const queryText = searchQuery.trim().toLowerCase();
+    if (!queryText) return customers;
+    return customers.filter(customer =>
+      [customer.msName, customer.phoneNo, customer.gstin]
+        .some(value => String(value || '').toLowerCase().includes(queryText))
+    );
+  }, [customers, searchQuery]);
 
   const handleSearch = (query) => {
     setSearchQuery(query);
-    if (query.trim() === '') {
-      setFilteredCustomers(customers);
-    } else {
-      const filtered = customers.filter(customer => 
-        customer.msName?.toLowerCase().includes(query.toLowerCase()) ||
-        customer.phoneNo?.toLowerCase().includes(query.toLowerCase()) ||
-        customer.gstin?.toLowerCase().includes(query.toLowerCase())
-      );
-      setFilteredCustomers(filtered);
-    }
   };
 
   const openMenu = (customer) => {
@@ -97,7 +93,7 @@ const CustomerList = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.text === '#FFFFFF' ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <View style={styles.headerTopRow}>
@@ -165,11 +161,8 @@ const CustomerList = () => {
         animationType="fade"
         onRequestClose={closeMenu}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={closeMenu}
-        >
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeMenu} accessibilityLabel="Close customer menu" />
           <View style={[styles.menuContainer, { backgroundColor: colors.surface }]}>
             <TouchableOpacity 
               style={styles.menuItem}
@@ -186,7 +179,7 @@ const CustomerList = () => {
               <Text style={[styles.menuText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </View>
   );

@@ -8,15 +8,15 @@ Reviewed from `neeraj5696/Vehile_App` at `1e52ebc` on 2026-09-23. The Android ap
 2. `src/screens/LoginScreen.js` signs in or creates an email/password user. `HomeScreen.js` opens Add Trip, Vehicles, Parties, All Trips, and Customers, plus theme/logout controls.
 3. `TripEntryScreen.js` manages one or more trip forms, draft autosave, customer validation, suggestions, and submission. A trip holds `vehicleNo`, `driverName`, `amount`, `date`, `dateTimestamp`, and an array of `{from,to}` locations.
 4. `src/config/firebase.js` writes trips to `tripEntries`, plus summary documents in `vehicles`, `parties`, `drivers`, and `fromcustomers`. Customer records live in `customers`. `src/services/firestoreService.js` supplies autocomplete queries.
-5. Vehicle and party lists derive groups from trips. Their detail pages and All Trips show searchable, horizontally scrolling tables with edit/delete and `Pdf_Excel_calender_Sort.js` date, sort, Excel, and PDF controls.
+5. Vehicle and party lists derive groups from trips. Their detail pages and All Trips show searchable trip cards with edit/delete and `Pdf_Excel_calender_Sort.js` date, sort, Excel, and PDF controls.
 6. `AddCustomer.js`, `CustomerList.js`, and `EditCustomer.js` manage customer records. `ThemeContext.js` stores light/dark preference in AsyncStorage.
 
 ## Source map
 
 | Area | Files and responsibility |
 | --- | --- |
-| Startup/navigation | `index.js`, `App.tsx`, `src/utils/navigation.js`, `src/screens/HomeScreen.js`, `src/screens/LoginScreen.js` |
-| Data and identity | `src/config/firebase.js`, `src/services/firestoreService.js`, `src/utils/tripData.js`, `firestore.rules` |
+| Startup/navigation | `index.js`, `App.tsx`, `src/screens/HomeScreen.js`, `src/screens/LoginScreen.js` |
+| Data and identity | `src/config/firebase.js`, `src/services/firestoreService.js`, `src/utils/tripData.js`, `src/utils/customerValidation.js`, `firestore.rules` |
 | Trip entry/edit | `src/screens/tripentry/TripEntryScreen.js`, `src/screens/Vehicle/EditTrip.js`, `src/components/AutoSuggestInput.js`, `src/hooks/useDebounce.js` |
 | Trip views | `src/screens/Vehicle/TripList.js`, `VehicleList.js`, `Vehicle_list_Screen.js`, `src/screens/Party/PartyListScreen.js`, `PartyList_Details_Screen.js` |
 | Customers | `src/screens/Customer/AddCustomer.js`, `CustomerList.js`, `EditCustomer.js` |
@@ -52,6 +52,23 @@ Reviewed from `neeraj5696/Vehile_App` at `1e52ebc` on 2026-09-23. The Android ap
 | P2 | Login wrote email and account ID to device logs | Authentication handlers logged identifiers during sign-in and registration. | Removed identifier logging |
 | P2 | Dependency advisories | Baseline `npm ci` reported 40 advisories: 4 critical, 18 high, 17 moderate, 1 low. | Open, dependency review needed |
 | P2 | Home images were oversized | Three photos were 4096–4864 pixels wide; five carousel files totalled about 24 MB. | Replaced by five 1200-pixel WebP assets under 0.4 MB total |
+
+## Follow-up source review (2026-09-26)
+
+The JavaScript/TypeScript source, tests, rules, package configuration, and Android build configuration were read again before running the app. This is a static review; behavior that depends on production data still needs a controlled test project.
+
+| Source | Finding or change |
+| --- | --- |
+| `App.tsx`, `LoginScreen.js`, `HomeScreen.js` | Removed redundant auth and navigation listeners. Login now shows readable Firebase errors. Registration remains enabled pending a business access decision; current rules allow every authenticated user to reach all listed collections. Home carousel runs continuously and should pause when off-screen. |
+| `config/firebase.js`, `utils/tripData.js` | Create/edit/delete use atomic writes for trip and summary changes. Transaction reads and clamps missing legacy counts. Legacy trip sorting handles missing `createdAt`; normalized vehicle lookup now keeps spelling variants in one history. Full scans remain a latency risk. Existing display-name based IDs can still confuse similarly named businesses. |
+| `services/firestoreService.js`, `components/AutoSuggestInput.js`, `hooks/useDebounce.js` | Removed unused duplicate driver writer. Autocomplete had a state variable referenced before initialization, causing a render failure; fixed. Tapping a suggestion no longer triggers a stale blur warning. Queries still depend on lower-case fields that legacy records may lack. |
+| `TripEntryScreen.js`, `EditTrip.js` | Replaced nested in-place state mutation, tightened route/amount validation and duplicate-submit guards, preserved zero amounts, and handled deleted trips. Drafts are now scoped to the signed-in account. The prior shared draft is intentionally not loaded across accounts. Edit Trip still has free-text party names and date entry; adding customer IDs and a date picker is planned. |
+| `Customer/AddCustomer.js`, `EditCustomer.js`, `CustomerList.js`, `utils/customerValidation.js` | Shared input validation, duplicate-name checks, and focus refresh address immediate form and stale-list issues. Concurrent duplicate creation and customer rename across old trips remain unresolved until stable IDs and migration. |
+| `Vehicle/VehicleList.js`, `Vehicle_list_Screen.js`, `TripList.js`, `Party/PartyListScreen.js`, `PartyList_Details_Screen.js`, `components/TripCard.js` | Lists refresh on focus, vehicle display groups normalized registrations, and detail views match legacy variants. Empty search results now show an empty state. Party details only show that party's matching locations. All Trips, Vehicle, and Party still load unbounded data. |
+| `components/Pdf_Excel_calender_Sort.js` | Filtered/sorted exports, spreadsheet text escaping, HTML escaping, and same-path PDF copy guard are in place. Removed file-path debug logging. Sharing and cleanup still require populated Android device checks. |
+| `theme/*`, `hooks/useTheme.js`, `index.js`, `metro.config.js`, `android/*`, package/test configuration | Read for initialization, visual consistency, and build behavior. Removed unused navigation helper and stale Firebase config copy. Android release build remains a preview signed with a debug key; production signing and secret handling require a separate release setup. |
+
+Current limits: no production records were sampled, so the exact duplicate-party cases and their correct identity mapping are unknown. A complete guarantee for every control or line of code requires representative data, account permissions, and repeated device testing. The open items above are tracked rather than silently merged or guessed.
 
 ## Controls and flow inventory
 
@@ -89,10 +106,11 @@ This separates party ownership from the trip's multi-stop route. Vehicle history
 ## Verification record
 
 - Baseline `npm ci` succeeded; baseline Jest failed before tests, TypeScript had two errors, ESLint had 17 errors/61 warnings.
-- After fixes, Jest passes 4 targeted tests, TypeScript passes, and ESLint has no errors with `--quiet`.
+- After the follow-up source fixes, Jest passes 8 targeted tests, TypeScript passes, and ESLint has no errors with `--quiet`.
 - A non-breaking lockfile refresh reduced the dependency audit to 13 advisories (7 moderate, 6 high, 0 critical). The unmaintained `xlsx` npm package has no npm fix and needs replacement.
 - Android debug build succeeded with JDK 17. A standalone release-variant APK also built successfully, signed with the default debug key strictly for preview. It is not a production signing setup.
 - After the trip card and export changes, Jest, TypeScript, ESLint, a production JavaScript bundle, and the standalone Android build passed again.
+- After the 2026-09-26 source review, 8 Jest tests, TypeScript, ESLint, and the Android release preview build passed. The APK contains the updated JavaScript bundle.
 - The debug APK launched in an Android emulator. Login and Sign Up both showed the expected empty-field validation message. The redesigned login screen was visually inspected on a foldable emulator.
 - The standalone APK launched without Metro and an existing signed-in emulator session displayed Home. Vehicles opened, passed through loading, and showed an empty state and search field. This account had no representative vehicle records, so load time and populated behavior could not be measured.
 - Authenticated tables, edit/delete, Firestore writes, exports, and every in-app control remain unverified end to end. Source review and a Home screenshot do not substitute for these checks. Use a non-production Firebase project with representative data for full QA.

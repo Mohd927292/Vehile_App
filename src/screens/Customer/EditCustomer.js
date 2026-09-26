@@ -7,7 +7,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  useColorScheme,
 } from 'react-native';
 
 import {
@@ -18,14 +17,14 @@ import {
 } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { db } from '../../config/firebase';
-import { collection, doc, updateDoc, serverTimestamp } from '@react-native-firebase/firestore';
+import { collection, doc, updateDoc, serverTimestamp, getDocs, query, where, limit } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
+import { normalizeCustomerName, validateCustomerInput } from '../../utils/customerValidation';
 
 const EditCustomer = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const customer = route.params?.customer;
-  const colorScheme = useColorScheme();
   const {colors} = useTheme();
   
 
@@ -49,22 +48,6 @@ const EditCustomer = () => {
     }));
   };
 
-  const validateGSTIN = (gstin) => {
-    const gstinRegex = /^[0-9]/;
-    return gstinRegex.test(gstin);
-  };
-
-  const validatePhone = (phone) => {
-    const phoneRegex = /^[6-9]\d{9}$/;
-    return phoneRegex.test(phone);
-  };
-
-  const validateEmail = (email) => {
-    if (!email) return true;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
   const handleUpdateCustomer = async () => {
     if (isSaving) return;
 
@@ -73,27 +56,34 @@ const EditCustomer = () => {
       return;
     }
 
-    if (!customerData.msName?.trim()) {
-      Alert.alert('Error', 'Customer name is required');
+    const validationError = validateCustomerInput(customerData);
+    if (validationError) {
+      Alert.alert('Check customer', validationError);
       return;
     }
 
 
     try {
       setIsSaving(true);
+      const name = normalizeCustomerName(customerData.msName);
+      const customersRef = collection(db, 'customers');
+      const existing = await getDocs(query(customersRef, where('msnamelower', '==', name.toLowerCase()), limit(2)));
+      if (existing.docs.some(snapshot => snapshot.id !== customer.id)) {
+        Alert.alert('Customer already exists', 'Choose the existing customer or use a different name.');
+        return;
+      }
 
       const customerDataToSave = {
-        msName: customerData.msName.trim(),
-        msnamelower: customerData.msName.trim().toLowerCase(),
+        msName: name,
+        msnamelower: name.toLowerCase(),
         address1: customerData.address1.trim(),
         address2: customerData.address2?.trim() || '',
-        gstin: customerData.gstin.trim(),
+        gstin: customerData.gstin.trim().toUpperCase(),
         phoneNo: customerData.phoneNo.trim(),
         email: customerData.email?.trim() || '',
         updatedAt: serverTimestamp(),
       };
 
-      const customersRef = collection(db, 'customers');
       const customerDoc = doc(customersRef, customer.id);
       await updateDoc(customerDoc, customerDataToSave);
 

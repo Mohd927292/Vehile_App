@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ const EditTrip = () => {
   const tripId = route.params?.tripId;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [tripData, setTripData] = useState({
     date: '',
     vehicleNo: '',
@@ -33,6 +34,7 @@ const EditTrip = () => {
 
   const fetchTripData = useCallback(async () => {
     try {
+      if (!tripId) throw new Error('Trip ID is missing');
       const db = getFirestore();
       const tripDoc = await getDoc(doc(db, 'tripEntries', tripId));
       
@@ -42,9 +44,13 @@ const EditTrip = () => {
           date: data.date || '',
           vehicleNo: data.vehicleNo || '',
           driverName: data.driverName || '',
-          amount: data.amount ? data.amount.toString() : '',
+          amount: data.amount != null ? data.amount.toString() : '',
           locations: data.locations || []
         });
+      } else {
+        Alert.alert('Trip unavailable', 'This trip was deleted. Refresh the list.', [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
       }
     } catch (error) {
       console.error('Error fetching trip:', error);
@@ -52,11 +58,12 @@ const EditTrip = () => {
     } finally {
       setLoading(false);
     }
-  }, [tripId]);
+  }, [tripId, navigation]);
 
   useEffect(() => { fetchTripData(); }, [fetchTripData]);
 
   const updateTrip = async () => {
+    if (savingRef.current) return;
     try {
       const date = parseTripDate(tripData.date);
       const vehicleNo = tripData.vehicleNo.trim().toUpperCase();
@@ -71,6 +78,7 @@ const EditTrip = () => {
         Alert.alert('Check trip', 'Enter a valid date (DD-MM-YYYY), vehicle, driver, locations, and amount.');
         return;
       }
+      savingRef.current = true;
       setSaving(true);
       await tripService.updateTrip(tripId, {
         date: tripData.date,
@@ -88,6 +96,7 @@ const EditTrip = () => {
       console.error('Error updating trip:', error);
       Alert.alert('Error', 'Failed to update trip');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

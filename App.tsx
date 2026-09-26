@@ -1,9 +1,8 @@
 import 'react-native-gesture-handler';
-import React, { useEffect, useState, useRef } from 'react';
-import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BackHandler, AppState } from 'react-native';
 import {
   getAuth,
   onAuthStateChanged,
@@ -29,41 +28,12 @@ const Stack = createNativeStackNavigator();
 function App() {
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
-  const auth = getAuth();
-  const navigationRef = useRef<NavigationContainerRef<any>>(null);
-  const appState = useRef(AppState.currentState);
-
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
-      setUser(user);
-      if (initializing) setInitializing(false);
+    const unsubscribe = onAuthStateChanged(getAuth(), nextUser => {
+      setUser(nextUser);
+      setInitializing(false);
     });
     return () => unsubscribe();
-  }, [initializing, auth]);
-
-  // Android 16 back handler
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      const currentRoute = navigationRef.current?.getCurrentRoute();
-      console.log('🔙 Hardware back button pressed - Android 16, Current screen:', currentRoute?.name);
-      return false; // Let React Navigation handle
-    });
-    return () => backHandler.remove();
-  }, []);
-
-  // App state change listener
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      const currentRoute = navigationRef.current?.getCurrentRoute();
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        console.log('🟢 App has come to the foreground, Current screen:', currentRoute?.name);
-      } else if (nextAppState.match(/inactive|background/)) {
-        console.log('🔴 App has gone to the background, Current screen:', currentRoute?.name);
-      }
-      appState.current = nextAppState;
-    });
-
-    return () => subscription?.remove();
   }, []);
 
   if (initializing) return null;
@@ -71,30 +41,13 @@ function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
-        <NavigationContainer
-          ref={navigationRef}
-          onStateChange={(state) => {
-            const currentRoute = state?.routes?.[state.index];
-            console.log('📱 Navigation state changed to:', currentRoute?.name);
-          }}
-        >
+        <NavigationContainer>
           <Stack.Navigator 
             screenOptions={{ 
               headerShown: false,
               gestureEnabled: true,
               fullScreenGestureEnabled: true,
               animation: 'slide_from_right'
-            }}
-            screenListeners={{
-              beforeRemove: (e) => {
-                console.log('🚫 Screen about to be removed:', e.target?.split('-')[0]);
-              },
-              transitionStart: (e) => {
-                console.log('🔄 Screen transition started from:', e.target?.split('-')[0]);
-              },
-              transitionEnd: (e) => {
-                console.log('✅ Screen transition ended to:', e.target?.split('-')[0]);
-              }
             }}
           >
             {user ? (
