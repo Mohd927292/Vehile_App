@@ -16,13 +16,19 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { getFirestore, doc, getDoc, Timestamp } from '@react-native-firebase/firestore';
 import { tripService } from '../../config/firebase';
 import { parseTripDate } from '../../utils/tripData';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useTheme } from '../../hooks/useTheme';
+
+const formatTripDate = date => `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
 
 const EditTrip = () => {
+  const { colors } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
   const tripId = route.params?.tripId;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const savingRef = useRef(false);
   const [tripData, setTripData] = useState({
     date: '',
@@ -119,23 +125,23 @@ const EditTrip = () => {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#7b2ff2" />
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+        <View style={[styles.header, { backgroundColor: colors.primary }]}>
           <Text style={styles.headerTitle}>Loading...</Text>
         </View>
-        <ActivityIndicator size="large" color="#007bff" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
       </View>
     );
   }
 
   return (
     <KeyboardAvoidingView 
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#7b2ff2" />
-      <View style={styles.header}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
@@ -145,7 +151,7 @@ const EditTrip = () => {
         <Text style={styles.headerTitle}>Edit Trip</Text>
         <TouchableOpacity
           onPress={updateTrip}
-          style={styles.saveButton}
+          style={[styles.saveButton, { backgroundColor: colors.primary }]}
           disabled={saving}
         >
           <Text style={styles.saveButtonText}>
@@ -160,20 +166,32 @@ const EditTrip = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.section}>
-          <Text style={styles.label}>Date</Text>
-          <TextInput
-            style={styles.input}
-            value={tripData.date}
-            onChangeText={(text) => setTripData({ ...tripData, date: text })}
-            placeholder="Enter date"
-            placeholderTextColor="#888"
-          />
+          <Text style={[styles.label, { color: colors.text }]}>Date</Text>
+          <TouchableOpacity
+            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => setShowDatePicker(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Choose trip date"
+          >
+            <Text style={[styles.dateValue, { color: colors.text }]}>{tripData.date || 'Choose date'}</Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={parseTripDate(tripData.date) || new Date()}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(_event, selectedDate) => {
+                setShowDatePicker(false);
+                if (selectedDate) setTripData(previous => ({ ...previous, date: formatTripDate(selectedDate) }));
+              }}
+            />
+          )}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Vehicle No</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Vehicle No</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
             value={tripData.vehicleNo}
             onChangeText={(text) => setTripData({ ...tripData, vehicleNo: text })}
             placeholder="Enter vehicle number"
@@ -182,9 +200,9 @@ const EditTrip = () => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Driver Name</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Driver Name</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
             value={tripData.driverName}
             onChangeText={(text) => setTripData({ ...tripData, driverName: text })}
             placeholder="Enter driver name"
@@ -193,9 +211,9 @@ const EditTrip = () => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Amount</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Amount</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
             value={tripData.amount}
             onChangeText={(text) => setTripData({ ...tripData, amount: text })}
             placeholder="Enter amount (optional)"
@@ -206,26 +224,26 @@ const EditTrip = () => {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.label}>Locations</Text>
-            <TouchableOpacity onPress={addLocation} style={styles.addButton}>
+            <Text style={[styles.label, { color: colors.text }]}>Locations</Text>
+            <TouchableOpacity onPress={addLocation} style={[styles.addButton, { backgroundColor: colors.primary }]}>
               <Text style={styles.addButtonText}>+ Add Location</Text>
             </TouchableOpacity>
           </View>
           
           {tripData.locations && tripData.locations.map((location, index) => (
-            <View key={index} style={styles.pairContainer}>
-              <Text style={styles.pairLabel}>Location {index + 1}</Text>
+            <View key={index} style={[styles.pairContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.pairLabel, { color: colors.primary }]}>Location {index + 1}</Text>
               <View style={styles.pairInputs}>
                 <TextInput
-                  style={[styles.input, styles.pairInput]}
+                  style={[styles.input, styles.pairInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
                   value={location.from}
                   onChangeText={(text) => updateLocation(index, 'from', text)}
                   placeholder="From"
                   placeholderTextColor="#888"
                 />
-                <Text style={styles.arrow}>→</Text>
+                <Text style={[styles.arrow, { color: colors.textSecondary }]}>→</Text>
                 <TextInput
-                  style={[styles.input, styles.pairInput]}
+                  style={[styles.input, styles.pairInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
                   value={location.to}
                   onChangeText={(text) => updateLocation(index, 'to', text)}
                   placeholder="To"
@@ -253,10 +271,8 @@ export default EditTrip;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
   },
   header: {
-    backgroundColor: '#7b2ff2',
     padding: 20,
     paddingTop: 50,
     flexDirection: 'row',
@@ -303,28 +319,24 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   label: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#2a2a2a',
-    color: '#fff',
     padding: 12,
-    borderRadius: 4,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#444',
     fontSize: 16,
   },
+  dateValue: { fontSize: 16 },
   pairContainer: {
     marginBottom: 15,
     padding: 15,
-    backgroundColor: '#2a2a2a',
     borderRadius: 8,
+    borderWidth: 1,
   },
   pairLabel: {
-    color: '#4CAF50',
     fontSize: 14,
     fontWeight: 'bold',
     marginBottom: 10,
@@ -338,7 +350,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   arrow: {
-    color: '#fff',
     fontSize: 18,
     marginHorizontal: 10,
   },
