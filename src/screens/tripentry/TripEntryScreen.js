@@ -179,8 +179,12 @@ const TripEntryScreen = () => {
 
   const removeTrip = (tripIndex) => {
     if (trips.length > 1) {
+      const nextIndex = currentTripIndex > tripIndex
+        ? currentTripIndex - 1
+        : Math.min(currentTripIndex, trips.length - 2);
       setTrips(previous => previous.filter((_, i) => i !== tripIndex));
-      setCurrentTripIndex(index => Math.min(index, trips.length - 2));
+      setCurrentTripIndex(nextIndex);
+      setPendingScrollIndex(nextIndex);
     }
   };
 

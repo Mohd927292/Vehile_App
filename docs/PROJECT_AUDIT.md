@@ -52,6 +52,10 @@ Reviewed from `neeraj5696/Vehile_App` at `1e52ebc` on 2026-09-23. The Android ap
 | P2 | Login wrote email and account ID to device logs | Authentication handlers logged identifiers during sign-in and registration. | Removed identifier logging |
 | P2 | Dependency advisories | Baseline `npm ci` reported 40 advisories: 4 critical, 18 high, 17 moderate, 1 low. | Open, dependency review needed |
 | P2 | Home images were oversized | Three photos were 4096–4864 pixels wide; five carousel files totalled about 24 MB. | Replaced by five 1200-pixel WebP assets under 0.4 MB total |
+| P2 | Removing the selected trip left its form off-screen | The horizontal form scroll offset stayed at the deleted trip's index. | Fixed by scrolling to the surviving trip; verified on the emulator |
+| P2 | Home header buttons were pushed off-screen on a foldable device | Square cards and a fixed content area overflowed vertically; the customer and theme icons could not be tapped. | Home content now scrolls, cards have bounded height, and buttons have accessibility names; visually rechecked, Customers opened |
+| P2 | Date filter action buttons were below the visible modal on a foldable device | Calendar day boxes scaled with screen width and pushed Cancel, Clear, and OK off-screen. | Calendar rows use a fixed touch height; filter and Clear verified on the emulator |
+| P2 | Edit Trip has a separate hardcoded dark and purple style and uses free-text dates and party names | A populated device view confirmed visual inconsistency with the rest of the app. Typing a destination bypasses Add Trip customer validation. | Open; move to shared theme, date picker, and stable customer selection |
 
 ## Follow-up source review (2026-09-26)
 
@@ -59,7 +63,7 @@ The JavaScript/TypeScript source, tests, rules, package configuration, and Andro
 
 | Source | Finding or change |
 | --- | --- |
-| `App.tsx`, `LoginScreen.js`, `HomeScreen.js` | Removed redundant auth and navigation listeners. Login now shows readable Firebase errors. Registration remains enabled pending a business access decision; current rules allow every authenticated user to reach all listed collections. Home carousel runs continuously and should pause when off-screen. |
+| `App.tsx`, `LoginScreen.js`, `HomeScreen.js` | Removed redundant auth and navigation listeners. Login now shows readable Firebase errors. Registration remains enabled pending a business access decision; current rules allow every authenticated user to reach all listed collections. Home carousel now pauses off-screen. |
 | `config/firebase.js`, `utils/tripData.js` | Create/edit/delete use atomic writes for trip and summary changes. Transaction reads and clamps missing legacy counts. Legacy trip sorting handles missing `createdAt`; normalized vehicle lookup now keeps spelling variants in one history. Full scans remain a latency risk. Existing display-name based IDs can still confuse similarly named businesses. |
 | `services/firestoreService.js`, `components/AutoSuggestInput.js`, `hooks/useDebounce.js` | Removed unused duplicate driver writer. Autocomplete had a state variable referenced before initialization, causing a render failure; fixed. Tapping a suggestion no longer triggers a stale blur warning. Queries still depend on lower-case fields that legacy records may lack. |
 | `TripEntryScreen.js`, `EditTrip.js` | Replaced nested in-place state mutation, tightened route/amount validation and duplicate-submit guards, preserved zero amounts, and handled deleted trips. Drafts are now scoped to the signed-in account. The prior shared draft is intentionally not loaded across accounts. Edit Trip still has free-text party names and date entry; adding customer IDs and a date picker is planned. |
@@ -113,5 +117,10 @@ This separates party ownership from the trip's multi-stop route. Vehicle history
 - After the 2026-09-26 source review, 8 Jest tests, TypeScript, ESLint, and the Android release preview build passed. The APK contains the updated JavaScript bundle.
 - The debug APK launched in an Android emulator. Login and Sign Up both showed the expected empty-field validation message. The redesigned login screen was visually inspected on a foldable emulator.
 - The standalone APK launched without Metro and an existing signed-in emulator session displayed Home. Vehicles opened, passed through loading, and showed an empty state and search field. This account had no representative vehicle records, so load time and populated behavior could not be measured.
-- Authenticated tables, edit/delete, Firestore writes, exports, and every in-app control remain unverified end to end. Source review and a Home screenshot do not substitute for these checks. Use a non-production Firebase project with representative data for full QA.
+- On 2026-09-26, the emulator session displayed populated vehicles and parties. A vehicle history opened, expanded its route, sorted by date, and produced Excel and PDF share sheets. A party history showed only the matching party route. Search showed an empty result for an impossible term. No source records were edited or deleted.
+- A device check found that removing the selected trip left a blank form; this was fixed and rechecked after reinstalling the preview APK. The foldable Home overflow was fixed and visually rechecked; Customers opened through its restored header button. Customer list, edit form, add form, and required-name validation opened without writes.
+- A foldable date dialog initially hid its action buttons. After compacting the calendar, a selected date range reduced the vehicle history to its matching trip; Clear restored the full list.
+- Edit Trip loaded an existing record without saving. Delete showed a confirmation dialog, and Cancel left the trip in the list. The write paths themselves were not exercised against live data.
+- Home theme switching worked in both directions on the foldable emulator; the original light preference was restored.
+- Some authenticated list, route, sort, search, and export controls have been checked with existing records. Edit/delete, Firestore writes, customer creation, date filtering, and every in-app control remain unverified end to end. Use a non-production Firebase project with representative data for full QA.
 - No production Firestore data has been modified for this audit.

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Dimensions } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { getAuth, signOut } from '@react-native-firebase/auth';
 import { useTheme } from '../hooks/useTheme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -20,7 +20,7 @@ const HomeScreen = () => {
   const scrollViewRef = useRef(null);
   const screenWidth = Dimensions.get('window').width;
   
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => {
         const nextIndex = (prevIndex + 1) % images.length;
@@ -29,7 +29,7 @@ const HomeScreen = () => {
       });
     }, 3000);
     return () => clearInterval(interval);
-  }, [screenWidth]);
+  }, [screenWidth]));
   
   const handleLogout = async () => {
     try {
@@ -58,6 +58,8 @@ const HomeScreen = () => {
         <TouchableOpacity 
           style={[styles.themeToggle, { backgroundColor: colors.textSecondary }]}
           onPress={toggleTheme}
+          accessibilityRole="button"
+          accessibilityLabel="Toggle theme"
         >
           <Icon name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} size={24} color="white" />
         </TouchableOpacity>
@@ -65,13 +67,15 @@ const HomeScreen = () => {
         <TouchableOpacity 
           style={[styles.customerListIcon, { backgroundColor: colors.primary }]}
           onPress={() => navigation.navigate('CustomerList')}
+          accessibilityRole="button"
+          accessibilityLabel="Customers"
         >
           <Icon name="account-group" size={26} color="white" />
         </TouchableOpacity>
       </View>
 
       {/* Main content area */}
-      <View style={styles.content}>
+      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.sliderContainer}>
           <ScrollView
             ref={scrollViewRef}
@@ -98,6 +102,8 @@ const HomeScreen = () => {
           <TouchableOpacity 
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate('TripEntry')}
+            accessibilityRole="button"
+            accessibilityLabel="Add Trip"
           >
             <Icon name="plus-circle" size={48} color="#4CAF50" />
             <Text style={[styles.menuText, { color: colors.text }]}>Add Trip</Text>
@@ -106,6 +112,8 @@ const HomeScreen = () => {
           <TouchableOpacity 
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate('VehicleList')}
+            accessibilityRole="button"
+            accessibilityLabel="Vehicles"
           >
             <Icon name="truck-fast" size={48} color="#FF9800" />
             <Text style={[styles.menuText, { color: colors.text }]}>Vehicles</Text>
@@ -114,6 +122,8 @@ const HomeScreen = () => {
           <TouchableOpacity 
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate('PartyList')}
+            accessibilityRole="button"
+            accessibilityLabel="Parties"
           >
             <Icon name="domain" size={48} color="#9C27B0" />
             <Text style={[styles.menuText, { color: colors.text }]}>Parties</Text>
@@ -122,17 +132,17 @@ const HomeScreen = () => {
           <TouchableOpacity 
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate('TripList')}
+            accessibilityRole="button"
+            accessibilityLabel="All Trips"
           >
             <Icon name="format-list-bulleted-square" size={48} color="#2196F3" />
             <Text style={[styles.menuText, { color: colors.text }]}>All Trips</Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* Logout button */}
-      <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.danger }]} onPress={handleLogout}>
-        <Text style={styles.buttonText}>Logout</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.danger }]} onPress={handleLogout} accessibilityRole="button" accessibilityLabel="Logout">
+          <Text style={styles.buttonText}>Logout</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 };
@@ -141,6 +151,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollContent: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -191,7 +202,7 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -232,7 +243,7 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     width: '48%',
-    aspectRatio: 1,
+    height: 170,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -252,8 +263,9 @@ const styles = StyleSheet.create({
   logoutButton: {
     padding: 15,
     borderRadius: 8,
-    margin: 20,
-    marginBottom: 30,
+    width: '100%',
+    marginTop: 12,
+    marginBottom: 16,
   },
   buttonText: {
     color: 'white',

@@ -141,7 +141,7 @@ const EditCustomer = () => {
             />
 
             <TextInput
-              label="Address 1 *"
+              label="Address 1"
               value={customerData.address1}
               onChangeText={(value) => handleInputChange('address1', value)}
               placeholder="Enter address line 1"
@@ -173,7 +173,7 @@ const EditCustomer = () => {
             />
 
             <TextInput
-              label="GSTIN *"
+              label="GSTIN"
               value={customerData.gstin}
               onChangeText={(value) => handleInputChange('gstin', value)}
               placeholder="Enter GSTIN"
@@ -188,7 +188,7 @@ const EditCustomer = () => {
             />
 
             <TextInput
-              label="Phone No *"
+              label="Phone No"
               value={customerData.phoneNo}
               onChangeText={(value) => handleInputChange('phoneNo', value)}
               placeholder="10-digit number"
