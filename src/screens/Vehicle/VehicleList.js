@@ -13,7 +13,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
-import { vehicleKey, parseTripDate } from '../../utils/tripData';
+import { parseTripDate } from '../../utils/tripData';
 
 const VehicleList = () => {
   const { colors } = useTheme();
@@ -25,25 +25,11 @@ const VehicleList = () => {
   const loadVehicles = useCallback(async () => {
     try {
       setLoading(true);
-      const mergedData = await vehicleTripService.getVehicleTripsData();
-      
-      // Group by vehicle and get unique vehicles
-      const vehicleMap = new Map();
-      mergedData.forEach(trip => {
-        const key = vehicleKey(trip.vehicleNo);
-        if (!key) return;
-        if (!vehicleMap.has(key)) {
-          vehicleMap.set(key, {
-            vehicleNo: trip.vehicleNo,
-            loadCount: 1,
-            createdAt: trip.createdAt || parseTripDate(trip.date),
-          });
-        } else {
-          vehicleMap.get(key).loadCount += 1;
-        }
-      });
-      
-      setVehicles(Array.from(vehicleMap.values()));
+      const summaries = await vehicleTripService.getVehicleSummaries();
+      setVehicles(summaries.map(item => ({
+        ...item,
+        createdAt: parseTripDate(item.lastTripAt),
+      })));
     } catch (error) {
       console.error('Error loading vehicles:', error);
       Alert.alert('Error', 'Failed to load vehicles. Please try again.');

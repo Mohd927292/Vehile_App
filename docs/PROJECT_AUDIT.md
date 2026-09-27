@@ -1,6 +1,6 @@
 # TripTrack project audit and modernization plan
 
-Reviewed from `neeraj5696/Vehile_App` at `1e52ebc` on 2026-09-23. The Android app is React Native 0.82, Firebase Authentication, and Cloud Firestore. This document records source findings and work performed; it does not claim production data was inspected.
+Reviewed from `neeraj5696/Vehile_App` at `1e52ebc` on 2026-09-23, then verified against the user's `vehicle2-79fd6` Firebase test project on 2026-09-27. The Android app is React Native 0.82, Firebase Authentication, and Cloud Firestore. Counts below describe the connected test project, not a production deployment.
 
 ## What the app does
 
@@ -8,7 +8,7 @@ Reviewed from `neeraj5696/Vehile_App` at `1e52ebc` on 2026-09-23. The Android ap
 2. `src/screens/LoginScreen.js` signs in or creates an email/password user. `HomeScreen.js` opens Add Trip, Vehicles, Parties, All Trips, and Customers, plus theme/logout controls.
 3. `TripEntryScreen.js` manages one or more trip forms, draft autosave, customer validation, suggestions, and submission. A trip holds `vehicleNo`, `driverName`, `amount`, `date`, `dateTimestamp`, and an array of `{from,to}` locations.
 4. `src/config/firebase.js` writes trips to `tripEntries`, plus summary documents in `vehicles`, `parties`, `drivers`, and `fromcustomers`. Customer records live in `customers`. `src/services/firestoreService.js` supplies autocomplete queries.
-5. Vehicle and party lists derive groups from trips. Their detail pages and All Trips show searchable trip cards with edit/delete and `Pdf_Excel_calender_Sort.js` date, sort, Excel, and PDF controls.
+5. Vehicle and party lists read summary documents; their detail pages use indexed trip lookup keys. All Trips still reads the complete trip collection. Trip cards have edit/delete and `Pdf_Excel_calender_Sort.js` date, sort, Excel, and PDF controls.
 6. `AddCustomer.js`, `CustomerList.js`, and `EditCustomer.js` manage customer records. `ThemeContext.js` stores light/dark preference in AsyncStorage.
 
 ## Source map
@@ -33,9 +33,9 @@ Reviewed from `neeraj5696/Vehile_App` at `1e52ebc` on 2026-09-23. The Android ap
 | P0 | Trip deletion used separate writes; a failure could leave partial data | Three trip screens formerly deleted first, then independently decremented counters. | Fixed with one transaction |
 | P1 | Party detail mixed other parties' locations and could attribute a shared trip amount to one party | Party screen scanned all trips and displayed the full `locations` array. | Matching locations shown; shared amount labelled rather than allocated |
 | P1 | Party names with case or whitespace differences formed separate groups | `PartyListScreen.js` keyed by raw `to`. | Grouped for display; canonical IDs and migration still open |
-| P1 | Vehicle summary counts could be stale and whole collection reads slow lists | `getVehicleTripsData` read all vehicles and all trips; vehicle list used summary count. | Removed redundant vehicle read and derives counts from trips; pagination open |
-| P1 | All trip, vehicle, and party tables read too many records | All Trips and Parties scan the entire trip collection; vehicle detail caps at 1000. Search/filter/sort happen on device. | Open; needs indexed keys, pagination, and migration |
-| P1 | Existing party query cannot match a partial object in an array | `getTripsByParty` used `array-contains-any` with `{to}` although stored location objects also contain `from`. | Fixed correctness with a legacy-safe scan; use indexed `partyKeys` after migration for speed |
+| P1 | Vehicle summary counts could be stale and whole collection reads slow lists | Previous lists scanned trips. The test project's 35 vehicle summaries reconcile with trip counts; 19 have trips. | Vehicle list now reads summaries; future writes and reconciliation still need monitoring |
+| P1 | All trip, vehicle, and party tables read too many records | All Trips still scans 303 trip documents and filters on device. | Vehicle/party lists and detail views now use summaries and indexed keys; All Trips pagination/search remains open |
+| P1 | Existing party query cannot match a partial object in an array | `getTripsByParty` used `array-contains-any` with `{to}` although stored location objects also contain `from`. | Fixed with a normalized `partyKeys` array, backfilled on all 303 trips, and indexed membership query |
 | P1 | Date filter misunderstood `DD-MM-YYYY` values | Entry saves day first, export parser tried native `Date` parsing. | Fixed parser for day first, slash, ISO formats |
 | P1 | Excel export used `btoa`, which is not reliably available in React Native | `Pdf_Excel_calender_Sort.js` converted binary workbook via `btoa`. | Fixed with XLSX base64 output; device export check pending |
 | P1 | Excel/PDF actions ignored the active date and sort selection | Table display applied date and sort locally, but export handlers received the unprocessed `data` prop. | Export now receives the same filtered and sorted trip set; populated-device check pending |
@@ -72,7 +72,26 @@ The JavaScript/TypeScript source, tests, rules, package configuration, and Andro
 | `components/Pdf_Excel_calender_Sort.js` | Filtered/sorted exports, spreadsheet text escaping, HTML escaping, and same-path PDF copy guard are in place. Removed file-path debug logging. Sharing and cleanup still require populated Android device checks. |
 | `theme/*`, `hooks/useTheme.js`, `index.js`, `metro.config.js`, `android/*`, package/test configuration | Read for initialization, visual consistency, and build behavior. Removed unused navigation helper and stale Firebase config copy. Android release build remains a preview signed with a debug key; production signing and secret handling require a separate release setup. |
 
-Current limits: no production records were sampled, so the exact duplicate-party cases and their correct identity mapping are unknown. A complete guarantee for every control or line of code requires representative data, account permissions, and repeated device testing. The open items above are tracked rather than silently merged or guessed.
+Current limits: the connected Firebase project was identified as a test environment by the user and sampled completely. Its deployed Firestore rules could not be read with the available account, and the two unmatched destination names cannot be mapped to customer identities without business input. The open items above are tracked rather than silently merged or guessed.
+
+## Connected test backend review (2026-09-27)
+
+The Android configuration points to Firebase project `vehicle2-79fd6`. A complete local JSON backup of its six top-level collections was saved under the ignored `.local-backup/20260927-180422` directory before writes. The backup contains business contact details and must remain local. A second backup confirmed the trip-key migration, and a later backup captured the reconciled summaries. The scripts under `scripts/` can repeat the backup, analysis, backfill, summary repair, and query checks; mutating scripts default to a dry run and use document update-time preconditions.
+
+| Collection | Documents before migration | Role |
+| --- | ---: | --- |
+| `tripEntries` | 303 | Trips, dates, totals, and multi-party location arrays |
+| `customers` | 82 | Customer contact and billing records |
+| `parties` | 82 | Destination load counters; 84 after creating two missing summaries |
+| `vehicles` | 35 | Vehicle trip counters; 19 currently have trips |
+| `drivers` | 60 | Driver suggestions |
+| `fromcustomers` | 24 | Origin suggestions and counters |
+
+All 303 existing trips lacked `vehicleKey` and `partyKeys`; those fields were derived from their current data and backfilled without changing dates, amounts, routes, or document IDs. The post-migration backup confirms full key coverage. Firestore equality and array-membership queries returned the same counts as the backup for sampled vehicle and party keys. Six party counters differed from their actual route counts by one; those counters were reconciled. Two destinations had neither a party summary nor a customer record. Their party summaries were restored from trips; customer records were not invented. A private local review file records the exact unmatched names for business resolution.
+
+The deployed Firestore rules remain unverified: this account can read and update Firestore documents but the Firebase Rules API returned HTTP 403 for the active `cloud.firestore` release. The repository's rules file covers only three of six collections and should not be deployed as-is. Authentication currently has open in-app sign-up, while repository rules grant every signed-in user broad access. An owner must define approved staff identities and grant rules administration before a secure role/allowlist policy can be deployed and tested. No security policy was changed in the backend during this pass.
+
+The remaining performance boundary is All Trips: it still downloads every trip and applies text/date/sort filters locally, and export operations require the complete result. Use cursor pages for routine browsing and a deliberate full export path with progress, then test with substantially more than 303 trips. For stable party identity, keep a customer ID on each route/load; migrating by display name alone would merge different businesses when names overlap or change. Historical trip totals shared across several parties must remain unallocated until a person confirms a split.
 
 ## Controls and flow inventory
 
@@ -125,3 +144,6 @@ This separates party ownership from the trip's multi-stop route. Vehicle history
 - Edit Trip was rebuilt with the shared light theme, and its native date picker opened on the existing trip date. It was dismissed without saving.
 - Some authenticated list, route, sort, search, and export controls have been checked with existing records. Edit/delete, Firestore writes, customer creation, date filtering, and every in-app control remain unverified end to end. Use a non-production Firebase project with representative data for full QA.
 - No production Firestore data has been modified for this audit.
+- On 2026-09-27, the connected test Firestore project was backed up and modified: 303 trip lookup keys were backfilled, six party counters were corrected, and two missing party summaries were created with last-trip timestamps. No trip, customer, vehicle, driver, or origin record was deleted or rewritten.
+- The updated Android debug package built with JDK 17 after configuring the installed Android SDK. Eight Jest tests and TypeScript passed; ESLint had no errors and 20 style/unused-variable warnings.
+- The updated package launched with the authenticated emulator session. The Vehicles list showed 19 active vehicles and a sampled vehicle detail showed its four trips. The Parties list showed 78 active parties, a sampled party detail showed only its two matching trips, its expanded route showed only that party's destination, and party search kept similarly named parties separate. Query results also matched the local backup counts in direct Firestore checks.

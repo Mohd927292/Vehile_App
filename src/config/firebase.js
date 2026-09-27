@@ -1,5 +1,5 @@
 import { getApps, initializeApp } from '@react-native-firebase/app';
-import { getFirestore, collection, doc, writeBatch, runTransaction, serverTimestamp, increment, getDocs } from '@react-native-firebase/firestore';
+import { getFirestore, collection, doc, writeBatch, runTransaction, serverTimestamp, increment, getDocs, query, where } from '@react-native-firebase/firestore';
 import { getAuth } from '@react-native-firebase/auth';
 import { partyKey, vehicleKey, countLocations, locationCountChanges, tripSortTime, parseTripDate } from '../utils/tripData';
 
@@ -144,10 +144,10 @@ const tripService = {
   // Get trips by vehicle
   getTripsByVehicle: async (vehicleNo) => {
     try {
-      // Legacy trips have no vehicleKey. Keep spelling variants together until backfill.
-      const querySnapshot = await getDocs(tripEntriesCollection);
+      const key = vehicleKey(vehicleNo);
+      if (!key) return [];
+      const querySnapshot = await getDocs(query(tripEntriesCollection, where('vehicleKey', '==', key)));
       return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(trip => vehicleKey(trip.vehicleNo) === vehicleKey(vehicleNo))
         .sort((a, b) => tripSortTime(b) - tripSortTime(a));
     } catch (error) {
       throw error;
@@ -157,11 +157,11 @@ const tripService = {
   // Get trips by party (to location)
   getTripsByParty: async (to) => {
     try {
-      // Legacy records have no partyKeys, so retain them until a backfill is complete.
-      const querySnapshot = await getDocs(tripEntriesCollection);
+      const key = partyKey(to);
+      if (!key) return [];
+      const querySnapshot = await getDocs(query(tripEntriesCollection, where('partyKeys', 'array-contains', key)));
       return querySnapshot.docs
         .map(snapshot => ({ id: snapshot.id, ...snapshot.data() }))
-        .filter(trip => (trip.locations || []).some(location => partyKey(location?.to) === partyKey(to)))
         .sort((a, b) => tripSortTime(b) - tripSortTime(a));
     } catch (error) {
       throw error;
@@ -171,6 +171,18 @@ const tripService = {
 
 // Vehicle-Trip merged data service
 const vehicleTripService = {
+  getVehicleSummaries: async () => {
+    const snapshot = await getDocs(vehiclesCollection);
+    return snapshot.docs.map(item => ({ id: item.id, ...item.data() }))
+      .filter(item => Number(item.loadCount) > 0)
+      .sort((a, b) => String(a.vehicleNo).localeCompare(String(b.vehicleNo)));
+  },
+  getPartySummaries: async () => {
+    const snapshot = await getDocs(partiesCollection);
+    return snapshot.docs.map(item => ({ id: item.id, ...item.data() }))
+      .filter(item => Number(item.loadCount) > 0)
+      .sort((a, b) => String(a.to).localeCompare(String(b.to)));
+  },
   getVehicleTripsData: async () => {
     try {
       const tripsSnapshot = await getDocs(tripEntriesCollection);

@@ -13,7 +13,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
-import { partyKey, parseTripDate } from '../../utils/tripData';
+import { parseTripDate } from '../../utils/tripData';
 
 const PartyListScreen = () => {
   const navigation = useNavigation();
@@ -26,37 +26,11 @@ const PartyListScreen = () => {
     try {
       setLoading(true);
       
-      // Get all trips and build parties from TO locations
-      const tripsSnapshot = await vehicleTripService.getVehicleTripsData();
-      
-      // Extract all TO locations and count them
-      const partyMap = new Map();
-      
-      tripsSnapshot.forEach(trip => {
-        if (trip.locations && trip.locations.length > 0) {
-          trip.locations.forEach(location => {
-            if (location.to) {
-              const partyName = location.to.replace(/\s+/g, ' ').trim();
-              const key = partyKey(partyName);
-              if (partyMap.has(key)) {
-                partyMap.set(key, {
-                  ...partyMap.get(key),
-                  loadCount: partyMap.get(key).loadCount + 1
-                });
-              } else {
-                partyMap.set(key, {
-                  id: key,
-                  to: partyName,
-                  loadCount: 1,
-                  createdAt: trip.createdAt || parseTripDate(trip.date)
-                });
-              }
-            }
-          });
-        }
-      });
-      
-      setParties(Array.from(partyMap.values()));
+      const summaries = await vehicleTripService.getPartySummaries();
+      setParties(summaries.map(item => ({
+        ...item,
+        createdAt: parseTripDate(item.lastTripAt),
+      })));
     } catch (error) {
       console.error('Error loading parties:', error);
       Alert.alert('Error', 'Failed to load parties. Please try again.');
