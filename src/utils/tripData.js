@@ -4,10 +4,9 @@ export const vehicleKey = value => (value || '').replace(/[^a-z0-9]/gi, '').toUp
 export const matchingPartyLocations = (trip, party) => {
   const partyId = typeof party === 'object' ? party?.id : null;
   const name = typeof party === 'object' ? party?.to : party;
-  return (trip.locations || []).filter(location =>
-    partyId && location?.partyId
-      ? location.partyId === partyId
-      : partyKey(location?.to) === partyKey(name));
+  return (trip.locations || []).filter(location => partyId
+    ? location?.partyId === partyId
+    : partyKey(location?.to) === partyKey(name));
 };
 
 export const countPartyLocations = locations => (locations || []).reduce((counts, location) => {

@@ -29,6 +29,7 @@ describe('trip identity and dates', () => {
     expect(matchingPartyLocations(trip, { id: 'party-one', to: 'Acme' })).toEqual([
       trip.locations[0], trip.locations[2],
     ]);
+    expect(matchingPartyLocations({ locations: [{ to: 'Acme' }] }, { id: 'party-one', to: 'Acme' })).toEqual([]);
     expect([...countPartyLocations(trip.locations).entries()]).toEqual([
       ['party-one', { name: 'Acme', count: 2 }],
       ['party-two', { name: 'ACME', count: 1 }],
