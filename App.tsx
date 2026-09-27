@@ -16,6 +16,7 @@ import VehicleList from './src/screens/Vehicle/VehicleList';
 import Vehicle_list_Screen from './src/screens/Vehicle/Vehicle_list_Screen';
 import EditTrip from './src/screens/Vehicle/EditTrip';
 import PartyListScreen from './src/screens/Party/PartyListScreen';
+import PartyMonthScreen from './src/screens/Party/PartyMonthScreen';
 import PartyList_Details_Screen from './src/screens/Party/PartyList_Details_Screen';
 import TripEntryScreen from './src/screens/tripentry/TripEntryScreen';
 import AddCustomer from './src/screens/Customer/AddCustomer';
@@ -57,6 +58,7 @@ function App() {
                 <Stack.Screen name="VehicleList" component={VehicleList} />
                 <Stack.Screen name="VehicleDetails" component={Vehicle_list_Screen} />
                 <Stack.Screen name="PartyList" component={PartyListScreen} />
+                <Stack.Screen name="PartyMonths" component={PartyMonthScreen} />
                 <Stack.Screen name="PartyDetails" component={PartyList_Details_Screen} />
                 <Stack.Screen name="TripList" component={TripList} />
                 <Stack.Screen name="EditTrip" component={EditTrip} />

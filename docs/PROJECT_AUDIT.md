@@ -1,5 +1,13 @@
 # TripTrack project audit and modernization plan
 
+## Party isolation and table pass (2026-09-27)
+
+The separate Flutter reference app at `C:\Users\Akhtar\Desktop\Billing_App_on work` stores a full trip's `pairs` array on each party document. Its party table and exports previously rendered that full array, which displayed other parties inside the opened party. The local Flutter fix projects only pairs whose destination exactly matches the opened party and aligns monthly counts. The Flutter repository contains extensive pre-existing staged and unstaged work, so this change is left locally uncommitted for review.
+
+TripTrack's Firestore test project `vehicle2-79fd6` now has `partyId` on every stored route, `partyIds` on every trip, normalized `partyKey` and `monthCounts` on every party summary. A fresh read found 303 trips, 84 party summaries, zero missing party IDs, and zero ID-to-route mismatches; recalculating all monthly counts required zero changes. The new Firestore indexes for `partyIds` plus ascending/descending `dateTimestamp` were deployed and all-history and month queries returned results. Backups are under ignored `.local-backup/`.
+
+The Party flow is Party list → Month list → paged trip table. The table projects the opened party's routes only, requests 40 rows at a time, and sorts/month-filters on Firestore. Search is explicitly limited to loaded rows, while full export separately fetches every page in the selected scope. Shared trip amounts are labelled instead of being attributed wholly to a single party. Remaining scalability and correctness work includes server-backed global text search, All Trips and vehicle detail pagination, party selection by ID during trip entry (especially if two distinct parties share a name), customer renames, and security rules review. The stored source rules are incomplete and were not deployed.
+
 Reviewed from `neeraj5696/Vehile_App` at `1e52ebc` on 2026-09-23, then verified against the user's `vehicle2-79fd6` Firebase test project on 2026-09-27. The Android app is React Native 0.82, Firebase Authentication, and Cloud Firestore. Counts below describe the connected test project, not a production deployment.
 
 ## What the app does
@@ -8,7 +16,7 @@ Reviewed from `neeraj5696/Vehile_App` at `1e52ebc` on 2026-09-23, then verified 
 2. `src/screens/LoginScreen.js` signs in or creates an email/password user. `HomeScreen.js` opens Add Trip, Vehicles, Parties, All Trips, and Customers, plus theme/logout controls.
 3. `TripEntryScreen.js` manages one or more trip forms, draft autosave, customer validation, suggestions, and submission. A trip holds `vehicleNo`, `driverName`, `amount`, `date`, `dateTimestamp`, and an array of `{from,to}` locations.
 4. `src/config/firebase.js` writes trips to `tripEntries`, plus summary documents in `vehicles`, `parties`, `drivers`, and `fromcustomers`. Customer records live in `customers`. `src/services/firestoreService.js` supplies autocomplete queries.
-5. Vehicle and party lists read summary documents; their detail pages use indexed trip lookup keys. All Trips still reads the complete trip collection. Trip cards have edit/delete and `Pdf_Excel_calender_Sort.js` date, sort, Excel, and PDF controls.
+5. Vehicle and party lists read summary documents. Party detail uses a stable party document ID and indexed, date-ordered pages. Party months use summary counts. All Trips still reads the complete trip collection. Trip cards have edit/delete and `Pdf_Excel_calender_Sort.js` date, sort, Excel, and PDF controls.
 6. `AddCustomer.js`, `CustomerList.js`, and `EditCustomer.js` manage customer records. `ThemeContext.js` stores light/dark preference in AsyncStorage.
 
 ## Source map
@@ -32,9 +40,9 @@ Reviewed from `neeraj5696/Vehile_App` at `1e52ebc` on 2026-09-23, then verified 
 | P0 | Trip edit changed the trip without updating vehicle or party summaries | `EditTrip.js` formerly called `updateDoc` only on `tripEntries`. Lists and counters could disagree. | Fixed for future edits with atomic transaction |
 | P0 | Trip deletion used separate writes; a failure could leave partial data | Three trip screens formerly deleted first, then independently decremented counters. | Fixed with one transaction |
 | P1 | Party detail mixed other parties' locations and could attribute a shared trip amount to one party | Party screen scanned all trips and displayed the full `locations` array. | Matching locations shown; shared amount labelled rather than allocated |
-| P1 | Party names with case or whitespace differences formed separate groups | `PartyListScreen.js` keyed by raw `to`. | Grouped for display; canonical IDs and migration still open |
+| P1 | Party names with case or whitespace differences formed separate groups | `PartyListScreen.js` keyed by raw `to`. | Stable party IDs migrated to all 303 trips; new trips resolve IDs through normalized party keys |
 | P1 | Vehicle summary counts could be stale and whole collection reads slow lists | Previous lists scanned trips. The test project's 35 vehicle summaries reconcile with trip counts; 19 have trips. | Vehicle list now reads summaries; future writes and reconciliation still need monitoring |
-| P1 | All trip, vehicle, and party tables read too many records | All Trips still scans 303 trip documents and filters on device. | Vehicle/party lists and detail views now use summaries and indexed keys; All Trips pagination/search remains open |
+| P1 | All trip, vehicle, and party tables read too many records | All Trips still scans 303 trip documents and filters on device. | Party detail now pages 40 records and filters month on the server; All Trips and vehicle details pagination remain open |
 | P1 | Existing party query cannot match a partial object in an array | `getTripsByParty` used `array-contains-any` with `{to}` although stored location objects also contain `from`. | Fixed with a normalized `partyKeys` array, backfilled on all 303 trips, and indexed membership query |
 | P1 | Date filter misunderstood `DD-MM-YYYY` values | Entry saves day first, export parser tried native `Date` parsing. | Fixed parser for day first, slash, ISO formats |
 | P1 | Excel export used `btoa`, which is not reliably available in React Native | `Pdf_Excel_calender_Sort.js` converted binary workbook via `btoa`. | Fixed with XLSX base64 output; device export check pending |

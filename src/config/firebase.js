@@ -1,7 +1,7 @@
 import { getApps, initializeApp } from '@react-native-firebase/app';
-import { getFirestore, collection, doc, writeBatch, runTransaction, serverTimestamp, increment, getDocs, query, where } from '@react-native-firebase/firestore';
+import { getFirestore, collection, doc, writeBatch, runTransaction, serverTimestamp, increment, getDocs, getDoc, query, where, orderBy, startAfter, limit, Timestamp } from '@react-native-firebase/firestore';
 import { getAuth } from '@react-native-firebase/auth';
-import { partyKey, vehicleKey, countLocations, locationCountChanges, tripSortTime, parseTripDate } from '../utils/tripData';
+import { partyKey, vehicleKey, countLocations, countPartyLocations, locationCountChanges, matchingPartyLocations, tripMonthKey, tripSortTime, parseTripDate } from '../utils/tripData';
 
 // Initialize Firebase if not already initialized
 if (getApps().length === 0) {
@@ -12,10 +12,26 @@ if (getApps().length === 0) {
 const db = getFirestore();
 const authInstance = getAuth();
 
+const resolvePartyLocations = async locations => {
+  const identities = new Map();
+  for (const location of locations || []) {
+    const key = partyKey(location?.to);
+    if (!key) throw new Error('Every route needs a destination party.');
+    if (identities.has(key)) continue;
+    const matches = await getDocs(query(partiesCollection, where('partyKey', '==', key), limit(2)));
+    if (matches.docs.length > 1) throw new Error(`Multiple party records match ${location.to}. Resolve the duplicate before saving.`);
+    identities.set(key, matches.docs[0]?.id || `party:${encodeURIComponent(key)}`);
+  }
+  return (locations || []).map(location => ({
+    ...location,
+    partyId: identities.get(partyKey(location.to)),
+  }));
+};
+
 const applySummaryChanges = async (transaction, previous, next) => {
   const changes = [];
-  const addChange = (reference, delta, fields = {}) => {
-    changes.push({ reference, delta, fields });
+  const addChange = (reference, delta, fields = {}, monthDeltas = {}) => {
+    changes.push({ reference, delta, fields, monthDeltas });
   };
   const oldVehicle = previous?.vehicleNo?.trim();
   const newVehicle = next?.vehicleNo?.trim();
@@ -24,8 +40,21 @@ const applySummaryChanges = async (transaction, previous, next) => {
     if (newVehicle) addChange(doc(vehiclesCollection, newVehicle), 1, { vehicleNo: newVehicle });
   }
 
-  for (const [name, delta] of locationCountChanges(previous, next, 'to')) {
-    addChange(doc(partiesCollection, name), delta, { to: name });
+  const oldParties = countPartyLocations(previous?.locations);
+  const newParties = countPartyLocations(next?.locations);
+  const oldMonth = tripMonthKey(previous);
+  const newMonth = tripMonthKey(next);
+  for (const id of new Set([...oldParties.keys(), ...newParties.keys()])) {
+    const oldCount = oldParties.get(id)?.count || 0;
+    const newCount = newParties.get(id)?.count || 0;
+    const delta = newCount - oldCount;
+    const monthDeltas = {};
+    if (oldMonth) monthDeltas[oldMonth] = (monthDeltas[oldMonth] || 0) - oldCount;
+    if (newMonth) monthDeltas[newMonth] = (monthDeltas[newMonth] || 0) + newCount;
+    if (delta || Object.values(monthDeltas).some(value => value !== 0)) {
+      const name = newParties.get(id)?.name || oldParties.get(id)?.name;
+      addChange(doc(partiesCollection, id), delta, { to: name, partyKey: partyKey(name) }, monthDeltas);
+    }
   }
 
   for (const [name, delta] of locationCountChanges(previous, next, 'from')) {
@@ -37,12 +66,17 @@ const applySummaryChanges = async (transaction, previous, next) => {
   for (const change of changes) {
     const snapshot = await transaction.get(change.reference);
     const current = Number(snapshot.data()?.loadCount) || 0;
-    summaries.push({ ...change, count: Math.max(0, current + change.delta) });
+    const monthCounts = { ...(snapshot.data()?.monthCounts || {}) };
+    for (const [month, delta] of Object.entries(change.monthDeltas)) {
+      monthCounts[month] = Math.max(0, (Number(monthCounts[month]) || 0) + delta);
+    }
+    summaries.push({ ...change, count: Math.max(0, current + change.delta), monthCounts });
   }
   for (const summary of summaries) {
     transaction.set(summary.reference, {
       ...summary.fields,
       loadCount: summary.count,
+      ...(Object.keys(summary.monthDeltas).length ? { monthCounts: summary.monthCounts } : {}),
       ...(summary.delta > 0 ? { lastTripAt: serverTimestamp() } : {}),
     }, { merge: true });
   }
@@ -63,12 +97,15 @@ const tripService = {
     const batch = writeBatch(db);
     
     try {
+      const locations = await resolvePartyLocations(tripData.locations);
       // 1. Add to tripEntries
       const tripRef = doc(tripEntriesCollection);
       const tripEntry = {
         ...tripData,
+        locations,
         vehicleKey: vehicleKey(tripData.vehicleNo),
-        partyKeys: [...new Set((tripData.locations || []).map(location => partyKey(location.to)).filter(Boolean))],
+        partyKeys: [...new Set(locations.map(location => partyKey(location.to)))],
+        partyIds: [...new Set(locations.map(location => location.partyId))],
         timestamp: Date.now(),
         createdAt: serverTimestamp(),
       };
@@ -103,10 +140,14 @@ const tripService = {
       }
 
       // Count repeated party locations before writing each summary document once.
-      for (const [name, count] of countLocations(tripData.locations, 'to')) {
-        batch.set(doc(partiesCollection, name), {
+      for (const [id, { name, count }] of countPartyLocations(locations)) {
+        const month = tripMonthKey(tripData);
+        if (!month) throw new Error('Trip date is required for party history.');
+        batch.set(doc(partiesCollection, id), {
           to: name,
+          partyKey: partyKey(name),
           loadCount: increment(count),
+          monthCounts: { [month]: increment(count) },
           lastTripAt: serverTimestamp(),
         }, { merge: true });
       }
@@ -126,20 +167,26 @@ const tripService = {
     transaction.delete(tripRef);
   }),
 
-  updateTrip: async (tripId, changes) => runTransaction(db, async transaction => {
+  updateTrip: async (tripId, changes) => {
+    const resolvedChanges = changes.locations
+      ? { ...changes, locations: await resolvePartyLocations(changes.locations) }
+      : changes;
+    return runTransaction(db, async transaction => {
     const tripRef = doc(tripEntriesCollection, tripId);
     const snapshot = await transaction.get(tripRef);
     if (!snapshot.exists()) throw new Error('Trip no longer exists. Refresh the list.');
     const previous = snapshot.data();
-    const next = { ...previous, ...changes };
+    const next = { ...previous, ...resolvedChanges };
     await applySummaryChanges(transaction, previous, next);
     transaction.update(tripRef, {
-      ...changes,
+      ...resolvedChanges,
       vehicleKey: vehicleKey(next.vehicleNo),
       partyKeys: [...new Set((next.locations || []).map(location => partyKey(location.to)).filter(Boolean))],
+      partyIds: [...new Set((next.locations || []).map(location => location.partyId).filter(Boolean))],
       updatedAt: serverTimestamp(),
     });
-  }),
+    });
+  },
   
   // Get trips by vehicle
   getTripsByVehicle: async (vehicleNo) => {
@@ -155,13 +202,16 @@ const tripService = {
   },
   
   // Get trips by party (to location)
-  getTripsByParty: async (to) => {
+  getTripsByParty: async (to, partyId) => {
     try {
       const key = partyKey(to);
       if (!key) return [];
-      const querySnapshot = await getDocs(query(tripEntriesCollection, where('partyKeys', 'array-contains', key)));
+      const querySnapshot = partyId
+        ? await getDocs(query(tripEntriesCollection, where('partyIds', 'array-contains', partyId)))
+        : await getDocs(query(tripEntriesCollection, where('partyKeys', 'array-contains', key)));
       return querySnapshot.docs
         .map(snapshot => ({ id: snapshot.id, ...snapshot.data() }))
+        .filter(trip => matchingPartyLocations(trip, { id: partyId, to }).length > 0)
         .sort((a, b) => tripSortTime(b) - tripSortTime(a));
     } catch (error) {
       throw error;
@@ -207,6 +257,33 @@ const vehicleTripService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  getPartySummary: async partyId => {
+    const snapshot = await getDoc(doc(partiesCollection, partyId));
+    return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
+  },
+
+  getPartyTripPage: async ({ partyId, to, month = null, cursor = null, pageSize = 40, direction = 'desc' }) => {
+    if (!partyId) return { trips: [], cursor: null, hasMore: false };
+    const constraints = [where('partyIds', 'array-contains', partyId)];
+    if (month) {
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error('Invalid party month.');
+      const [year, monthNumber] = month.split('-').map(Number);
+      constraints.push(where('dateTimestamp', '>=', Timestamp.fromDate(new Date(year, monthNumber - 1, 1))));
+      constraints.push(where('dateTimestamp', '<', Timestamp.fromDate(new Date(year, monthNumber, 1))));
+    }
+    constraints.push(orderBy('dateTimestamp', direction));
+    if (cursor) constraints.push(startAfter(cursor));
+    constraints.push(limit(pageSize));
+    const snapshot = await getDocs(query(tripEntriesCollection, ...constraints));
+    const trips = snapshot.docs.map(item => ({ id: item.id, ...item.data() }))
+      .filter(trip => matchingPartyLocations(trip, { id: partyId, to }).length > 0);
+    return {
+      trips,
+      cursor: snapshot.docs[snapshot.docs.length - 1] || null,
+      hasMore: snapshot.docs.length === pageSize,
+    };
   },
 };
 

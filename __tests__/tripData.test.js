@@ -1,4 +1,4 @@
-import { matchingPartyLocations, parseTripDate, partyKey, vehicleKey, locationCountChanges, escapeHtml, safeSpreadsheetText, tripSortTime } from '../src/utils/tripData';
+import { matchingPartyLocations, parseTripDate, partyKey, vehicleKey, countPartyLocations, locationCountChanges, escapeHtml, safeSpreadsheetText, tripMonthKey, tripSortTime } from '../src/utils/tripData';
 
 describe('trip identity and dates', () => {
   test('a party sees only its own locations from a shared trip', () => {
@@ -17,6 +17,22 @@ describe('trip identity and dates', () => {
     expect(parseTripDate('23/09/2026')?.getMonth()).toBe(8);
     expect(parseTripDate('2026-09-23')?.getFullYear()).toBe(2026);
     expect(parseTripDate('31-02-2026')).toBeNull();
+    expect(tripMonthKey({ date: '01-09-2026' })).toBe('2026-09');
+  });
+
+  test('party document ID prevents same-named businesses from mixing', () => {
+    const trip = { locations: [
+      { from: 'A', to: 'Acme', partyId: 'party-one' },
+      { from: 'B', to: 'ACME', partyId: 'party-two' },
+      { from: 'C', to: 'Acme', partyId: 'party-one' },
+    ] };
+    expect(matchingPartyLocations(trip, { id: 'party-one', to: 'Acme' })).toEqual([
+      trip.locations[0], trip.locations[2],
+    ]);
+    expect([...countPartyLocations(trip.locations).entries()]).toEqual([
+      ['party-one', { name: 'Acme', count: 2 }],
+      ['party-two', { name: 'ACME', count: 1 }],
+    ]);
   });
 
   test('sorts legacy trips that have no creation timestamp', () => {

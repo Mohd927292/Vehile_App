@@ -45,6 +45,13 @@ console.log(JSON.stringify({
   metrics: {
     tripsMissingVehicleKey: trips.filter(trip => !trip.vehicleKey).length,
     tripsMissingPartyKeys: trips.filter(trip => !Array.isArray(trip.partyKeys)).length,
+    tripsMissingPartyIds: trips.filter(trip => !Array.isArray(trip.partyIds)).length,
+    locationsMissingPartyId: allLocations.filter(location => !location?.partyId).length,
+    tripsWithPartyIdMismatch: trips.filter(trip => {
+      const ids = new Set((trip.locations || []).map(location => location.partyId).filter(Boolean));
+      const stored = new Set(trip.partyIds || []);
+      return ids.size !== stored.size || [...ids].some(id => !stored.has(id));
+    }).length,
     tripsWithNoLocations: trips.filter(trip => !Array.isArray(trip.locations) || !trip.locations.length).length,
     locationsMissingDestination: allLocations.filter(location => !partyKey(location?.to)).length,
     distinctTripDestinations: tripDestinations.size,

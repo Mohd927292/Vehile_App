@@ -1,8 +1,24 @@
 export const partyKey = value => (value || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
 export const vehicleKey = value => (value || '').replace(/[^a-z0-9]/gi, '').toUpperCase();
 
-export const matchingPartyLocations = (trip, party) =>
-  (trip.locations || []).filter(location => partyKey(location?.to) === partyKey(party));
+export const matchingPartyLocations = (trip, party) => {
+  const partyId = typeof party === 'object' ? party?.id : null;
+  const name = typeof party === 'object' ? party?.to : party;
+  return (trip.locations || []).filter(location =>
+    partyId && location?.partyId
+      ? location.partyId === partyId
+      : partyKey(location?.to) === partyKey(name));
+};
+
+export const countPartyLocations = locations => (locations || []).reduce((counts, location) => {
+  const name = location?.to?.trim();
+  const id = location?.partyId || name;
+  if (id && name) {
+    const current = counts.get(id) || { name, count: 0 };
+    counts.set(id, { ...current, count: current.count + 1 });
+  }
+  return counts;
+}, new Map());
 
 export const filterTripsByQuery = (trips, value) => {
   const query = value.trim().toLowerCase();
@@ -51,6 +67,11 @@ export const parseTripDate = value => {
   const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (iso) return parseTripDate(`${iso[3]}-${iso[2]}-${iso[1]}`);
   return null;
+};
+
+export const tripMonthKey = trip => {
+  const date = parseTripDate(trip?.date) || parseTripDate(trip?.dateTimestamp);
+  return date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}` : null;
 };
 
 export const tripSortTime = trip =>

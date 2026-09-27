@@ -48,7 +48,7 @@ const PartyListScreen = () => {
   const renderParty = ({ item }) => (
     <TouchableOpacity 
       style={[styles.partyCard, { backgroundColor: colors.surface }]}
-      onPress={() => navigation.navigate('PartyDetails', { to: item.to })}
+      onPress={() => navigation.navigate('PartyMonths', { partyId: item.id, to: item.to })}
     >
       <View style={styles.partyHeader}>
         <Text style={[styles.partyName, { color: colors.text }]}>{item.to || 'N/A'}</Text>

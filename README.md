@@ -28,7 +28,7 @@ npm run lint -- --quiet
 
 ## Data and release notes
 
-Trips are stored in `tripEntries`. Vehicle, party, driver, and origin collections are derived summaries or autocomplete sources; customer records are in `customers`. New and edited trips include normalized `vehicleKey` and `partyKeys`. All 303 existing trips in the connected test project were backed up and backfilled on 2026-09-27, so vehicle and party detail screens use indexed queries. A different Firestore project needs its own reviewed backup and backfill before this app version is installed.
+Trips are stored in `tripEntries`. Vehicle, party, driver, and origin collections are derived summaries or autocomplete sources; customer records are in `customers`. New and edited trips include normalized `vehicleKey`, `partyKeys`, stable `partyIds`, and a `partyId` on each route. Party summaries also have `partyKey` and `monthCounts`. All 303 existing trips and 84 party summaries in the connected test project were backed up and migrated on 2026-09-27. The party screen reads one party ID and one month at a time in indexed pages. Its search covers loaded rows; "Prepare full export" fetches the complete selected history before showing PDF/Excel actions. A different Firestore project needs its own reviewed backup, index deployment, and backfill before this app version is installed.
 
 The repeatable test-project data checks are:
 
@@ -42,7 +42,11 @@ node scripts/backfill-trip-keys.cjs $backup --apply
 $backup = (Get-ChildItem .local-backup -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
 node scripts/repair-party-summaries.cjs $backup # dry run
 node scripts/repair-party-summaries.cjs $backup --apply
+node scripts/backfill-party-summary-keys.cjs $backup # dry run; back up again before applying
+node scripts/backfill-party-ids.cjs $backup # dry run; back up again before applying
+node scripts/backfill-party-months.cjs $backup # dry run; back up again before applying
 node scripts/verify-firestore-queries.cjs $backup
+node scripts/check-party-page.cjs $backup
 ```
 
 These scripts target `vehicle2-79fd6` explicitly and require Google Cloud CLI authentication with Firestore data access. Backups contain customer details and are ignored by Git. The repository's `firestore.rules` file is incomplete for the live six-collection data model; deployed rules could not be read with the current account. Do not deploy those rules until access policy and permissions are resolved.

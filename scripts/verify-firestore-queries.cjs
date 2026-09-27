@@ -6,6 +6,7 @@ if (!backup) throw new Error('Usage: node scripts/verify-firestore-queries.cjs <
 const docs = JSON.parse(fs.readFileSync(path.join(backup, 'tripEntries.json'), 'utf8'));
 const vehicle = docs[0]?.fields?.vehicleKey?.stringValue;
 const party = docs[0]?.fields?.partyKeys?.arrayValue?.values?.[0]?.stringValue;
+const partyId = docs[0]?.fields?.partyIds?.arrayValue?.values?.[0]?.stringValue;
 if (!vehicle || !party) throw new Error('Backup has no derived trip lookup fields.');
 const token = execFileSync('powershell.exe', ['-NoProfile', '-Command', 'gcloud auth print-access-token'], { encoding: 'utf8' }).trim();
 const endpoint = 'https://firestore.googleapis.com/v1/projects/vehicle2-79fd6/databases/(default)/documents:runQuery';
@@ -27,4 +28,7 @@ const check = async (field, op, value, expected) => {
 (async () => {
   await check('vehicleKey', 'EQUAL', vehicle, docs.filter(doc => doc.fields?.vehicleKey?.stringValue === vehicle).length);
   await check('partyKeys', 'ARRAY_CONTAINS', party, docs.filter(doc => (doc.fields?.partyKeys?.arrayValue?.values || []).some(value => value.stringValue === party)).length);
+  if (partyId) {
+    await check('partyIds', 'ARRAY_CONTAINS', partyId, docs.filter(doc => (doc.fields?.partyIds?.arrayValue?.values || []).some(value => value.stringValue === partyId)).length);
+  }
 })().catch(error => { console.error(error.message); process.exitCode = 1; });
