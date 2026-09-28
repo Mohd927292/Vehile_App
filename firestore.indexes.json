@@ -29,6 +29,26 @@
         { "fieldPath": "__name__", "order": "ASCENDING" }
       ],
       "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "tripEntries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "vehicleKey", "order": "ASCENDING" },
+        { "fieldPath": "dateTimestamp", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "tripEntries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "vehicleKey", "order": "ASCENDING" },
+        { "fieldPath": "dateTimestamp", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ],
+      "density": "SPARSE_ALL"
     }
   ],
   "fieldOverrides": []

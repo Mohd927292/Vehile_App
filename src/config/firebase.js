@@ -1,7 +1,7 @@
 import { getApps, initializeApp } from '@react-native-firebase/app';
 import { getFirestore, collection, doc, writeBatch, runTransaction, serverTimestamp, increment, getDocs, getDoc, query, where, orderBy, startAfter, limit, Timestamp } from '@react-native-firebase/firestore';
 import { getAuth } from '@react-native-firebase/auth';
-import { partyKey, vehicleKey, countLocations, countPartyLocations, locationCountChanges, matchingPartyLocations, tripMonthKey, tripSortTime, parseTripDate } from '../utils/tripData';
+import { partyKey, vehicleKey, countLocations, countPartyLocations, locationCountChanges, matchingPartyLocations, tripMonthKey } from '../utils/tripData';
 
 // Initialize Firebase if not already initialized
 if (getApps().length === 0) {
@@ -188,34 +188,19 @@ const tripService = {
     });
   },
   
-  // Get trips by vehicle
-  getTripsByVehicle: async (vehicleNo) => {
-    try {
-      const key = vehicleKey(vehicleNo);
-      if (!key) return [];
-      const querySnapshot = await getDocs(query(tripEntriesCollection, where('vehicleKey', '==', key)));
-      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-        .sort((a, b) => tripSortTime(b) - tripSortTime(a));
-    } catch (error) {
-      throw error;
-    }
-  },
-  
-  // Get trips by party (to location)
-  getTripsByParty: async (to, partyId) => {
-    try {
-      const key = partyKey(to);
-      if (!key) return [];
-      const querySnapshot = partyId
-        ? await getDocs(query(tripEntriesCollection, where('partyIds', 'array-contains', partyId)))
-        : await getDocs(query(tripEntriesCollection, where('partyKeys', 'array-contains', key)));
-      return querySnapshot.docs
-        .map(snapshot => ({ id: snapshot.id, ...snapshot.data() }))
-        .filter(trip => matchingPartyLocations(trip, { id: partyId, to }).length > 0)
-        .sort((a, b) => tripSortTime(b) - tripSortTime(a));
-    } catch (error) {
-      throw error;
-    }
+  getTripPage: async ({ vehicleNo = null, cursor = null, pageSize = 40, direction = 'desc' } = {}) => {
+    if (direction !== 'asc' && direction !== 'desc') throw new Error('Invalid date order.');
+    const constraints = [];
+    if (vehicleNo) constraints.push(where('vehicleKey', '==', vehicleKey(vehicleNo)));
+    constraints.push(orderBy('dateTimestamp', direction));
+    if (cursor) constraints.push(startAfter(cursor));
+    constraints.push(limit(pageSize));
+    const snapshot = await getDocs(query(tripEntriesCollection, ...constraints));
+    return {
+      trips: snapshot.docs.map(item => ({ id: item.id, ...item.data() })),
+      cursor: snapshot.docs[snapshot.docs.length - 1] || null,
+      hasMore: snapshot.docs.length === pageSize,
+    };
   },
 };
 
@@ -233,32 +218,6 @@ const vehicleTripService = {
       .filter(item => Number(item.loadCount) > 0)
       .sort((a, b) => String(a.to).localeCompare(String(b.to)));
   },
-  getVehicleTripsData: async () => {
-    try {
-      const tripsSnapshot = await getDocs(tripEntriesCollection);
-
-      const mergedData = tripsSnapshot.docs.map(doc => {
-        const tripData = doc.data();
-        
-        return {
-          id: doc.id,
-          vehicleNo: tripData.vehicleNo,
-          driverName: tripData.driverName,
-          amount: tripData.amount,
-          date: tripData.date,
-          dateTimestamp: tripData.dateTimestamp,
-          locations: tripData.locations,
-          createdAt: parseTripDate(tripData.createdAt),
-          loadCount: tripData.locations?.length || 0
-        };
-      });
-      
-      return mergedData.sort((a, b) => tripSortTime(b) - tripSortTime(a));
-    } catch (error) {
-      throw error;
-    }
-  },
-
   getPartySummary: async partyId => {
     const snapshot = await getDoc(doc(partiesCollection, partyId));
     return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
