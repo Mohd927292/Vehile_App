@@ -20,6 +20,7 @@ import { db } from '../../config/firebase';
 import { collection, doc, updateDoc, serverTimestamp, getDocs, query, where, limit } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
 import { normalizeCustomerName, validateCustomerInput } from '../../utils/customerValidation';
+import { partyKey } from '../../utils/tripData';
 
 const EditCustomer = () => {
   const navigation = useNavigation();
@@ -71,6 +72,22 @@ const EditCustomer = () => {
       if (existing.docs.some(snapshot => snapshot.id !== customer.id)) {
         Alert.alert('Customer already exists', 'Choose the existing customer or use a different name.');
         return;
+      }
+
+      if (partyKey(name) !== partyKey(customer.msName)) {
+        const oldKey = partyKey(customer.msName);
+        const [trips, summaries, legacySummaries] = await Promise.all([
+          getDocs(query(collection(db, 'tripEntries'), where('partyKeys', 'array-contains', oldKey), limit(1))),
+          getDocs(query(collection(db, 'parties'), where('partyKey', '==', oldKey), limit(2))),
+          getDocs(query(collection(db, 'parties'), where('to', '==', customer.msName), limit(2))),
+        ]);
+        if (!trips.empty || [...summaries.docs, ...legacySummaries.docs].some(snapshot => Number(snapshot.data().loadCount) > 0)) {
+          Alert.alert(
+            'Name has trip history',
+            'This name is used by existing trips. Keep the name and update the contact details here; renaming historical routes needs a dedicated data migration.',
+          );
+          return;
+        }
       }
 
       const customerDataToSave = {
@@ -139,6 +156,9 @@ const EditCustomer = () => {
               textColor={colors.text}
               placeholderTextColor={colors.textSecondary}
             />
+            <Text style={[styles.nameHelp, { color: colors.textSecondary }]}>
+              Names linked to trip history cannot be changed from this form.
+            </Text>
 
             <TextInput
               label="Address 1"
@@ -268,6 +288,11 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 12,
+  },
+  nameHelp: {
+    fontSize: 12,
+    marginTop: -4,
+    marginBottom: 14,
   },
   multilineInput: {
     minHeight: 54,
