@@ -37,6 +37,7 @@
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.3",
     "@babel/runtime": "^7.28.4",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@react-native-community/cli": "20.0.0",
     "@react-native-community/cli-platform-android": "20.0.0",
     "@react-native-community/cli-platform-ios": "20.0.0",

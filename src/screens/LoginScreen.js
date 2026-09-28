@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from '@react-native-firebase/auth';
+import { getAuth, signInWithEmailAndPassword } from '@react-native-firebase/auth';
 import { useTheme } from '../hooks/useTheme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -9,8 +9,6 @@ const authMessage = code => ({
   'auth/invalid-credential': 'The email or password is incorrect.',
   'auth/user-not-found': 'The email or password is incorrect.',
   'auth/wrong-password': 'The email or password is incorrect.',
-  'auth/email-already-in-use': 'An account already uses this email address.',
-  'auth/weak-password': 'Use a stronger password with at least six characters.',
   'auth/network-request-failed': 'Check your connection and try again.',
   'auth/too-many-requests': 'Too many attempts. Wait a moment and try again.',
 })[code] || 'Unable to complete this request. Please try again.';
@@ -37,22 +35,6 @@ const LoginScreen = () => {
     setLoading(false);
   };
 
-  const handleSignUp = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill all fields');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const auth = getAuth();
-      await createUserWithEmailAndPassword(auth, email, password);
-    } catch (error) {
-      Alert.alert('Account creation failed', authMessage(error.code));
-    }
-    setLoading(false);
-  };
-
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
@@ -66,7 +48,7 @@ const LoginScreen = () => {
 
           <View style={[styles.form, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.formTitle, { color: colors.text }]}>Welcome back</Text>
-            <Text style={[styles.formHint, { color: colors.textSecondary }]}>Sign in to continue</Text>
+            <Text style={[styles.formHint, { color: colors.textSecondary }]}>Sign in with an approved account</Text>
 
             <Text style={[styles.label, { color: colors.text }]}>Email address</Text>
             <TextInput
@@ -103,15 +85,7 @@ const LoginScreen = () => {
               <Text style={styles.primaryButtonText}>{loading ? 'Please wait…' : 'Sign in'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={handleSignUp}
-              disabled={loading}
-              accessibilityRole="button"
-              accessibilityLabel="Create account"
-            >
-              <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>Create an account</Text>
-            </TouchableOpacity>
+            <Text style={[styles.accessHint, { color: colors.textSecondary }]}>Need access? Ask the project administrator.</Text>
           </View>
         </View>
       </ScrollView>
@@ -151,8 +125,7 @@ const styles = StyleSheet.create({
     height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 6,
   },
   primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  secondaryButton: { padding: 14, alignItems: 'center', marginTop: 8 },
-  secondaryButtonText: { fontSize: 14, fontWeight: '600' },
+  accessHint: { textAlign: 'center', marginTop: 20, fontSize: 13 },
 });
 
 export default LoginScreen;
