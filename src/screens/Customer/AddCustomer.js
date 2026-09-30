@@ -1,3 +1,4 @@
+import { workspaceCollection, assertWritableWorkspace } from '../../services/workspace';
 import React, { useState } from 'react';
 import {
   View,
@@ -15,8 +16,7 @@ import {
   Provider as PaperProvider,
 } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { db } from '../../config/firebase';
-import { collection, addDoc, serverTimestamp, query, where, limit, getDocs } from '@react-native-firebase/firestore';
+import { addDoc, serverTimestamp, query, where, limit, getDocs } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
 import { normalizeCustomerName, validateCustomerInput } from '../../utils/customerValidation';
 
@@ -56,8 +56,9 @@ const AddCustomer = () => {
 
     try {
       setIsSaving(true);
+      assertWritableWorkspace();
       const name = normalizeCustomerName(customerData.msName);
-      const customersRef = collection(db, 'customers');
+      const customersRef = workspaceCollection('customers');
       const existing = await getDocs(query(customersRef, where('msnamelower', '==', name.toLowerCase()), limit(1)));
       if (!existing.empty) {
         Alert.alert('Customer already exists', 'Choose the existing customer or use a different name.');

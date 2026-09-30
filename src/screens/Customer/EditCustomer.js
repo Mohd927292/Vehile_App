@@ -1,3 +1,4 @@
+import { workspaceCollection, assertWritableWorkspace } from '../../services/workspace';
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -16,8 +17,7 @@ import {
   Provider as PaperProvider,
 } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { db } from '../../config/firebase';
-import { collection, doc, updateDoc, serverTimestamp, getDocs, query, where, limit } from '@react-native-firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDocs, query, where, limit } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
 import { normalizeCustomerName, validateCustomerInput } from '../../utils/customerValidation';
 import { partyKey } from '../../utils/tripData';
@@ -66,8 +66,9 @@ const EditCustomer = () => {
 
     try {
       setIsSaving(true);
+      const workspaceId = assertWritableWorkspace();
       const name = normalizeCustomerName(customerData.msName);
-      const customersRef = collection(db, 'customers');
+      const customersRef = workspaceCollection('customers', workspaceId);
       const existing = await getDocs(query(customersRef, where('msnamelower', '==', name.toLowerCase()), limit(2)));
       if (existing.docs.some(snapshot => snapshot.id !== customer.id)) {
         Alert.alert('Customer already exists', 'Choose the existing customer or use a different name.');
@@ -77,9 +78,9 @@ const EditCustomer = () => {
       if (partyKey(name) !== partyKey(customer.msName)) {
         const oldKey = partyKey(customer.msName);
         const [trips, summaries, legacySummaries] = await Promise.all([
-          getDocs(query(collection(db, 'tripEntries'), where('partyKeys', 'array-contains', oldKey), limit(1))),
-          getDocs(query(collection(db, 'parties'), where('partyKey', '==', oldKey), limit(2))),
-          getDocs(query(collection(db, 'parties'), where('to', '==', customer.msName), limit(2))),
+          getDocs(query(workspaceCollection('tripEntries', workspaceId), where('partyKeys', 'array-contains', oldKey), limit(1))),
+          getDocs(query(workspaceCollection('parties', workspaceId), where('partyKey', '==', oldKey), limit(2))),
+          getDocs(query(workspaceCollection('parties', workspaceId), where('to', '==', customer.msName), limit(2))),
         ]);
         if (!trips.empty || [...summaries.docs, ...legacySummaries.docs].some(snapshot => Number(snapshot.data().loadCount) > 0)) {
           Alert.alert(

@@ -10,7 +10,9 @@ import {
   FirebaseAuthTypes,
   signOut,
 } from '@react-native-firebase/auth';
-import { doc, getDoc, getFirestore } from '@react-native-firebase/firestore';
+import { doc, getDoc, getFirestore, setDoc, serverTimestamp } from '@react-native-firebase/firestore';
+import { WorkspaceContext } from './src/context/WorkspaceContext';
+import { activateWorkspace, LEGACY_WORKSPACE } from './src/services/workspace';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { useTheme } from './src/hooks/useTheme';
 import LoginScreen from './src/screens/LoginScreen';
@@ -27,8 +29,11 @@ import AddCustomer from './src/screens/Customer/AddCustomer';
 import CustomerList from './src/screens/Customer/CustomerList';
 import EditCustomer from './src/screens/Customer/EditCustomer';
 import TripList from './src/screens/Vehicle/TripList';
+import ArchiveScreen from './src/screens/ArchiveScreen';
 
 const Stack = createNativeStackNavigator();
+type Workspace = { id: string; displayName: string; email: string };
+type Member = Workspace & { active: boolean; role: 'admin' | 'user' };
 
 function AccessScreen({ retry, failed }: { retry: () => void; failed: boolean }) {
   const { colors } = useTheme();
@@ -55,6 +60,8 @@ function AccessScreen({ retry, failed }: { retry: () => void; failed: boolean })
 function App() {
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
+  const [member, setMember] = useState<Member | null>(null);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [access, setAccess] = useState<'checking' | 'allowed' | 'denied' | 'error' | 'signedOut'>('checking');
   const accessRequest = useRef(0);
 
@@ -62,9 +69,19 @@ function App() {
     const request = ++accessRequest.current;
     setAccess('checking');
     try {
-      const membership = await getDoc(doc(getFirestore(), 'staff', nextUser.uid));
+      const reference = doc(getFirestore(), 'staff', nextUser.uid);
+      const membership = await getDoc(reference);
+      let profile = membership.data();
+      if (!membership.exists()) {
+        profile = { email: nextUser.email, displayName: nextUser.displayName || nextUser.email?.split('@')[0] || 'User', role: 'user', active: true, createdAt: serverTimestamp() };
+        await setDoc(reference, profile);
+      }
       if (request === accessRequest.current) {
-        setAccess(membership.exists() && membership.data()?.active === true ? 'allowed' : 'denied');
+        const nextMember = { ...profile, id: nextUser.uid } as Member;
+        setMember(nextMember);
+        setWorkspace(nextMember);
+        activateWorkspace(nextMember.active ? nextUser.uid : null);
+        setAccess(nextMember.active === true ? 'allowed' : 'denied');
       }
     } catch {
       if (request === accessRequest.current) setAccess('error');
@@ -78,12 +95,21 @@ function App() {
         void checkAccess(nextUser);
       } else {
         ++accessRequest.current;
+        activateWorkspace(null);
+        setMember(null);
+        setWorkspace(null);
         setAccess('signedOut');
       }
       setInitializing(false);
     });
     return () => unsubscribe();
   }, [checkAccess]);
+
+  const switchWorkspace = useCallback((target: Workspace) => {
+    if (!member || (member.role !== 'admin' && target.id !== member.id)) return;
+    activateWorkspace(target.id);
+    setWorkspace(target);
+  }, [member]);
 
   if (initializing || access === 'checking') {
     return <ThemeProvider><View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator size="large" /></View></ThemeProvider>;
@@ -96,7 +122,8 @@ function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
-        <NavigationContainer>
+        <WorkspaceContext.Provider value={{ user, member, workspace, switchWorkspace, isAdmin: member?.role === 'admin', readOnly: workspace?.id === LEGACY_WORKSPACE }}>
+        <NavigationContainer key={`${user?.uid || 'signed-out'}:${workspace?.id || ''}`}>
           <Stack.Navigator 
             screenOptions={{ 
               headerShown: false,
@@ -119,12 +146,14 @@ function App() {
                 <Stack.Screen name="AddCustomer" component={AddCustomer} />
                 <Stack.Screen name="CustomerList" component={CustomerList} />
                 <Stack.Screen name="EditCustomer" component={EditCustomer} />
+                <Stack.Screen name="Archive" component={ArchiveScreen} />
               </>
             ) : (
               <Stack.Screen name="Login" component={LoginScreen} />
             )}
           </Stack.Navigator>
         </NavigationContainer>
+        </WorkspaceContext.Provider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );

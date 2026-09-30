@@ -1,5 +1,6 @@
 import { getApps, initializeApp } from '@react-native-firebase/app';
-import { getFirestore, collection, doc, writeBatch, runTransaction, serverTimestamp, increment, getDocs, getDoc, query, where, orderBy, startAfter, limit, Timestamp } from '@react-native-firebase/firestore';
+import { getFirestore, doc, writeBatch, runTransaction, serverTimestamp, increment, getDocs, getDoc, query, where, orderBy, startAfter, limit, Timestamp } from '@react-native-firebase/firestore';
+import { workspaceCollections, assertWritableWorkspace } from '../services/workspace';
 import { getAuth } from '@react-native-firebase/auth';
 import { partyKey, vehicleKey, countLocations, countPartyLocations, locationCountChanges, matchingPartyLocations, tripMonthKey } from '../utils/tripData';
 
@@ -12,13 +13,13 @@ if (getApps().length === 0) {
 const db = getFirestore();
 const authInstance = getAuth();
 
-const resolvePartyLocations = async locations => {
+const resolvePartyLocations = async (locations, refs) => {
   const identities = new Map();
   for (const location of locations || []) {
     const key = partyKey(location?.to);
     if (!key) throw new Error('Every route needs a destination party.');
     if (identities.has(key)) continue;
-    const matches = await getDocs(query(partiesCollection, where('partyKey', '==', key), limit(2)));
+    const matches = await getDocs(query(refs.parties, where('partyKey', '==', key), limit(2)));
     if (matches.docs.length > 1) throw new Error(`Multiple party records match ${location.to}. Resolve the duplicate before saving.`);
     identities.set(key, matches.docs[0]?.id || `party:${encodeURIComponent(key)}`);
   }
@@ -28,16 +29,16 @@ const resolvePartyLocations = async locations => {
   }));
 };
 
-const applySummaryChanges = async (transaction, previous, next) => {
+const applySummaryChanges = async (transaction, previous, next, refs) => {
   const changes = [];
   const addChange = (reference, delta, fields = {}, monthDeltas = {}) => {
     changes.push({ reference, delta, fields, monthDeltas });
   };
-  const oldVehicle = previous?.vehicleNo?.trim();
-  const newVehicle = next?.vehicleNo?.trim();
+  const oldVehicle = vehicleKey(previous?.vehicleNo);
+  const newVehicle = vehicleKey(next?.vehicleNo);
   if (oldVehicle !== newVehicle) {
-    if (oldVehicle) addChange(doc(vehiclesCollection, oldVehicle), -1);
-    if (newVehicle) addChange(doc(vehiclesCollection, newVehicle), 1, { vehicleNo: newVehicle });
+    if (oldVehicle) addChange(doc(refs.vehicles, oldVehicle), -1);
+    if (newVehicle) addChange(doc(refs.vehicles, newVehicle), 1, { vehicleNo: newVehicle });
   }
 
   const oldParties = countPartyLocations(previous?.locations);
@@ -53,12 +54,12 @@ const applySummaryChanges = async (transaction, previous, next) => {
     if (newMonth) monthDeltas[newMonth] = (monthDeltas[newMonth] || 0) + newCount;
     if (delta || Object.values(monthDeltas).some(value => value !== 0)) {
       const name = newParties.get(id)?.name || oldParties.get(id)?.name;
-      addChange(doc(partiesCollection, id), delta, { to: name, partyKey: partyKey(name) }, monthDeltas);
+      addChange(doc(refs.parties, id), delta, { to: name, partyKey: partyKey(name) }, monthDeltas);
     }
   }
 
   for (const [name, delta] of locationCountChanges(previous, next, 'from')) {
-    addChange(doc(fromcustomersCollection1, name), delta, { from: name, fromlower: name.toLowerCase() });
+    addChange(doc(refs.fromcustomers, encodeURIComponent(name)), delta, { from: name, fromlower: name.toLowerCase() });
   }
 
   // Firestore transactions require all reads before any writes.
@@ -82,24 +83,17 @@ const applySummaryChanges = async (transaction, previous, next) => {
   }
 };
 
-// Collection references
-export const tripEntriesCollection = collection(db, 'tripEntries');
-export const vehiclesCollection = collection(db, 'vehicles');
-export const partiesCollection = collection(db, 'parties');
-export const driversCollection = collection(db, 'drivers');
-export const fromcustomersCollection1 = collection(db, 'fromcustomers');
-export const customersCollection = collection(db, 'customers');
-
 // Trip service with batch operations
 const tripService = {
   // Add new trip with batch write for consistency
-  addTrip: async (tripData) => {
+  addTrip: async (tripData, workspaceId) => {
+    const refs = workspaceCollections(assertWritableWorkspace(workspaceId));
     const batch = writeBatch(db);
     
     try {
-      const locations = await resolvePartyLocations(tripData.locations);
+      const locations = await resolvePartyLocations(tripData.locations, refs);
       // 1. Add to tripEntries
-      const tripRef = doc(tripEntriesCollection);
+      const tripRef = doc(refs.tripEntries);
       const tripEntry = {
         ...tripData,
         locations,
@@ -108,11 +102,12 @@ const tripService = {
         partyIds: [...new Set(locations.map(location => location.partyId))],
         timestamp: Date.now(),
         createdAt: serverTimestamp(),
+        createdBy: authInstance.currentUser.uid,
       };
       batch.set(tripRef, tripEntry);
       
       // 2. Update vehicles collection
-      const vehicleRef = doc(vehiclesCollection, tripData.vehicleNo);
+      const vehicleRef = doc(refs.vehicles, vehicleKey(tripData.vehicleNo));
       batch.set(vehicleRef, {
         vehicleNo: tripData.vehicleNo,
         loadCount: increment(1),
@@ -121,7 +116,7 @@ const tripService = {
 
       //3. Update drivers collection
       if (tripData.driverName) {
-        const driverRef = doc(driversCollection, tripData.driverName.toLowerCase());
+        const driverRef = doc(refs.drivers, encodeURIComponent(tripData.driverName.toLowerCase()));
         batch.set(driverRef,{
           
           driverName: tripData.driverName.toLowerCase(),
@@ -131,7 +126,7 @@ const tripService = {
 
       // 4. Update fromcustomers collection for each location
       for (const [name, count] of countLocations(tripData.locations, 'from')) {
-        batch.set(doc(fromcustomersCollection1, name), {
+        batch.set(doc(refs.fromcustomers, encodeURIComponent(name)), {
           from: name,
           fromlower: name.toLowerCase(),
           loadCount: increment(count),
@@ -143,7 +138,7 @@ const tripService = {
       for (const [id, { name, count }] of countPartyLocations(locations)) {
         const month = tripMonthKey(tripData);
         if (!month) throw new Error('Trip date is required for party history.');
-        batch.set(doc(partiesCollection, id), {
+        batch.set(doc(refs.parties, id), {
           to: name,
           partyKey: partyKey(name),
           loadCount: increment(count),
@@ -159,43 +154,75 @@ const tripService = {
     }
   },
 
-  deleteTrip: async tripId => runTransaction(db, async transaction => {
-    const tripRef = doc(tripEntriesCollection, tripId);
+  deleteTrip: async tripId => {
+    const refs = workspaceCollections(assertWritableWorkspace());
+    return runTransaction(db, async transaction => {
+    const tripRef = doc(refs.tripEntries, tripId);
     const snapshot = await transaction.get(tripRef);
     if (!snapshot.exists()) throw new Error('Trip no longer exists. Refresh the list.');
-    await applySummaryChanges(transaction, snapshot.data(), null);
+    await applySummaryChanges(transaction, snapshot.data(), null, refs);
+    transaction.set(doc(refs.archivedTrips, tripId), { ...snapshot.data(), deletedAt: serverTimestamp(), deletedBy: authInstance.currentUser.uid });
     transaction.delete(tripRef);
-  }),
+    });
+  },
+
+  restoreTrip: async tripId => {
+    const refs = workspaceCollections(assertWritableWorkspace());
+    return runTransaction(db, async transaction => {
+      const archiveRef = doc(refs.archivedTrips, tripId);
+      const tripRef = doc(refs.tripEntries, tripId);
+      const archive = await transaction.get(archiveRef);
+      const existing = await transaction.get(tripRef);
+      if (!archive.exists()) throw new Error("Archived trip is no longer available.");
+      if (existing.exists()) throw new Error("A trip with this ID already exists.");
+      const { deletedAt, deletedBy, ...restored } = archive.data();
+      await applySummaryChanges(transaction, null, restored, refs);
+      transaction.set(tripRef, { ...restored, restoredAt: serverTimestamp(), restoredBy: authInstance.currentUser.uid });
+      transaction.delete(archiveRef);
+    });
+  },
+
+  getArchivedTrips: async ({ cursor = null, pageSize = 40 } = {}) => {
+    const refs = workspaceCollections();
+    const constraints = [orderBy("deletedAt", "desc")];
+    if (cursor) constraints.push(startAfter(cursor));
+    constraints.push(limit(pageSize));
+    const snapshot = await getDocs(query(refs.archivedTrips, ...constraints));
+    return { trips: snapshot.docs.map(item => ({ id: item.id, ...item.data() })), cursor: snapshot.docs[snapshot.docs.length - 1] || null, hasMore: snapshot.docs.length === pageSize };
+  },
 
   updateTrip: async (tripId, changes) => {
+    const refs = workspaceCollections(assertWritableWorkspace());
     const resolvedChanges = changes.locations
-      ? { ...changes, locations: await resolvePartyLocations(changes.locations) }
+      ? { ...changes, locations: await resolvePartyLocations(changes.locations, refs) }
       : changes;
     return runTransaction(db, async transaction => {
-    const tripRef = doc(tripEntriesCollection, tripId);
+    const tripRef = doc(refs.tripEntries, tripId);
     const snapshot = await transaction.get(tripRef);
     if (!snapshot.exists()) throw new Error('Trip no longer exists. Refresh the list.');
     const previous = snapshot.data();
     const next = { ...previous, ...resolvedChanges };
-    await applySummaryChanges(transaction, previous, next);
+    await applySummaryChanges(transaction, previous, next, refs);
     transaction.update(tripRef, {
       ...resolvedChanges,
       vehicleKey: vehicleKey(next.vehicleNo),
       partyKeys: [...new Set((next.locations || []).map(location => partyKey(location.to)).filter(Boolean))],
       partyIds: [...new Set((next.locations || []).map(location => location.partyId).filter(Boolean))],
       updatedAt: serverTimestamp(),
+      updatedBy: authInstance.currentUser.uid,
     });
     });
   },
   
-  getTripPage: async ({ vehicleNo = null, cursor = null, pageSize = 40, direction = 'desc' } = {}) => {
+  getTripPage: async ({ vehicleNo = null, cursor = null, pageSize = 40, direction = 'desc', workspaceId } = {}) => {
+    const refs = workspaceCollections(workspaceId);
     if (direction !== 'asc' && direction !== 'desc') throw new Error('Invalid date order.');
     const constraints = [];
     if (vehicleNo) constraints.push(where('vehicleKey', '==', vehicleKey(vehicleNo)));
     constraints.push(orderBy('dateTimestamp', direction));
     if (cursor) constraints.push(startAfter(cursor));
     constraints.push(limit(pageSize));
-    const snapshot = await getDocs(query(tripEntriesCollection, ...constraints));
+    const snapshot = await getDocs(query(refs.tripEntries, ...constraints));
     return {
       trips: snapshot.docs.map(item => ({ id: item.id, ...item.data() })),
       cursor: snapshot.docs[snapshot.docs.length - 1] || null,
@@ -207,23 +234,27 @@ const tripService = {
 // Vehicle-Trip merged data service
 const vehicleTripService = {
   getVehicleSummaries: async () => {
-    const snapshot = await getDocs(vehiclesCollection);
+    const refs = workspaceCollections();
+    const snapshot = await getDocs(refs.vehicles);
     return snapshot.docs.map(item => ({ id: item.id, ...item.data() }))
       .filter(item => Number(item.loadCount) > 0)
       .sort((a, b) => String(a.vehicleNo).localeCompare(String(b.vehicleNo)));
   },
   getPartySummaries: async () => {
-    const snapshot = await getDocs(partiesCollection);
+    const refs = workspaceCollections();
+    const snapshot = await getDocs(refs.parties);
     return snapshot.docs.map(item => ({ id: item.id, ...item.data() }))
       .filter(item => Number(item.loadCount) > 0)
       .sort((a, b) => String(a.to).localeCompare(String(b.to)));
   },
   getPartySummary: async partyId => {
-    const snapshot = await getDoc(doc(partiesCollection, partyId));
+    const refs = workspaceCollections();
+    const snapshot = await getDoc(doc(refs.parties, partyId));
     return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
   },
 
-  getPartyTripPage: async ({ partyId, to, month = null, cursor = null, pageSize = 40, direction = 'desc' }) => {
+  getPartyTripPage: async ({ partyId, to, month = null, cursor = null, pageSize = 40, direction = 'desc', workspaceId }) => {
+    const refs = workspaceCollections(workspaceId);
     if (!partyId) return { trips: [], cursor: null, hasMore: false };
     const constraints = [where('partyIds', 'array-contains', partyId)];
     if (month) {
@@ -235,7 +266,7 @@ const vehicleTripService = {
     constraints.push(orderBy('dateTimestamp', direction));
     if (cursor) constraints.push(startAfter(cursor));
     constraints.push(limit(pageSize));
-    const snapshot = await getDocs(query(tripEntriesCollection, ...constraints));
+    const snapshot = await getDocs(query(refs.tripEntries, ...constraints));
     const trips = snapshot.docs.map(item => ({ id: item.id, ...item.data() }))
       .filter(trip => matchingPartyLocations(trip, { id: partyId, to }).length > 0);
     return {
@@ -249,8 +280,9 @@ const vehicleTripService = {
 // Customer service
 const customerService = {
   getCustomers: async () => {
+    const refs = workspaceCollections();
     try {
-      const querySnapshot = await getDocs(customersCollection);
+      const querySnapshot = await getDocs(refs.customers);
       return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       throw error;

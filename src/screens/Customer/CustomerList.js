@@ -14,23 +14,28 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { customerService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
+import { useWorkspace } from '../../context/WorkspaceContext';
 
 const CustomerList = () => {
   const { colors, isDark } = useTheme();
+  const { readOnly } = useWorkspace();
   const navigation = useNavigation();
   const [customers, setCustomers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [menuVisible, setMenuVisible] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   const loadCustomers = useCallback(async () => {
     try {
       setLoading(true);
+      setError('');
       const customerData = await customerService.getCustomers();
       setCustomers(customerData);
     } catch (error) {
       console.error('Error loading customers:', error);
+      setError(error.message || 'Unable to load customers.');
     } finally {
       setLoading(false);
     }
@@ -52,6 +57,7 @@ const CustomerList = () => {
   };
 
   const openMenu = (customer) => {
+    if (readOnly) return;
     setSelectedCustomer(customer);
     setMenuVisible(true);
   };
@@ -97,6 +103,7 @@ const CustomerList = () => {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <View style={styles.headerTopRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Back" style={{ padding: 12 }}><Text style={{ color: colors.primary }}>‹ Back</Text></TouchableOpacity>
           <View style={styles.headerTitleWrap}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>Customers</Text>
           </View>
@@ -119,6 +126,7 @@ const CustomerList = () => {
       </View>
 
       {/* Customer List */}
+      {!!error && <TouchableOpacity onPress={loadCustomers}><Text style={{ color: colors.danger, padding: 16 }}>{error} Tap to retry.</Text></TouchableOpacity>}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -146,13 +154,13 @@ const CustomerList = () => {
       )}
 
       {/* Floating Action Button */}
-      <TouchableOpacity 
+      {!readOnly && <TouchableOpacity
         style={[styles.fab, { backgroundColor: colors.primary }]}
         onPress={() => navigation.navigate('AddCustomer')}
         activeOpacity={0.8}
       >
         <Text style={styles.fabIcon}>+</Text>
-      </TouchableOpacity>
+      </TouchableOpacity>}
 
       {/* Menu Modal */}
       <Modal

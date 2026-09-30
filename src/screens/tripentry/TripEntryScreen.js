@@ -1,3 +1,4 @@
+import { workspaceCollection, getWorkspaceId } from '../../services/workspace';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -27,23 +28,23 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { auth, tripService } from '../../config/firebase';
 import AutoSuggestInput from '../../components/AutoSuggestInput';
 import { getVehicleSuggestions, getCustomerSuggestions, getDriverSuggestions, getFromLocationSuggestions } from '../../services/firestoreService';
-import { getFirestore, collection, query, where, limit, getDocs, Timestamp } from '@react-native-firebase/firestore';
+import { query, where, limit, getDocs, Timestamp } from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../hooks/useTheme';
 
-const draftKey = () => `tripEntryDraft:${auth.currentUser?.uid || 'signed-out'}`;
+const draftKey = scope => `tripEntryDraft:${scope}`;
 
-export const saveDraft = async (data) => {
+export const saveDraft = async (data, workspaceId) => {
   try {
-    await AsyncStorage.setItem(draftKey(), JSON.stringify(data));
+    await AsyncStorage.setItem(draftKey(workspaceId), JSON.stringify(data));
   } catch (e) {
     console.warn('Failed to save trip draft:', e);
   }
 };
 
-export const loadDraft = async () => {
+export const loadDraft = async workspaceId => {
   try {
-    const value = await AsyncStorage.getItem(draftKey());
+    const value = await AsyncStorage.getItem(draftKey(workspaceId));
     if (value) {
       return JSON.parse(value);
     }
@@ -53,15 +54,17 @@ export const loadDraft = async () => {
   return null;
 };
 
-export const clearDraft = async () => {
+export const clearDraft = async workspaceId => {
   try {
-    await AsyncStorage.removeItem(draftKey());
+    await AsyncStorage.removeItem(draftKey(workspaceId));
   } catch (e) {
     console.warn('Failed to clear trip draft:', e);
   }
 };
 
 const TripEntryScreen = () => {
+  const workspaceId = useRef(getWorkspaceId()).current;
+  const draftScope = useRef(`${auth.currentUser.uid}:${workspaceId}`).current;
   const { colors } = useTheme();
   const navigation = useNavigation();
   const screenWidth = Dimensions.get('window').width;
@@ -90,16 +93,16 @@ const TripEntryScreen = () => {
     if (draftSaveTimeout.current) clearTimeout(draftSaveTimeout.current);
 
     draftSaveTimeout.current = setTimeout(() => {
-      saveDraft({ trips, currentTripIndex });
+      saveDraft({ trips, currentTripIndex }, draftScope);
     }, 800); // 800ms debounce
 
     return () => clearTimeout(draftSaveTimeout.current);
-  }, [trips, currentTripIndex, hydrated]);
+  }, [trips, currentTripIndex, hydrated, draftScope]);
 
   // Step 2: Restore draft trips on mount
   useEffect(() => {
     (async () => {
-      const data = await loadDraft();
+      const data = await loadDraft(draftScope);
       if (
         data &&
         Array.isArray(data.trips) && data.trips.length > 0 &&
@@ -124,7 +127,7 @@ const TripEntryScreen = () => {
       }
       setHydrated(true);
     })();
-  }, [screenWidth]);
+  }, [screenWidth, draftScope]);
 
    
   const formatDate = (date) => {
@@ -244,8 +247,7 @@ const TripEntryScreen = () => {
       const trimmedName = customerName.replace(/\s+/g, ' ').trim();
       if (!trimmedName) return false;
       
-      const db = getFirestore();
-      const customersRef = collection(db, 'customers');
+            const customersRef = workspaceCollection('customers', workspaceId);
       const q = query(customersRef, where('msnamelower', '==', trimmedName.toLowerCase()), limit(1));
       const snapshot = await getDocs(q);
       return !snapshot.empty;
@@ -367,7 +369,7 @@ const TripEntryScreen = () => {
             dateTimestamp: Timestamp.fromDate(trips[i].date), // For optimal sorting
           };
 
-          await tripService.addTrip(tripData);
+          await tripService.addTrip(tripData, workspaceId);
           results.success++;
         } catch (error) {
           console.error(`Trip ${i + 1} failed:`, error);
@@ -380,7 +382,7 @@ const TripEntryScreen = () => {
       if (results.success === trips.length) {
         completedRef.current = true;
         if (draftSaveTimeout.current) clearTimeout(draftSaveTimeout.current);
-        await clearDraft();
+        await clearDraft(draftScope);
         Alert.alert('Success', `All ${results.success} trips added successfully!`, [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);

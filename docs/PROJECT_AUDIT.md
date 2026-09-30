@@ -1,5 +1,19 @@
 # TripTrack project audit and modernization plan
 
+## Current status — user workspaces (2026-09-30)
+
+This section supersedes the historical access model described below. Five existing Firebase accounts now have staff profiles, with one confirmed administrator. Roles are bound to Firebase UIDs in trusted profiles; client code cannot assign an administrator role. See `docs/WORKSPACES.md` for the current schema and deployment procedure.
+
+Ordinary accounts work only in `workspaces/{uid}/{collection}/{id}`. The administrator can select any active user's workspace from Home while remaining authenticated as the administrator. Navigation remounts on workspace changes; draft keys include both actor and workspace. In-flight service writes and export loops capture their scope. New accounts create ordinary profiles and start in empty workspaces. Existing root business collections are read-only to the administrator until the owner decides where to copy them.
+
+The September 28 allowlist included only one of five existing accounts, explaining why other accounts lost access. The September 30 snapshot found 302 current trips compared with 303 previously. One missing trip is preserved from its earlier backup; available logs do not establish who deleted it. All other business collections retained their earlier IDs, with one additional customer. Exact record details, private backups, and unresolved historical discrepancies are saved locally in the task output report, not in GitHub.
+
+Home now has task cards, the user switch, account context, and theme controls. Trip removal archives a full copy, with paged Archive browsing and atomic restoration. Vehicle IDs are normalized for new writes; party tables continue to filter by party ID and project only that party's routes.
+
+Verification: 11 Jest tests, TypeScript, ESLint error checks, Firestore rules isolation tests, and actual trip-service create/edit/archive/restore tests passed. Android preview version 1.1 (code 2) built and launched with the existing ordinary-user session. All Trips, Vehicles, Parties, Customers, Archive, and Add Trip opened successfully; the new empty workspace exposes no historical shared records. Deployed rules match source; nested workspace queries have live indexes for vehicle/party and both date orders. Automated switcher tests cover admin search/selection and ordinary-user hiding; live admin visual sign-in remains pending.
+
+Release boundaries remain: debug signing, server-backed global text search, exact customer/party ID selection in entry forms for same-named businesses, unresolved historical allocation/contact questions, dependency advisories, and a large-data device benchmark. Do not describe this preview as a fully certified production release.
+
 ## Party isolation and table pass (2026-09-27)
 
 The separate Flutter reference app at `C:\Users\Akhtar\Desktop\Billing_App_on work` stores a full trip's `pairs` array on each party document. Its party table and exports previously rendered that full array, which displayed other parties inside the opened party. The local Flutter fix projects only pairs whose destination exactly matches the opened party and aligns monthly counts. The Flutter repository contains extensive pre-existing staged and unstaged work, so this change is left locally uncommitted for review.

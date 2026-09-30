@@ -1,3 +1,5 @@
+import { useWorkspace } from '../context/WorkspaceContext';
+import { getWorkspaceId } from '../services/workspace';
 import React, { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -23,6 +25,7 @@ const displayTrip = trip => ({
 export default function PagedTripHistory({ title, vehicleNo = null }) {
   const navigation = useNavigation();
   const { colors } = useTheme();
+  const { readOnly } = useWorkspace();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -73,9 +76,10 @@ export default function PagedTripHistory({ title, vehicleNo = null }) {
     if (exporting) return;
     setExporting(true); setExportData(null); setExportCount(0);
     try {
+      const workspaceId = getWorkspaceId();
       let nextCursor = null, all = [], more = true;
       while (more) {
-        const page = await tripService.getTripPage({ vehicleNo, direction, cursor: nextCursor, pageSize: 100 });
+        const page = await tripService.getTripPage({ vehicleNo, direction, cursor: nextCursor, pageSize: 100, workspaceId });
         all = all.concat(page.trips.map(displayTrip));
         setExportCount(all.length);
         nextCursor = page.cursor; more = page.hasMore;
@@ -85,7 +89,7 @@ export default function PagedTripHistory({ title, vehicleNo = null }) {
     finally { setExporting(false); }
   }, [exporting, vehicleNo, direction, search]);
 
-  const deleteTrip = tripId => Alert.alert('Delete trip', 'Delete this trip and update its totals?', [
+  const deleteTrip = tripId => Alert.alert('Delete trip', 'Move this trip to Archive? You can restore it later.', [
     { text: 'Cancel', style: 'cancel' },
     { text: 'Delete', style: 'destructive', onPress: async () => {
       try { await tripService.deleteTrip(tripId); await reload(); }
@@ -118,7 +122,7 @@ export default function PagedTripHistory({ title, vehicleNo = null }) {
     {!!error && <TouchableOpacity onPress={reload} style={styles.error}><Text style={{ color: '#b42318' }}>{error} Tap to retry.</Text></TouchableOpacity>}
     {loading ? <ActivityIndicator style={styles.center} size="large" color={colors.primary} /> :
       <FlatList data={visibleTrips} keyExtractor={item => item.id}
-        renderItem={({ item }) => <TripCard trip={item} onEdit={trip => navigation.navigate('EditTrip', { tripId: trip.id })} onDelete={deleteTrip} />}
+        renderItem={({ item }) => <TripCard trip={item} readOnly={readOnly} onEdit={trip => navigation.navigate('EditTrip', { tripId: trip.id })} onDelete={deleteTrip} />}
         onEndReached={loadMore} onEndReachedThreshold={0.4} onRefresh={reload} refreshing={loading}
         initialNumToRender={12} maxToRenderPerBatch={12} windowSize={5}
         ListEmptyComponent={<Text style={[styles.empty, { color: colors.textSecondary }]}>No trips found.</Text>}

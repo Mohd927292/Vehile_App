@@ -1,3 +1,5 @@
+import { useWorkspace } from '../../context/WorkspaceContext';
+import { getWorkspaceId } from '../../services/workspace';
 import React, { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -20,6 +22,7 @@ export default function PartyList_Details_Screen() {
   const { params = {} } = useRoute();
   const { partyId, to, month } = params;
   const { colors } = useTheme();
+  const { readOnly } = useWorkspace();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -71,9 +74,10 @@ export default function PartyList_Details_Screen() {
     if (exporting) return;
     setExporting(true); setExportCount(0); setExportData(null);
     try {
+      const workspaceId = getWorkspaceId();
       let nextCursor = null, all = [], more = true;
       while (more) {
-        const page = await vehicleTripService.getPartyTripPage({ partyId, to, month, direction, cursor: nextCursor, pageSize: 100 });
+        const page = await vehicleTripService.getPartyTripPage({ partyId, to, month, direction, cursor: nextCursor, pageSize: 100, workspaceId });
         all = all.concat(page.trips.map(trip => projectTrip(trip, partyId, to)));
         setExportCount(all.length);
         more = page.hasMore; nextCursor = page.cursor;
@@ -83,7 +87,7 @@ export default function PartyList_Details_Screen() {
     finally { setExporting(false); }
   }, [partyId, to, month, direction, search, exporting]);
 
-  const deleteTrip = tripId => Alert.alert('Delete trip', 'Delete this trip and update party totals?', [
+  const deleteTrip = tripId => Alert.alert('Delete trip', 'Move this trip to Archive? You can restore it later.', [
     { text: 'Cancel', style: 'cancel' },
     { text: 'Delete', style: 'destructive', onPress: async () => {
       try { await tripService.deleteTrip(tripId); await reload(); }
@@ -95,10 +99,10 @@ export default function PartyList_Details_Screen() {
     <View style={[styles.row, { backgroundColor: index % 2 ? colors.background : colors.surface, borderBottomColor: colors.border }]}>
       {[item.date || '—', item.vehicleNo || '—', item.driverName || '—', item.locations.map(location => location.from || '—').join(', '), item.amount].map((value, column) =>
         <Text key={column} style={[styles.cell, { width: widths[column], color: colors.text, fontWeight: column === 1 ? '700' : '400' }]} numberOfLines={column === 3 ? 2 : 1}>{value}</Text>)}
-      <View style={[styles.actions, { width: widths[5] }]}>
+      <View style={[styles.actions, { width: widths[5] }]}>{!readOnly && <>
         <TouchableOpacity onPress={() => navigation.navigate('EditTrip', { tripId: item.id })} accessibilityLabel={`Edit ${item.vehicleNo}`} style={styles.action}><Icon name="pencil-outline" size={20} color={colors.primary} /></TouchableOpacity>
         <TouchableOpacity onPress={() => deleteTrip(item.id)} accessibilityLabel={`Delete ${item.vehicleNo}`} style={styles.action}><Icon name="trash-can-outline" size={20} color="#b42318" /></TouchableOpacity>
-      </View>
+      </>}</View>
     </View>
   );
 

@@ -1,3 +1,4 @@
+import { workspaceCollection } from '../../services/workspace';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
@@ -13,7 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { getFirestore, doc, getDoc, Timestamp } from '@react-native-firebase/firestore';
+import { doc, getDoc, Timestamp } from '@react-native-firebase/firestore';
 import { tripService } from '../../config/firebase';
 import { parseTripDate } from '../../utils/tripData';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -41,8 +42,7 @@ const EditTrip = () => {
   const fetchTripData = useCallback(async () => {
     try {
       if (!tripId) throw new Error('Trip ID is missing');
-      const db = getFirestore();
-      const tripDoc = await getDoc(doc(db, 'tripEntries', tripId));
+      const tripDoc = await getDoc(doc(workspaceCollection('tripEntries'), tripId));
       
       if (tripDoc.exists()) {
         const data = tripDoc.data();

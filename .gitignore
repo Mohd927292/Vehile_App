@@ -79,3 +79,7 @@ android/build-*.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Local emulator output
+firestore-debug.log
+firebase-debug.log

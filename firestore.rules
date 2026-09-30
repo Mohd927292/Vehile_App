@@ -7,34 +7,42 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.active == true;
     }
 
-    // Membership is managed through a trusted administrator, never by the app.
+    function isAdmin() {
+      return isStaff() && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function businessCollection(name) {
+      return name in ['tripEntries', 'vehicles', 'parties', 'customers', 'drivers', 'fromcustomers', 'archivedTrips'];
+    }
+
+    // New accounts can create only their own ordinary-user profile.
+    // Roles and account activation remain controlled by a trusted project administrator.
     match /staff/{uid} {
-      allow get: if request.auth != null && request.auth.uid == uid;
-      allow list, write: if false;
+      allow get: if (request.auth != null && request.auth.uid == uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'displayName', 'role', 'active', 'createdAt'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 120
+        && request.resource.data.role == 'user'
+        && request.resource.data.active == true
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
     }
 
-    match /tripEntries/{tripId} {
-      allow read, write: if isStaff();
+    match /workspaces/{ownerId}/{collectionName}/{documentId} {
+      allow read, write: if businessCollection(collectionName) && isStaff()
+        && (request.auth.uid == ownerId || isAdmin())
+        && exists(/databases/$(database)/documents/staff/$(ownerId))
+        && get(/databases/$(database)/documents/staff/$(ownerId)).data.active == true;
     }
 
-    match /vehicles/{vehicleId} {
-      allow read, write: if isStaff();
-    }
-
-    match /parties/{partyId} {
-      allow read, write: if isStaff();
-    }
-
-    match /customers/{customerId} {
-      allow read, write: if isStaff();
-    }
-
-    match /drivers/{driverId} {
-      allow read, write: if isStaff();
-    }
-
-    match /fromcustomers/{originId} {
-      allow read, write: if isStaff();
+    // Historical shared data awaits the owner's placement decision.
+    match /{collectionName}/{documentId} {
+      allow read: if businessCollection(collectionName) && isAdmin();
+      allow write: if false;
     }
   }
 }

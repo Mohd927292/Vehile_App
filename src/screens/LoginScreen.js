@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
-import { getAuth, signInWithEmailAndPassword } from '@react-native-firebase/auth';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from '@react-native-firebase/auth';
 import { useTheme } from '../hooks/useTheme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -11,16 +11,20 @@ const authMessage = code => ({
   'auth/wrong-password': 'The email or password is incorrect.',
   'auth/network-request-failed': 'Check your connection and try again.',
   'auth/too-many-requests': 'Too many attempts. Wait a moment and try again.',
+  'auth/email-already-in-use': 'An account already uses this email. Sign in instead.',
+  'auth/weak-password': 'Use a password with at least six characters.',
 })[code] || 'Unable to complete this request. Please try again.';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [registering, setRegistering] = useState(false);
   const { colors, isDark } = useTheme();
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (loading) return;
+    if (!email.trim() || !password) {
       Alert.alert('Error', 'Please fill all fields');
       return;
     }
@@ -28,7 +32,8 @@ const LoginScreen = () => {
     setLoading(true);
     try {
       const auth = getAuth();
-      await signInWithEmailAndPassword(auth, email, password);
+      if (registering) await createUserWithEmailAndPassword(auth, email.trim(), password);
+      else await signInWithEmailAndPassword(auth, email.trim(), password);
     } catch (error) {
       Alert.alert('Sign in failed', authMessage(error.code));
     }
@@ -47,8 +52,8 @@ const LoginScreen = () => {
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Trips, vehicles and parties in one place</Text>
 
           <View style={[styles.form, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.formTitle, { color: colors.text }]}>Welcome back</Text>
-            <Text style={[styles.formHint, { color: colors.textSecondary }]}>Sign in with an approved account</Text>
+            <Text style={[styles.formTitle, { color: colors.text }]}>{registering ? 'Create your account' : 'Welcome back'}</Text>
+            <Text style={[styles.formHint, { color: colors.textSecondary }]}>Your trips and customers stay in your own account</Text>
 
             <Text style={[styles.label, { color: colors.text }]}>Email address</Text>
             <TextInput
@@ -80,12 +85,14 @@ const LoginScreen = () => {
               onPress={handleLogin}
               disabled={loading}
               accessibilityRole="button"
-              accessibilityLabel="Sign in"
+              accessibilityLabel={registering ? 'Create account' : 'Sign in'}
             >
-              <Text style={styles.primaryButtonText}>{loading ? 'Please wait…' : 'Sign in'}</Text>
+              <Text style={styles.primaryButtonText}>{loading ? 'Please wait…' : registering ? 'Create account' : 'Sign in'}</Text>
             </TouchableOpacity>
 
-            <Text style={[styles.accessHint, { color: colors.textSecondary }]}>Need access? Ask the project administrator.</Text>
+            <TouchableOpacity onPress={() => setRegistering(value => !value)} disabled={loading} accessibilityRole="button">
+              <Text style={[styles.accessHint, { color: colors.primary }]}>{registering ? 'Already registered? Sign in' : 'New user? Create an account'}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>

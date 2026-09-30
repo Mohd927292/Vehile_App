@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../hooks/useTheme';
 
-const TripCard = ({ trip, onEdit, onDelete }) => {
+const TripCard = ({ trip, onEdit, onDelete, readOnly = false }) => {
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const locations = trip.locations || [];
@@ -53,7 +53,7 @@ const TripCard = ({ trip, onEdit, onDelete }) => {
         </View>
       )}
 
-      <View style={[styles.actions, { borderTopColor: colors.border }]}>
+      {!readOnly && <View style={[styles.actions, { borderTopColor: colors.border }]}>
         <TouchableOpacity style={styles.action} onPress={() => onEdit(trip)} accessibilityRole="button" accessibilityLabel={`Edit trip ${trip.vehicleNo || ''}`}>
           <Icon name="pencil-outline" size={19} color={colors.primary} />
           <Text style={[styles.actionText, { color: colors.primary }]}>Edit</Text>
@@ -62,7 +62,7 @@ const TripCard = ({ trip, onEdit, onDelete }) => {
           <Icon name="trash-can-outline" size={19} color="#c62828" />
           <Text style={[styles.actionText, styles.deleteText]}>Delete</Text>
         </TouchableOpacity>
-      </View>
+      </View>}
     </View>
   );
 };
