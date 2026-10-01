@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,10 @@ import {
   TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
-import { navigateWithParams } from '../../utils/navigation';
+import { parseTripDate } from '../../utils/tripData';
 
 const VehicleList = () => {
   const { colors } = useTheme();
@@ -22,36 +22,23 @@ const VehicleList = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    loadVehicles();
-  }, []);
-
-  const loadVehicles = async () => {
+  const loadVehicles = useCallback(async () => {
     try {
       setLoading(true);
-      const mergedData = await vehicleTripService.getVehicleTripsData();
-      
-      // Group by vehicle and get unique vehicles
-      const vehicleMap = new Map();
-      mergedData.forEach(trip => {
-        if (!vehicleMap.has(trip.vehicleNo)) {
-          vehicleMap.set(trip.vehicleNo, {
-            vehicleNo: trip.vehicleNo,
-          
-            loadCount: trip.loadCount,
-            createdAt: trip.createdAt
-          });
-        }
-      });
-      
-      setVehicles(Array.from(vehicleMap.values()));
+      const summaries = await vehicleTripService.getVehicleSummaries();
+      setVehicles(summaries.map(item => ({
+        ...item,
+        createdAt: parseTripDate(item.lastTripAt),
+      })));
     } catch (error) {
       console.error('Error loading vehicles:', error);
       Alert.alert('Error', 'Failed to load vehicles. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(useCallback(() => { loadVehicles(); }, [loadVehicles]));
 
   const filteredVehicles = vehicles.filter(vehicle =>
     vehicle.vehicleNo.toLowerCase().includes(searchQuery.toLowerCase())
@@ -66,7 +53,8 @@ const VehicleList = () => {
         <Text style={[styles.vehicleNumber, { color: colors.text }]}>{item.vehicleNo || 'N/A'}</Text>
       </View>
       
-      <Text style={[styles.vehicleInfo, { color: colors.textSecondary }]}>Load Count: {item.loadCount || 'N/A'}</Text>
+      <Text style={[styles.vehicleInfo, { color: colors.textSecondary }]}>Trip Count: {item.loadCount}</Text>
+      <TouchableOpacity accessibilityLabel={`Browse months for ${item.vehicleNo}`} onPress={() => navigation.navigate('PartyMonths', { vehicleNo: item.vehicleNo })} style={{ paddingVertical: 12 }}><Text style={{ color: colors.primary }}>Browse by month</Text></TouchableOpacity>
       <Text style={[styles.vehicleInfo, { color: colors.textSecondary }]}>Last Trip: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
     </TouchableOpacity>
   );
@@ -99,6 +87,7 @@ const VehicleList = () => {
         <View style={styles.headerRight} />
       </View>
 
+      <TouchableOpacity onPress={() => navigation.navigate('TripList')} style={{ padding: 16 }} accessibilityRole="button"><Text style={{ color: colors.primary, fontWeight: '700' }}>All vehicles — complete table</Text></TouchableOpacity>
       <View style={styles.searchContainer}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.text }]}
@@ -109,7 +98,7 @@ const VehicleList = () => {
         />
       </View>
 
-      {vehicles.length === 0 ? (
+      {filteredVehicles.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No vehicles found</Text>
         </View>

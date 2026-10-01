@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { TextInput, Text, Card } from 'react-native-paper';
 import { useDebounce } from '../hooks/useDebounce';
 import { useTheme } from '../hooks/useTheme';
@@ -21,46 +21,42 @@ const AutoSuggestInput = ({
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [lastSelectedValue, setLastSelectedValue] = useState('');
+  const selectedDuringBlur = useRef(false);
   
   const debouncedValue = useDebounce(value);
 
   // Fetch suggestions when debounced value changes
   useEffect(() => {
-    if (debouncedValue && debouncedValue.length > 0 && debouncedValue !== lastSelectedValue) {
-      fetchSuggestions(debouncedValue);
-    } else {
+    let active = true;
+    if (!debouncedValue?.trim() || debouncedValue === lastSelectedValue) {
+      setLoading(false);
       setSuggestions([]);
       setShowSuggestions(false);
+      return () => { active = false; };
     }
-  }, [debouncedValue, lastSelectedValue]);
-
-  const fetchSuggestions = async (searchText) => {
-    console.log('🔍 AutoSuggestInput fetchSuggestions for:', searchText);
     setLoading(true);
-    try {
-      const results = await getSuggestions(searchText);
-      console.log('✅ AutoSuggestInput got results:', results);
+    getSuggestions(debouncedValue).then(results => {
+      if (!active) return;
       setSuggestions(results);
       setShowSuggestions(results.length > 0);
-      console.log('📊 Setting showSuggestions to:', results.length > 0);
-    } catch (error) {
-      console.error('❌ AutoSuggestInput error:', error);
-      setSuggestions([]);
-      setShowSuggestions(false);
-    } finally {
-      setLoading(false);
-    }
-  };
+    }).catch(() => {
+      if (active) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [debouncedValue, lastSelectedValue, getSuggestions]);
 
   const handleSuggestionPress = (suggestion) => {
     const selectedValue = suggestion.vehicleNo || suggestion.name || suggestion.label;
+    selectedDuringBlur.current = true;
     setLastSelectedValue(selectedValue);
     setShowSuggestions(false);
     setSuggestions([]);
     onSuggestionSelect(suggestion);
   };
-
-  const [lastSelectedValue, setLastSelectedValue] = useState('');
 
   const handleTextChange = (text) => {
     onChangeText(text);
@@ -104,10 +100,14 @@ const AutoSuggestInput = ({
         }}
         onBlur={() => {
           setTimeout(() => setShowSuggestions(false), 200);
-          if (onBlur) onBlur(value);
+          setTimeout(() => {
+            if (!selectedDuringBlur.current && onBlur) onBlur(value);
+            selectedDuringBlur.current = false;
+          }, 200);
         }}
         {...props}
       />
+      {loading && <ActivityIndicator style={styles.loadingIndicator} size="small" color={colors.primary} />}
       
       {showSuggestions && suggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>
@@ -129,9 +129,10 @@ const AutoSuggestInput = ({
 };
 
 const styles = StyleSheet.create({
+  loadingIndicator: { position: 'absolute', right: 16, top: 18 },
   suggestionsContainer: {
     position: 'absolute',
-    top: 56,
+    top: '100%',
     left: 0,
     right: 0,
     zIndex: 99999,

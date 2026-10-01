@@ -1,97 +1,55 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# TripTrack
 
-# Getting Started
+React Native Android app for recording trips, vehicles, party destinations, and customers. See [the project audit](docs/PROJECT_AUDIT.md) for the data model, known problems, verification, and modernization plan.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Local setup (Windows)
 
-## Step 1: Start Metro
+Install Node.js 20+, Android SDK 36, NDK 27.1.12297006, and JDK 17. Use the bundled Android Gradle wrapper. The debug build uses `android/app/google-services.json` for the existing `vehicle2-79fd6` Firebase test project. Use a different Firebase configuration for any separate environment.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
-
-```sh
-# Using npm
+```powershell
+npm ci
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+$env:JAVA_HOME = 'C:\Program Files\Java\jdk-17'
+cd android
+.\gradlew.bat assembleDebug
+cd ..
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
+With an emulator running, install `android/app/build/outputs/apk/debug/app-debug.apk` using `adb install -r`. For a development build, keep Metro running and use `adb reverse tcp:8081 tcp:8081`.
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+## Checks
 
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+```powershell
+npm test -- --runInBand
+npm exec tsc -- --noEmit
+npm run lint -- --quiet
 ```
 
-### iOS
+## Data and release notes
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+Trips are stored in `tripEntries`. Vehicle, party, driver, and origin collections are derived summaries or autocomplete sources; customer records are in `customers`. New and edited trips include normalized `vehicleKey`, `partyKeys`, stable `partyIds`, and a `partyId` on each route. Party summaries also have `partyKey` and `monthCounts`. All 303 existing trips and 84 party summaries in the connected test project were backed up and migrated on 2026-09-27. Party, vehicle, and All Trips histories read indexed pages of 40; party history is isolated by party ID and can be limited by month. Search covers loaded rows; "Prepare full export" fetches the complete selected history before showing PDF/Excel actions. A different Firestore project needs its own reviewed backup, index deployment, and backfill before this app version is installed.
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+The repeatable test-project data checks are:
 
-```sh
-bundle install
+```powershell
+.\scripts\backup-firestore.ps1
+$backup = (Get-ChildItem .local-backup -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
+node scripts/analyze-backup.cjs $backup
+node scripts/backfill-trip-keys.cjs $backup # dry run
+node scripts/backfill-trip-keys.cjs $backup --apply
+.\scripts\backup-firestore.ps1
+$backup = (Get-ChildItem .local-backup -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
+node scripts/repair-party-summaries.cjs $backup # dry run
+node scripts/repair-party-summaries.cjs $backup --apply
+node scripts/backfill-party-summary-keys.cjs $backup # dry run; back up again before applying
+node scripts/backfill-party-ids.cjs $backup # dry run; back up again before applying
+node scripts/backfill-party-months.cjs $backup # dry run; back up again before applying
+node scripts/verify-firestore-queries.cjs $backup
+node scripts/check-party-page.cjs $backup
+node scripts/check-trip-pages.cjs $backup
 ```
 
-Then, and every time you update your native dependencies, run:
+These scripts target `vehicle2-79fd6` explicitly and require Google Cloud CLI authentication with Firestore data access. Backups contain customer details and are ignored by Git. The repository's `firestore.rules` file is incomplete for the live six-collection data model; deployed rules could not be read with the current account. Do not deploy those rules until access policy and permissions are resolved.
 
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Release signing requires an ignored `android/keystore.properties` file with `storeFile`, `storePassword`, `keyAlias`, and `keyPassword`. Do not commit a release keystore or credentials.

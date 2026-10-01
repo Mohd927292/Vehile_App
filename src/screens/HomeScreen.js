@@ -1,266 +1,55 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Dimensions } from 'react-native';
+import React from 'react';
+import { Alert, View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getAuth, signOut } from '@react-native-firebase/auth';
-import { useTheme } from '../hooks/useTheme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTheme } from '../hooks/useTheme';
+import { useWorkspace } from '../context/WorkspaceContext';
+import WorkspaceSwitcher from '../components/WorkspaceSwitcher';
 
-const HomeScreen = () => {
+const destinations = [
+  { label: 'Add Trip', detail: 'Record a journey', icon: 'plus-circle-outline', screen: 'TripEntry', write: true },
+  { label: 'All Trips', detail: 'Browse your history', icon: 'format-list-bulleted-square', screen: 'TripList' },
+  { label: 'Vehicles', detail: 'Trips by vehicle', icon: 'truck-outline', screen: 'VehicleList' },
+  { label: 'Parties', detail: 'Loads by destination', icon: 'domain', screen: 'PartyList' },
+  { label: 'Customers', detail: 'Contact and billing details', icon: 'account-group-outline', screen: 'CustomerList' },
+  { label: 'Archive', detail: 'Restore removed trips', icon: 'archive-outline', screen: 'Archive', write: true },
+];
+
+export default function HomeScreen() {
   const { colors, toggleTheme, isDark } = useTheme();
+  const { workspace, isAdmin, readOnly, member } = useWorkspace();
   const navigation = useNavigation();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const scrollViewRef = useRef(null);
-  const screenWidth = Dimensions.get('window').width;
-  
-  const images = [
-    require('../../assets/images/1.jpg'),
-    require('../../assets/images/2.png'),
-    require('../../assets/images/3.png'),
-    require('../../assets/images/4.jpg'),
-    require('../../assets/images/5.jpg'),
-  ];
-  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => {
-        const nextIndex = (prevIndex + 1) % images.length;
-        scrollViewRef.current?.scrollTo({ x: nextIndex * (screenWidth - 40), animated: true });
-        return nextIndex;
-      });
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-  
-  const handleLogout = async () => {
-    try {
-      const auth = getAuth();
-      await signOut(auth);
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+  const { width } = useWindowDimensions();
+  const logout = async () => {
+    try { await signOut(getAuth()); }
+    catch { Alert.alert('Sign out failed', 'Please try again.'); }
   };
-
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header with logo and customer list icon */}
-      <View style={[styles.header, { backgroundColor: colors.surface }]}>
-        <View style={styles.logoContainer}>
-          <View style={styles.logoIconWrapper}>
-            <Image 
-              source={require('../../assets/icons/Icon-192.png')} 
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
-            <Text style={[styles.logoAppName, { color: colors.text }]}>TripTrack</Text>
-          </View>
-        </View>
-        
-        <TouchableOpacity 
-          style={[styles.themeToggle, { backgroundColor: colors.textSecondary }]}
-          onPress={toggleTheme}
-        >
-          <Icon name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} size={24} color="white" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.customerListIcon, { backgroundColor: colors.primary }]}
-          onPress={() => navigation.navigate('CustomerList')}
-        >
-          <Icon name="account-group" size={26} color="white" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Main content area */}
-      <View style={styles.content}>
-        <View style={styles.sliderContainer}>
-          <ScrollView
-            ref={scrollViewRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(e) => {
-              const index = Math.round(e.nativeEvent.contentOffset.x / (screenWidth - 40));
-              setCurrentIndex(index);
-            }}
-          >
-            {images.map((img, index) => (
-              <Image key={index} source={img} style={[styles.sliderImage, { width: screenWidth - 40 }]} resizeMode="cover" />
-            ))}
-          </ScrollView>
-          <View style={styles.pagination}>
-            {images.map((_, index) => (
-              <View key={index} style={[styles.dot, currentIndex === index && styles.activeDot]} />
-            ))}
-          </View>
-        </View>
-        
-        <View style={styles.menuGrid}>
-          <TouchableOpacity 
-            style={[styles.menuButton, { backgroundColor: colors.surface }]}
-            onPress={() => navigation.navigate('TripEntry')}
-          >
-            <Icon name="plus-circle" size={48} color="#4CAF50" />
-            <Text style={[styles.menuText, { color: colors.text }]}>Add Trip</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.menuButton, { backgroundColor: colors.surface }]}
-            onPress={() => navigation.navigate('VehicleList')}
-          >
-            <Icon name="truck-fast" size={48} color="#FF9800" />
-            <Text style={[styles.menuText, { color: colors.text }]}>Vehicles</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.menuButton, { backgroundColor: colors.surface }]}
-            onPress={() => navigation.navigate('PartyList')}
-          >
-            <Icon name="domain" size={48} color="#9C27B0" />
-            <Text style={[styles.menuText, { color: colors.text }]}>Parties</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.menuButton, { backgroundColor: colors.surface }]}
-            onPress={() => navigation.navigate('TripList')}
-          >
-            <Icon name="format-list-bulleted-square" size={48} color="#2196F3" />
-            <Text style={[styles.menuText, { color: colors.text }]}>All Trips</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Logout button */}
-      <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.danger }]} onPress={handleLogout}>
-        <Text style={styles.buttonText}>Logout</Text>
-      </TouchableOpacity>
+  return <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <WorkspaceSwitcher />
+      <TouchableOpacity onPress={toggleTheme} accessibilityRole="button" accessibilityLabel="Toggle theme" style={styles.iconButton}><Icon name={isDark ? 'white-balance-sunny' : 'moon-waning-crescent'} color={colors.primary} size={24} /></TouchableOpacity>
     </View>
-  );
-};
-
+    <ScrollView contentContainerStyle={styles.content}>
+      <Text style={[styles.eyebrow, { color: colors.primary }]}>TRIPTRACK {isAdmin ? ' / ADMIN' : ''}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{readOnly ? 'Existing records' : 'Your transport desk'}</Text>
+      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{readOnly ? 'Preserved for review. Choose where to place these records before making changes.' : `Working in ${workspace?.displayName}’s account`}</Text>
+      {isAdmin && !readOnly && member.id !== workspace.id && <View style={[styles.notice, { backgroundColor: colors.surface, borderColor: colors.border }]}><Icon name="account-eye-outline" size={22} color={colors.primary} /><Text style={{ color: colors.text, flex: 1 }}>Viewing {workspace.email}. Entries and edits stay in this user’s account.</Text></View>}
+      <View style={styles.grid}>{destinations.filter(item => !readOnly || !item.write).map(item => <TouchableOpacity key={item.screen} onPress={() => navigation.navigate(item.screen)} accessibilityRole="button" accessibilityLabel={item.label} style={[styles.card, { width: width < 380 ? '100%' : '48%', backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Icon name={item.icon} size={30} color={colors.primary} />
+        <Text style={[styles.cardTitle, { color: colors.text }]}>{item.label}</Text><Text style={[styles.cardDetail, { color: colors.textSecondary }]}>{item.detail}</Text>
+      </TouchableOpacity>)}</View>
+      <TouchableOpacity onPress={logout} accessibilityRole="button" accessibilityLabel="Logout" style={styles.logout}><Icon name="logout" size={20} color={colors.textSecondary} /><Text style={{ color: colors.textSecondary }}>Sign out</Text></TouchableOpacity>
+    </ScrollView>
+  </View>;
+}
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingTop: 50,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-  },
-  logoContainer: {
-    flex: 1,
-  },
-  logoIconWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoImage: {
-    width: 45,
-    height: 45,
-  },
-  logoAppName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginLeft: 10,
-    letterSpacing: 0.5,
-  },
-  themeToggle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  customerListIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconText: {
-    fontSize: 20,
-    color: 'white',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  sliderContainer: {
-    width: '100%',
-    height: 200,
-    marginTop: 10,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  sliderImage: {
-    height: 200,
-    borderRadius: 12,
-  },
-  pagination: {
-    flexDirection: 'row',
-    position: 'absolute',
-    bottom: 10,
-    alignSelf: 'center',
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ccc',
-    marginHorizontal: 4,
-  },
-  activeDot: {
-    backgroundColor: '#FF6B35',
-    width: 24,
-  },
-  menuGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginTop: 30,
-  },
-  menuButton: {
-    width: '48%',
-    aspectRatio: 1,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-
-  menuText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  logoutButton: {
-    padding: 15,
-    borderRadius: 8,
-    margin: 20,
-    marginBottom: 30,
-  },
-  buttonText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  container: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center', paddingTop: 48, paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, gap: 16 },
+  iconButton: { padding: 12 }, content: { padding: 20, maxWidth: 900, alignSelf: 'center', width: '100%' },
+  eyebrow: { fontSize: 12, fontWeight: '700', letterSpacing: 1.5, marginTop: 14 }, title: { fontSize: 30, fontWeight: '700', marginTop: 12 },
+  subtitle: { fontSize: 15, lineHeight: 23, marginTop: 10, marginBottom: 24 },
+  notice: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderWidth: 1, borderRadius: 12, marginBottom: 20 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  card: { minHeight: 150, borderWidth: 1, borderRadius: 16, padding: 20, marginBottom: 16 }, cardTitle: { fontSize: 18, fontWeight: '700', marginTop: 14 }, cardDetail: { fontSize: 13, marginTop: 6 },
+  logout: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, padding: 20, marginTop: 4 },
 });
-
-export default HomeScreen;

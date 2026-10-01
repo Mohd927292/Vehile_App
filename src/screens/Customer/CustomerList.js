@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   FlatList,
   ActivityIndicator,
@@ -10,53 +11,53 @@ import {
   Modal,
   StatusBar,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { customerService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
-import { navigateWithParams } from '../../utils/navigation';
+import { useWorkspace } from '../../context/WorkspaceContext';
 
 const CustomerList = () => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const { readOnly } = useWorkspace();
   const navigation = useNavigation();
   const [customers, setCustomers] = useState([]);
-  const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [menuVisible, setMenuVisible] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
-  useEffect(() => {
-    loadCustomers();
-  }, []);
-
-  const loadCustomers = async () => {
+  const loadCustomers = useCallback(async () => {
     try {
       setLoading(true);
+      setError('');
       const customerData = await customerService.getCustomers();
       setCustomers(customerData);
-      setFilteredCustomers(customerData);
     } catch (error) {
       console.error('Error loading customers:', error);
+      setError(error.message || 'Unable to load customers.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(useCallback(() => { loadCustomers(); }, [loadCustomers]));
+
+  const filteredCustomers = useMemo(() => {
+    const queryText = searchQuery.trim().toLowerCase();
+    if (!queryText) return customers;
+    return customers.filter(customer =>
+      [customer.msName, customer.phoneNo, customer.gstin]
+        .some(value => String(value || '').toLowerCase().includes(queryText))
+    );
+  }, [customers, searchQuery]);
 
   const handleSearch = (query) => {
     setSearchQuery(query);
-    if (query.trim() === '') {
-      setFilteredCustomers(customers);
-    } else {
-      const filtered = customers.filter(customer => 
-        customer.msName?.toLowerCase().includes(query.toLowerCase()) ||
-        customer.phoneNo?.toLowerCase().includes(query.toLowerCase()) ||
-        customer.gstin?.toLowerCase().includes(query.toLowerCase())
-      );
-      setFilteredCustomers(filtered);
-    }
   };
 
   const openMenu = (customer) => {
+    if (readOnly) return;
     setSelectedCustomer(customer);
     setMenuVisible(true);
   };
@@ -98,10 +99,11 @@ const CustomerList = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.text === '#FFFFFF' ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <View style={styles.headerTopRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Back" style={{ padding: 12 }}><Text style={{ color: colors.primary }}>‹ Back</Text></TouchableOpacity>
           <View style={styles.headerTitleWrap}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>Customers</Text>
           </View>
@@ -124,6 +126,7 @@ const CustomerList = () => {
       </View>
 
       {/* Customer List */}
+      {!!error && <TouchableOpacity onPress={loadCustomers}><Text style={{ color: colors.danger, padding: 16 }}>{error} Tap to retry.</Text></TouchableOpacity>}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -151,13 +154,13 @@ const CustomerList = () => {
       )}
 
       {/* Floating Action Button */}
-      <TouchableOpacity 
+      {!readOnly && <TouchableOpacity
         style={[styles.fab, { backgroundColor: colors.primary }]}
         onPress={() => navigation.navigate('AddCustomer')}
         activeOpacity={0.8}
       >
         <Text style={styles.fabIcon}>+</Text>
-      </TouchableOpacity>
+      </TouchableOpacity>}
 
       {/* Menu Modal */}
       <Modal
@@ -166,11 +169,8 @@ const CustomerList = () => {
         animationType="fade"
         onRequestClose={closeMenu}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={closeMenu}
-        >
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeMenu} accessibilityLabel="Close customer menu" />
           <View style={[styles.menuContainer, { backgroundColor: colors.surface }]}>
             <TouchableOpacity 
               style={styles.menuItem}
@@ -187,7 +187,7 @@ const CustomerList = () => {
               <Text style={[styles.menuText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </View>
   );

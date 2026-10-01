@@ -8,3 +8,7 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
+
+# PDFBox's optional JPEG 2000 decoder is not used by our generated text reports.
+# https://github.com/TomRoush/PdfBox-Android#optional-dependencies
+-dontwarn com.gemalto.jp2.JP2Decoder

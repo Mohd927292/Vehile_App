@@ -1,7 +1,7 @@
-import { getFirestore, collection, query, orderBy, startAt, endAt, limit, getDocs, addDoc } from '@react-native-firebase/firestore';
+import { workspaceCollection } from './workspace';
+import { query, orderBy, startAt, endAt, limit, getDocs } from '@react-native-firebase/firestore';
 
 // Get Firestore instance
-const db = getFirestore();
 
 // Fetch vehicle suggestions from Firestore
 export const getVehicleSuggestions = async searchText => {
@@ -9,7 +9,7 @@ export const getVehicleSuggestions = async searchText => {
 
   try {
     const searchUpper = searchText.toUpperCase();
-    const vehiclesRef = collection(db, 'vehicles');
+    const vehiclesRef = workspaceCollection('vehicles');
     const q = query(
       vehiclesRef,
       orderBy('vehicleNo'),
@@ -35,7 +35,7 @@ export const getDriverSuggestions = async searchText => {
 
   try {
     const searchLower = searchText.toLowerCase();
-    const driverRef = collection(db, 'drivers');
+    const driverRef = workspaceCollection('drivers');
     const q = query(
       driverRef,
       orderBy('driverName'),
@@ -56,36 +56,13 @@ export const getDriverSuggestions = async searchText => {
   }
 }
 
-// Save driver name to Firestore collection
-export const saveDriverName = async (driverName) => {
-  if (!driverName.trim()) return;
-  
-  try {
-    const trimmedName = driverName.trim().toLowerCase();
-    const driversRef = collection(db, 'drivers');
-    
-    // Check if driver already exists
-    const q = query(driversRef, orderBy('driverName'), startAt(trimmedName), endAt(trimmedName + '\uf8ff'), limit(1));
-    const snapshot = await getDocs(q);
-    
-    if (snapshot.empty) {
-      await addDoc(driversRef, {
-        driverName: trimmedName,
-        createdAt: new Date()
-      });
-    }
-  } catch (error) {
-    console.error('Error saving driver name:', error);
-  }
-};
-
 // Fetch from location suggestions from Firestore (using fromcustomers collection)
 export const getFromLocationSuggestions = async searchText => {
   if (!searchText.trim()) return [];
 
   try {
     const searchLower = searchText.toLowerCase();
-    const fromcustomersRef = collection(db, 'fromcustomers');
+    const fromcustomersRef = workspaceCollection('fromcustomers');
     const q = query(
       fromcustomersRef,
       orderBy('fromlower'),
@@ -113,7 +90,7 @@ export const getCustomerSuggestions = async searchText => {
 
   try {
     const searchLower = searchText.toLowerCase();
-    const customersRef = collection(db, 'customers');
+    const customersRef = workspaceCollection('customers');
     const q = query(
       customersRef,
       orderBy('msnamelower'),

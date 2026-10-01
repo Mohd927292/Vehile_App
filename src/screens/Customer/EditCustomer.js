@@ -1,3 +1,4 @@
+import { workspaceCollection, assertWritableWorkspace } from '../../services/workspace';
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -7,7 +8,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  useColorScheme,
 } from 'react-native';
 
 import {
@@ -17,15 +17,15 @@ import {
   Provider as PaperProvider,
 } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { db } from '../../config/firebase';
-import { collection, doc, updateDoc, serverTimestamp } from '@react-native-firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDocs, query, where, limit } from '@react-native-firebase/firestore';
 import { useTheme } from '../../hooks/useTheme';
+import { normalizeCustomerName, validateCustomerInput } from '../../utils/customerValidation';
+import { partyKey } from '../../utils/tripData';
 
 const EditCustomer = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const customer = route.params?.customer;
-  const colorScheme = useColorScheme();
   const {colors} = useTheme();
   
 
@@ -49,22 +49,6 @@ const EditCustomer = () => {
     }));
   };
 
-  const validateGSTIN = (gstin) => {
-    const gstinRegex = /^[0-9]/;
-    return gstinRegex.test(gstin);
-  };
-
-  const validatePhone = (phone) => {
-    const phoneRegex = /^[6-9]\d{9}$/;
-    return phoneRegex.test(phone);
-  };
-
-  const validateEmail = (email) => {
-    if (!email) return true;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
   const handleUpdateCustomer = async () => {
     if (isSaving) return;
 
@@ -73,27 +57,51 @@ const EditCustomer = () => {
       return;
     }
 
-    if (!customerData.msName?.trim()) {
-      Alert.alert('Error', 'Customer name is required');
+    const validationError = validateCustomerInput(customerData);
+    if (validationError) {
+      Alert.alert('Check customer', validationError);
       return;
     }
 
 
     try {
       setIsSaving(true);
+      const workspaceId = assertWritableWorkspace();
+      const name = normalizeCustomerName(customerData.msName);
+      const customersRef = workspaceCollection('customers', workspaceId);
+      const existing = await getDocs(query(customersRef, where('msnamelower', '==', name.toLowerCase()), limit(2)));
+      if (existing.docs.some(snapshot => snapshot.id !== customer.id)) {
+        Alert.alert('Customer already exists', 'Choose the existing customer or use a different name.');
+        return;
+      }
+
+      if (partyKey(name) !== partyKey(customer.msName)) {
+        const oldKey = partyKey(customer.msName);
+        const [trips, summaries, legacySummaries] = await Promise.all([
+          getDocs(query(workspaceCollection('tripEntries', workspaceId), where('partyKeys', 'array-contains', oldKey), limit(1))),
+          getDocs(query(workspaceCollection('parties', workspaceId), where('partyKey', '==', oldKey), limit(2))),
+          getDocs(query(workspaceCollection('parties', workspaceId), where('to', '==', customer.msName), limit(2))),
+        ]);
+        if (!trips.empty || [...summaries.docs, ...legacySummaries.docs].some(snapshot => Number(snapshot.data().loadCount) > 0)) {
+          Alert.alert(
+            'Name has trip history',
+            'This name is used by existing trips. Keep the name and update the contact details here; renaming historical routes needs a dedicated data migration.',
+          );
+          return;
+        }
+      }
 
       const customerDataToSave = {
-        msName: customerData.msName.trim(),
-        msnamelower: customerData.msName.trim().toLowerCase(),
+        msName: name,
+        msnamelower: name.toLowerCase(),
         address1: customerData.address1.trim(),
         address2: customerData.address2?.trim() || '',
-        gstin: customerData.gstin.trim(),
+        gstin: customerData.gstin.trim().toUpperCase(),
         phoneNo: customerData.phoneNo.trim(),
         email: customerData.email?.trim() || '',
         updatedAt: serverTimestamp(),
       };
 
-      const customersRef = collection(db, 'customers');
       const customerDoc = doc(customersRef, customer.id);
       await updateDoc(customerDoc, customerDataToSave);
 
@@ -149,9 +157,12 @@ const EditCustomer = () => {
               textColor={colors.text}
               placeholderTextColor={colors.textSecondary}
             />
+            <Text style={[styles.nameHelp, { color: colors.textSecondary }]}>
+              Names linked to trip history cannot be changed from this form.
+            </Text>
 
             <TextInput
-              label="Address 1 *"
+              label="Address 1"
               value={customerData.address1}
               onChangeText={(value) => handleInputChange('address1', value)}
               placeholder="Enter address line 1"
@@ -183,7 +194,7 @@ const EditCustomer = () => {
             />
 
             <TextInput
-              label="GSTIN *"
+              label="GSTIN"
               value={customerData.gstin}
               onChangeText={(value) => handleInputChange('gstin', value)}
               placeholder="Enter GSTIN"
@@ -198,7 +209,7 @@ const EditCustomer = () => {
             />
 
             <TextInput
-              label="Phone No *"
+              label="Phone No"
               value={customerData.phoneNo}
               onChangeText={(value) => handleInputChange('phoneNo', value)}
               placeholder="10-digit number"
@@ -278,6 +289,11 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 12,
+  },
+  nameHelp: {
+    fontSize: 12,
+    marginTop: -4,
+    marginBottom: 14,
   },
   multilineInput: {
     minHeight: 54,

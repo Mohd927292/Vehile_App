@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,10 @@ import {
   TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { vehicleTripService } from '../../config/firebase';
 import { useTheme } from '../../hooks/useTheme';
+import { parseTripDate } from '../../utils/tripData';
 
 const PartyListScreen = () => {
   const navigation = useNavigation();
@@ -21,51 +22,24 @@ const PartyListScreen = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    loadParties();
-  }, []);
-
-  const loadParties = async () => {
+  const loadParties = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Get all trips and build parties from TO locations
-      const tripsSnapshot = await vehicleTripService.getVehicleTripsData();
-      
-      // Extract all TO locations and count them
-      const partyMap = new Map();
-      
-      tripsSnapshot.forEach(trip => {
-        if (trip.locations && trip.locations.length > 0) {
-          trip.locations.forEach(location => {
-            if (location.to) {
-              const partyName = location.to;
-              if (partyMap.has(partyName)) {
-                partyMap.set(partyName, {
-                  ...partyMap.get(partyName),
-                  loadCount: partyMap.get(partyName).loadCount + 1
-                });
-              } else {
-                partyMap.set(partyName, {
-                  id: partyName,
-                  to: partyName,
-                  loadCount: 1,
-                  createdAt: trip.createdAt
-                });
-              }
-            }
-          });
-        }
-      });
-      
-      setParties(Array.from(partyMap.values()));
+      const summaries = await vehicleTripService.getPartySummaries();
+      setParties(summaries.map(item => ({
+        ...item,
+        createdAt: parseTripDate(item.lastTripAt),
+      })));
     } catch (error) {
       console.error('Error loading parties:', error);
       Alert.alert('Error', 'Failed to load parties. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(useCallback(() => { loadParties(); }, [loadParties]));
 
   const filteredParties = parties.filter(party =>
     party.to.toLowerCase().includes(searchQuery.toLowerCase())
@@ -74,13 +48,14 @@ const PartyListScreen = () => {
   const renderParty = ({ item }) => (
     <TouchableOpacity 
       style={[styles.partyCard, { backgroundColor: colors.surface }]}
-      onPress={() => navigation.navigate('PartyDetails', { to: item.to })}
+      onPress={() => navigation.navigate('PartyDetails', { partyId: item.id, to: item.to })}
     >
       <View style={styles.partyHeader}>
         <Text style={[styles.partyName, { color: colors.text }]}>{item.to || 'N/A'}</Text>
       </View>
       <Text style={[styles.partyInfo, { color: colors.textSecondary }]}>Load: {item.loadCount }</Text>
-      <Text style={[styles.partyInfo, { color: colors.textSecondary }]}>CreatedAt: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
+      <TouchableOpacity accessibilityLabel={`Browse months for ${item.to}`} onPress={() => navigation.navigate('PartyMonths', { partyId: item.id, to: item.to })} style={{ paddingVertical: 12 }}><Text style={{ color: colors.primary }}>Browse by month</Text></TouchableOpacity>
+      <Text style={[styles.partyInfo, { color: colors.textSecondary }]}>Last Trip: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
     </TouchableOpacity>
   );
 
@@ -111,6 +86,7 @@ const PartyListScreen = () => {
         <View style={styles.headerRight} />
       </View>
 
+      <TouchableOpacity onPress={() => navigation.navigate('PartyDetails', { to: 'All parties' })} style={{ padding: 16 }} accessibilityRole="button"><Text style={{ color: colors.primary, fontWeight: '700' }}>All parties — complete table</Text></TouchableOpacity>
       <View style={styles.searchContainer}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.text }]}
@@ -121,7 +97,7 @@ const PartyListScreen = () => {
         />
       </View>
 
-      {parties.length === 0 ? (
+      {filteredParties.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No parties found</Text>
         </View>

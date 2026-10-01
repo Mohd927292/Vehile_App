@@ -1,0 +1,9 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "react-native": {
+    "android_bypass_emulator_url_remap": true
+  }
+}
