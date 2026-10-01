@@ -20,7 +20,10 @@ import { parseTripDate } from '../../utils/tripData';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../../hooks/useTheme';
 
-const formatTripDate = date => `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+const formatTripDate = date =>
+  `${String(date.getDate()).padStart(2, '0')}-${String(
+    date.getMonth() + 1,
+  ).padStart(2, '0')}-${date.getFullYear()}`;
 
 const EditTrip = () => {
   const { colors } = useTheme();
@@ -36,14 +39,16 @@ const EditTrip = () => {
     vehicleNo: '',
     driverName: '',
     amount: '',
-    locations: []
+    locations: [],
   });
 
   const fetchTripData = useCallback(async () => {
     try {
       if (!tripId) throw new Error('Trip ID is missing');
-      const tripDoc = await getDoc(doc(workspaceCollection('tripEntries'), tripId));
-      
+      const tripDoc = await getDoc(
+        doc(workspaceCollection('tripEntries'), tripId),
+      );
+
       if (tripDoc.exists()) {
         const data = tripDoc.data();
         setTripData({
@@ -51,12 +56,14 @@ const EditTrip = () => {
           vehicleNo: data.vehicleNo || '',
           driverName: data.driverName || '',
           amount: data.amount != null ? data.amount.toString() : '',
-          locations: data.locations || []
+          locations: data.locations || [],
         });
       } else {
-        Alert.alert('Trip unavailable', 'This trip was deleted. Refresh the list.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        Alert.alert(
+          'Trip unavailable',
+          'This trip was deleted. Refresh the list.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
+        );
       }
     } catch (error) {
       console.error('Error fetching trip:', error);
@@ -66,7 +73,9 @@ const EditTrip = () => {
     }
   }, [tripId, navigation]);
 
-  useEffect(() => { fetchTripData(); }, [fetchTripData]);
+  useEffect(() => {
+    fetchTripData();
+  }, [fetchTripData]);
 
   const updateTrip = async () => {
     if (savingRef.current) return;
@@ -74,14 +83,22 @@ const EditTrip = () => {
       const date = parseTripDate(tripData.date);
       const vehicleNo = tripData.vehicleNo.trim().toUpperCase();
       const locations = tripData.locations.map(location => ({
-        from: location.from?.replace(/\s+/g, ' ').trim() || '',
-        to: location.to?.replace(/\s+/g, ' ').trim() || '',
+        from: location.from?.trim() || '',
+        to: location.to?.trim() || '',
       }));
       const amount = tripData.amount.trim() ? Number(tripData.amount) : null;
-      if (!date || !vehicleNo || !tripData.driverName.trim() ||
-          !locations.length || locations.some(location => !location.from || !location.to) ||
-          (amount !== null && (!Number.isFinite(amount) || amount < 0))) {
-        Alert.alert('Check trip', 'Enter a valid date (DD-MM-YYYY), vehicle, driver, locations, and amount.');
+      if (
+        !date ||
+        !vehicleNo ||
+        !tripData.driverName.trim() ||
+        !locations.length ||
+        locations.some(location => !location.from || !location.to) ||
+        (amount !== null && (!Number.isFinite(amount) || amount < 0))
+      ) {
+        Alert.alert(
+          'Check trip',
+          'Enter a valid date (DD-MM-YYYY), vehicle, driver, locations, and amount.',
+        );
         return;
       }
       savingRef.current = true;
@@ -94,9 +111,9 @@ const EditTrip = () => {
         amount,
         locations,
       });
-      
-        Alert.alert('Success', 'Trip updated successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+
+      Alert.alert('Success', 'Trip updated successfully', [
+        { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
       console.error('Error updating trip:', error);
@@ -118,7 +135,7 @@ const EditTrip = () => {
     setTripData({ ...tripData, locations: newLocations });
   };
 
-  const removeLocation = (index) => {
+  const removeLocation = index => {
     const newLocations = tripData.locations.filter((_, i) => i !== index);
     setTripData({ ...tripData, locations: newLocations });
   };
@@ -130,13 +147,17 @@ const EditTrip = () => {
         <View style={[styles.header, { backgroundColor: colors.primary }]}>
           <Text style={styles.headerTitle}>Loading...</Text>
         </View>
-        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+          style={{ marginTop: 40 }}
+        />
       </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
@@ -160,7 +181,7 @@ const EditTrip = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -168,12 +189,17 @@ const EditTrip = () => {
         <View style={styles.section}>
           <Text style={[styles.label, { color: colors.text }]}>Date</Text>
           <TouchableOpacity
-            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            style={[
+              styles.input,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
             onPress={() => setShowDatePicker(true)}
             accessibilityRole="button"
             accessibilityLabel="Choose trip date"
           >
-            <Text style={[styles.dateValue, { color: colors.text }]}>{tripData.date || 'Choose date'}</Text>
+            <Text style={[styles.dateValue, { color: colors.text }]}>
+              {tripData.date || 'Choose date'}
+            </Text>
           </TouchableOpacity>
           {showDatePicker && (
             <DateTimePicker
@@ -182,7 +208,11 @@ const EditTrip = () => {
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={(_event, selectedDate) => {
                 setShowDatePicker(false);
-                if (selectedDate) setTripData(previous => ({ ...previous, date: formatTripDate(selectedDate) }));
+                if (selectedDate)
+                  setTripData(previous => ({
+                    ...previous,
+                    date: formatTripDate(selectedDate),
+                  }));
               }}
             />
           )}
@@ -191,20 +221,41 @@ const EditTrip = () => {
         <View style={styles.section}>
           <Text style={[styles.label, { color: colors.text }]}>Vehicle No</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.surface,
+                color: colors.text,
+                borderColor: colors.border,
+              },
+            ]}
             value={tripData.vehicleNo}
-            onChangeText={(text) => setTripData({ ...tripData, vehicleNo: text })}
+            onChangeText={text => setTripData({ ...tripData, vehicleNo: text })}
             placeholder="Enter vehicle number"
             placeholderTextColor="#888"
           />
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.text }]}>Driver Name</Text>
+          <Text style={[styles.label, { color: colors.text }]}>
+            Driver Name
+          </Text>
           <TextInput
-            style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.surface,
+                color: colors.text,
+                borderColor: colors.border,
+              },
+            ]}
+            multiline
+            submitBehavior="newline"
+            blurOnSubmit={false}
             value={tripData.driverName}
-            onChangeText={(text) => setTripData({ ...tripData, driverName: text })}
+            onChangeText={text =>
+              setTripData({ ...tripData, driverName: text })
+            }
             placeholder="Enter driver name"
             placeholderTextColor="#888"
           />
@@ -213,9 +264,16 @@ const EditTrip = () => {
         <View style={styles.section}>
           <Text style={[styles.label, { color: colors.text }]}>Amount</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.surface,
+                color: colors.text,
+                borderColor: colors.border,
+              },
+            ]}
             value={tripData.amount}
-            onChangeText={(text) => setTripData({ ...tripData, amount: text })}
+            onChangeText={text => setTripData({ ...tripData, amount: text })}
             placeholder="Enter amount (optional)"
             placeholderTextColor="#888"
             keyboardType="numeric"
@@ -224,42 +282,85 @@ const EditTrip = () => {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.label, { color: colors.text }]}>Locations</Text>
-            <TouchableOpacity onPress={addLocation} style={[styles.addButton, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Locations
+            </Text>
+            <TouchableOpacity
+              onPress={addLocation}
+              style={[styles.addButton, { backgroundColor: colors.primary }]}
+            >
               <Text style={styles.addButtonText}>+ Add Location</Text>
             </TouchableOpacity>
           </View>
-          
-          {tripData.locations && tripData.locations.map((location, index) => (
-            <View key={index} style={[styles.pairContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.pairLabel, { color: colors.primary }]}>Location {index + 1}</Text>
-              <View style={styles.pairInputs}>
-                <TextInput
-                  style={[styles.input, styles.pairInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-                  value={location.from}
-                  onChangeText={(text) => updateLocation(index, 'from', text)}
-                  placeholder="From"
-                  placeholderTextColor="#888"
-                />
-                <Text style={[styles.arrow, { color: colors.textSecondary }]}>→</Text>
-                <TextInput
-                  style={[styles.input, styles.pairInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-                  value={location.to}
-                  onChangeText={(text) => updateLocation(index, 'to', text)}
-                  placeholder="To"
-                  placeholderTextColor="#888"
-                />
-                {tripData.locations.length > 1 && (
-                  <TouchableOpacity
-                    onPress={() => removeLocation(index)}
-                    style={styles.removeButton}
-                  >
-                    <Text style={styles.removeButtonText}>×</Text>
-                  </TouchableOpacity>
-                )}
+
+          {tripData.locations &&
+            tripData.locations.map((location, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.pairContainer,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.pairLabel, { color: colors.primary }]}>
+                  Location {index + 1}
+                </Text>
+                <View style={styles.pairInputs}>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      styles.pairInput,
+                      {
+                        backgroundColor: colors.background,
+                        color: colors.text,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                    multiline
+                    submitBehavior="newline"
+                    blurOnSubmit={false}
+                    textAlignVertical="top"
+                    value={location.from}
+                    onChangeText={text => updateLocation(index, 'from', text)}
+                    placeholder="From"
+                    placeholderTextColor="#888"
+                  />
+                  <Text style={[styles.arrow, { color: colors.textSecondary }]}>
+                    →
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      styles.pairInput,
+                      {
+                        backgroundColor: colors.background,
+                        color: colors.text,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                    multiline
+                    submitBehavior="newline"
+                    blurOnSubmit={false}
+                    textAlignVertical="top"
+                    value={location.to}
+                    onChangeText={text => updateLocation(index, 'to', text)}
+                    placeholder="To"
+                    placeholderTextColor="#888"
+                  />
+                  {tripData.locations.length > 1 && (
+                    <TouchableOpacity
+                      onPress={() => removeLocation(index)}
+                      style={styles.removeButton}
+                    >
+                      <Text style={styles.removeButtonText}>×</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

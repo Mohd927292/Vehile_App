@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
 const { doc, collection, getDoc, getDocs, setDoc, updateDoc, serverTimestamp } = require('firebase/firestore');
-const collections = ['tripEntries', 'vehicles', 'parties', 'customers', 'drivers', 'fromcustomers', 'archivedTrips'];
+const collections = ['tripEntries', 'vehicles', 'parties', 'customers', 'drivers', 'fromcustomers', 'archivedTrips', 'loads'];
 
 async function main() {
   const environment = await initializeTestEnvironment({ projectId: 'demo-triptrack', firestore: { rules: fs.readFileSync(path.join(__dirname, '..', 'firestore.rules'), 'utf8') } });
@@ -51,7 +51,7 @@ async function main() {
     await assertSucceeds(setDoc(doc(newcomer, 'staff', 'new-user'), profile));
     await assertSucceeds(setDoc(doc(newcomer, 'workspaces', 'new-user', 'tripEntries', 'first'), { owner: 'new-user' }));
     await assertFails(setDoc(doc(newcomer, 'workspaces', 'alice', 'tripEntries', 'first'), { owner: 'new-user' }));
-    console.log('PASS: isolated reads/writes/queries for seven collections; admin switching; protected legacy records; self-registration and role escalation.');
+    console.log('PASS: isolated reads/writes/queries for eight collections; admin switching; protected legacy records; self-registration and role escalation.');
   } finally { await environment.cleanup(); }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

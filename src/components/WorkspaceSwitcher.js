@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { collection, getDocs, getFirestore } from '@react-native-firebase/firestore';
+import { collection, getDocsFromServer as getDocs, getFirestore } from '@react-native-firebase/firestore';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../hooks/useTheme';
 import { useWorkspace } from '../context/WorkspaceContext';
@@ -45,7 +45,7 @@ export default function WorkspaceSwitcher() {
             </TouchableOpacity>} />}
           {!!error && <TouchableOpacity onPress={open}><Text style={{ color: colors.danger, paddingVertical: 12 }}>{error} Tap to retry.</Text></TouchableOpacity>}
           <TouchableOpacity onPress={() => choose({ id: LEGACY_WORKSPACE, displayName: 'Existing shared data', email: '' })} accessibilityRole="button" accessibilityLabel="Review existing shared data" style={{ paddingVertical: 16 }}>
-            <Text style={{ color: colors.primary, fontWeight: '700' }}>Existing shared data</Text><Text style={{ color: colors.textSecondary, marginTop: 4 }}>Read only · awaiting assignment</Text>
+            <Text style={{ color: colors.primary, fontWeight: '700' }}>Existing shared data</Text><Text style={{ color: colors.textSecondary, marginTop: 4 }}>Read only · preserved original records</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setVisible(false)} accessibilityRole="button" style={{ padding: 12 }}><Text style={{ color: colors.primary, textAlign: 'center' }}>Close</Text></TouchableOpacity>
         </View>

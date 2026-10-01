@@ -3,12 +3,12 @@ import renderer, { act } from 'react-test-renderer';
 import { TextInput, TouchableOpacity } from 'react-native';
 import WorkspaceSwitcher from '../src/components/WorkspaceSwitcher';
 import { useWorkspace } from '../src/context/WorkspaceContext';
-import { getDocs } from '@react-native-firebase/firestore';
+import { getDocsFromServer as getDocs } from '@react-native-firebase/firestore';
 
 jest.mock('../src/context/WorkspaceContext', () => ({ useWorkspace: jest.fn() }));
 jest.mock('../src/hooks/useTheme', () => ({ useTheme: () => ({ colors: {} }) }));
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => 'Icon');
-jest.mock('@react-native-firebase/firestore', () => ({ getDocs: jest.fn(), collection: jest.fn(), getFirestore: jest.fn() }));
+jest.mock('@react-native-firebase/firestore', () => ({ getDocsFromServer: jest.fn(), collection: jest.fn(), getFirestore: jest.fn() }));
 
 let tree;
 afterEach(async () => { if (tree) await act(async () => tree.unmount()); tree = null; jest.clearAllMocks(); });

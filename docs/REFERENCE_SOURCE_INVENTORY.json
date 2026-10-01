@@ -1,0 +1,1328 @@
+[
+  {
+    "file": "debug/daily_bill_template_dump.dart",
+    "lines": 56,
+    "sha256": "ea72e41086b89035287089fb6ea2b679023dc78199aa487e1ee845631c832085",
+    "classes": [],
+    "collections": [],
+    "imports": [
+      "dart:convert",
+      "dart:typed_data",
+      "package:flutter/services.dart",
+      "package:syncfusion_flutter_pdf/pdf.dart"
+    ]
+  },
+  {
+    "file": "main.dart",
+    "lines": 80,
+    "sha256": "6d853fcec859b370f3abaea2c03eb5a153544f85c578aea7aca8663574728c67",
+    "classes": [
+      "MyApp",
+      "AuthCheck"
+    ],
+    "collections": [],
+    "imports": [
+      "package:flutter/material.dart",
+      "package:firebase_core/firebase_core.dart",
+      "package:firebase_auth/firebase_auth.dart",
+      "screens/home_screen.dart",
+      "screens/login_screen.dart",
+      "package:cloud_firestore/cloud_firestore.dart"
+    ]
+  },
+  {
+    "file": "models/bill_form_data.dart",
+    "lines": 313,
+    "sha256": "b885a2d04debba76a0a5cfd4b2254ff3a812da6b616fba1e04cc6e4004442950",
+    "classes": [
+      "BillFormData"
+    ],
+    "collections": [],
+    "imports": [
+      "package:flutter/material.dart",
+      "package:intl/intl.dart"
+    ]
+  },
+  {
+    "file": "models/formula_model.dart",
+    "lines": 134,
+    "sha256": "e4b4cd9a94759fd6d63ce0710f98e7548483c7bccc7b692862add5a39e6638af",
+    "classes": [
+      "FormulaTier",
+      "Formula"
+    ],
+    "collections": [],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart"
+    ]
+  },
+  {
+    "file": "screens/add_edit_customer_screen.dart",
+    "lines": 322,
+    "sha256": "00149e93c9a4330b0a11732258bde7a53567fa57bc58b411bbf08e2df2f958dd",
+    "classes": [
+      "AddEditCustomerScreen",
+      "_AddEditCustomerScreenState"
+    ],
+    "collections": [
+      "bills",
+      "customer"
+    ],
+    "imports": [
+      "package:flutter/material.dart",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "dart:async"
+    ]
+  },
+  {
+    "file": "screens/attachment_viewer.dart",
+    "lines": 46,
+    "sha256": "ff7412e020899de9ad910eec337e2b5fa376252d0e2782695b0818a3dee21b26",
+    "classes": [
+      "AttachmentViewerScreen"
+    ],
+    "collections": [],
+    "imports": [
+      "package:flutter/material.dart",
+      "package:cached_network_image/cached_network_image.dart",
+      "dart:io",
+      "package:photo_view/photo_view.dart"
+    ]
+  },
+  {
+    "file": "screens/auth_service.dart",
+    "lines": 40,
+    "sha256": "6a638a8199376871b9962f79c76156dfda0a85b1dea0f6229672240483e9444e",
+    "classes": [
+      "AuthService"
+    ],
+    "collections": [],
+    "imports": [
+      "dart:developer",
+      "package:firebase_auth/firebase_auth.dart"
+    ]
+  },
+  {
+    "file": "screens/Bill_Records/home_record_screen.dart",
+    "lines": 1656,
+    "sha256": "d027e5b1c4219b73fad82b9bf596eb8b73b824dcd5d24c91e6f85cc4e83b8529",
+    "classes": [
+      "BillRecordScreen",
+      "_BillRecordScreenState"
+    ],
+    "collections": [
+      "batches",
+      "bills",
+      "customer",
+      "customer/$msName/batches/$latestBatchId/bills"
+    ],
+    "imports": [
+      "dart:async",
+      "dart:io",
+      "package:flutter/material.dart",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:intl/intl.dart",
+      "package:rna_bill_app/screens/payment_update_screen.dart",
+      "package:share_plus/share_plus.dart",
+      "package:path_provider/path_provider.dart",
+      "package:url_launcher/url_launcher.dart",
+      "../../utils/device_info_helper.dart",
+      "package:flutter/foundation.dart",
+      "../../utils/pdf_generation.dart",
+      "../../utils/merge_pdf.dart",
+      "../Daily_Bill/daily_bill_screen.dart",
+      "../in_app_pdf_viewer.dart",
+      "package:lottie/lottie.dart",
+      "../../utils/batchgetter.dart"
+    ]
+  },
+  {
+    "file": "screens/custom_numeric_keypad_dialog.dart",
+    "lines": 64,
+    "sha256": "76c491410a43d2db6757105de4cc7d1212d45353e1d08bc3957921cb6b126077",
+    "classes": [
+      "CustomNumericKeypadDialog",
+      "_CustomNumericKeypadDialogState"
+    ],
+    "collections": [],
+    "imports": [
+      "package:flutter/material.dart"
+    ]
+  },
+  {
+    "file": "screens/customer_brief_screen.dart",
+    "lines": 128,
+    "sha256": "eb696036d17f6176bf9e1643e07509c1b911beb9e35ad0b8f7d83e428ea43825",
+    "classes": [
+      "CustomerDetailScreen"
+    ],
+    "collections": [],
+    "imports": [
+      "package:flutter/material.dart",
+      "package:flutter/services.dart",
+      "package:path/path.dart",
+      "package:url_launcher/url_launcher.dart",
+      "../screens/Bill_Records/home_record_screen.dart",
+      "dart:io",
+      "../utils/phoneno_handler.dart"
+    ]
+  },
+  {
+    "file": "screens/customer_detail_screen.dart",
+    "lines": 538,
+    "sha256": "d70c60afb509f69df8753cf0400ab90685c60283f347e85d88b42e4ca30783be",
+    "classes": [
+      "CustomerDetailsScreen",
+      "_MiddleButtonsFloatingHeader",
+      "_SearchAndSortHeader",
+      "_CustomerDetailsScreenState"
+    ],
+    "collections": [
+      "batches",
+      "customer",
+      "updates"
+    ],
+    "imports": [
+      "dart:io",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "package:intl/intl.dart",
+      "package:path_provider/path_provider.dart",
+      "package:pdf/pdf.dart",
+      "package:pdf/widgets.dart",
+      "package:share_plus/share_plus.dart",
+      "../widgets/truck_progress_bar.dart",
+      "../screens/Bill_Records/home_record_screen.dart"
+    ]
+  },
+  {
+    "file": "screens/customer_list_screen.dart",
+    "lines": 230,
+    "sha256": "6cfb2dcb7d87310c1558b94a54d7b2be6002dcc1b8c183363edd43d1e9c79123",
+    "classes": [
+      "CustomerListScreen",
+      "_CustomerListScreenState"
+    ],
+    "collections": [
+      "customer"
+    ],
+    "imports": [
+      "dart:async",
+      "package:flutter/material.dart",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/services.dart",
+      "package:shared_preferences/shared_preferences.dart",
+      "package:url_launcher/url_launcher.dart",
+      "add_edit_customer_screen.dart",
+      "customer_brief_screen.dart",
+      "dart:io",
+      "../utils/phoneno_handler.dart"
+    ]
+  },
+  {
+    "file": "screens/Daily_Bill/daily_bill_screen.dart",
+    "lines": 1537,
+    "sha256": "21e5528eadd1218ff4af6464f8478316268db05d6a5a5eacb3ea619d09a5ebd9",
+    "classes": [
+      "_UpperCaseTextFormatter",
+      "_FastAutocompleteField",
+      "_FastAutocompleteFieldState",
+      "DailyBillScreen",
+      "_DailyBillScreenState"
+    ],
+    "collections": [
+      "bills",
+      "customer"
+    ],
+    "imports": [
+      "dart:async",
+      "dart:io",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:connectivity_plus/connectivity_plus.dart",
+      "package:flutter/material.dart",
+      "package:flutter/services.dart",
+      "package:intl/intl.dart",
+      "package:path_provider/path_provider.dart",
+      "package:share_plus/share_plus.dart",
+      "package:vibration/vibration.dart",
+      "package:rna_bill_app/services/single_bill_save_service.dart",
+      "package:rna_bill_app/services/suggestion_cache.dart",
+      "package:rna_bill_app/utils/device_info_helper.dart",
+      "package:rna_bill_app/utils/pdf_generation.dart",
+      "package:rna_bill_app/widgets/editable_calculator.dart",
+      "../add_edit_customer_screen.dart",
+      "../in_app_pdf_viewer.dart",
+      "../monthybillentry/multiple_bill_entry_v2.dart"
+    ]
+  },
+  {
+    "file": "screens/daily_bill_screen.dart",
+    "lines": 1736,
+    "sha256": "beadb3de4f4e965f39b2edf0ed015a416265ca972c5887538abfe9c41018c5f5",
+    "classes": [
+      "DailyBillScreen",
+      "_DailyBillScreenState"
+    ],
+    "collections": [
+      "batches",
+      "bills",
+      "customer",
+      "customer/$msId/batches",
+      "payments"
+    ],
+    "imports": [
+      "dart:async",
+      "dart:io",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "package:intl/intl.dart",
+      "package:path_provider/path_provider.dart",
+      "package:vibration/vibration.dart",
+      "package:share_plus/share_plus.dart",
+      "package:flutter_typeahead/flutter_typeahead.dart",
+      "../utils/device_info_helper.dart",
+      "../widgets/editable_calculator.dart",
+      "package:image_picker/image_picker.dart",
+      "package:firebase_storage/firebase_storage.dart",
+      "package:connectivity_plus/connectivity_plus.dart",
+      "../widgets/universal_suggestion_field.dart",
+      "../utils/pdf_generation.dart",
+      "add_edit_customer_screen.dart",
+      "in_app_pdf_viewer.dart",
+      "monthybillentry/Multiple_bill_entry.dart"
+    ]
+  },
+  {
+    "file": "screens/edit_partydetail.dart",
+    "lines": 719,
+    "sha256": "559027344de545b9b0d8d419f86dddca7dbf7e6eae6b4491976b670ac919be6a",
+    "classes": [
+      "UpperCaseTextFormatter",
+      "_TripPairUI",
+      "EditPartyDetailScreen",
+      "_EditPartyDetailScreenState"
+    ],
+    "collections": [
+      "customer"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "package:flutter/services.dart",
+      "package:intl/intl.dart",
+      "../utils/firestore_helpers.dart",
+      "add_edit_customer_screen.dart"
+    ]
+  },
+  {
+    "file": "screens/formula_editor.dart",
+    "lines": 261,
+    "sha256": "4d189a207f83d465af79e96814f806a69ee6100d357ffa19b8e8cbdea5a0c07c",
+    "classes": [
+      "FormulaEditorScreen",
+      "_FormulaEditorScreenState"
+    ],
+    "collections": [
+      "${widget.from}_${widget.to}",
+      "formulas"
+    ],
+    "imports": [
+      "package:flutter/material.dart",
+      "package:cloud_firestore/cloud_firestore.dart"
+    ]
+  },
+  {
+    "file": "screens/home_screen.dart",
+    "lines": 323,
+    "sha256": "7aa089fefa4ec0a919610ccccc630cb50cb61a5ece471959cfdf5b1bc4af1748",
+    "classes": [
+      "HomeScreen",
+      "_HomeScreenState",
+      "AnimatedHomeButton",
+      "_AnimatedHomeButtonState"
+    ],
+    "collections": [
+      "batches",
+      "bills",
+      "customer"
+    ],
+    "imports": [
+      "package:flutter/material.dart",
+      "Daily_Bill/daily_bill_screen.dart",
+      "Monthly_Bill/monthly_bill_screen.dart",
+      "payment_tracking_screen.dart",
+      "Bill_Records/home_record_screen.dart",
+      "customer_list_screen.dart",
+      "party_section/party_screen.dart",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "../utils/pdf_generation.dart",
+      "dart:io",
+      "recent/recent_screen.dart"
+    ]
+  },
+  {
+    "file": "screens/in_app_pdf_viewer.dart",
+    "lines": 17,
+    "sha256": "c0f5f54f68190564902695d219495c149f7facb69373b2cc5ec30b58f3dc80cc",
+    "classes": [
+      "InAppPdfViewer"
+    ],
+    "collections": [],
+    "imports": [
+      "dart:io",
+      "package:flutter/material.dart",
+      "package:syncfusion_flutter_pdfviewer/pdfviewer.dart"
+    ]
+  },
+  {
+    "file": "screens/login_screen.dart",
+    "lines": 282,
+    "sha256": "c9a6bd0a233d06c573c2da7e4334516b151996f9407f537d94582ef1a151c623",
+    "classes": [
+      "LoginScreen",
+      "_LoginScreenState"
+    ],
+    "collections": [
+      "login_history"
+    ],
+    "imports": [
+      "dart:io",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:device_info_plus/device_info_plus.dart",
+      "package:firebase_auth/firebase_auth.dart",
+      "package:flutter/material.dart",
+      "home_screen.dart"
+    ]
+  },
+  {
+    "file": "screens/Monthly_Bill/month_wise_bill_screen.dart",
+    "lines": 830,
+    "sha256": "1a6e39030075d0127a99a311f69867c7cf2c5774c6a7780b936db9eb863a93d3",
+    "classes": [
+      "BillKeys",
+      "_BillSelectionDialogContent",
+      "_BillSelectionDialogContentState",
+      "MonthWiseBillScreen",
+      "_MonthWiseBillScreenState"
+    ],
+    "collections": [],
+    "imports": [
+      "package:flutter/material.dart",
+      "package:intl/intl.dart",
+      "package:lottie/lottie.dart",
+      "package:share_plus/share_plus.dart",
+      "dart:io",
+      "../../utils/monthly_pdf_generator.dart",
+      "../../utils/monthly_excel_generator.dart",
+      "../in_app_pdf_viewer.dart",
+      "../../utils/monthly_billno_service.dart"
+    ]
+  },
+  {
+    "file": "screens/Monthly_Bill/monthly_bill_screen.dart",
+    "lines": 505,
+    "sha256": "0f30e6f59636120218360e3661d2c668f0aa473ff54f53c82c00959d27e0a7db",
+    "classes": [
+      "MonthlyBillScreen",
+      "_MonthlyBillScreenState"
+    ],
+    "collections": [
+      "bills"
+    ],
+    "imports": [
+      "dart:async",
+      "dart:io",
+      "package:flutter/material.dart",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:intl/intl.dart",
+      "package:path_provider/path_provider.dart",
+      "../../utils/device_info_helper.dart",
+      "package:flutter/foundation.dart",
+      "../../utils/monthly_billno_service.dart",
+      "../../utils/pdf_generation.dart",
+      "package:lottie/lottie.dart",
+      "package:rna_bill_app/screens/Monthly_Bill/month_wise_bill_screen.dart"
+    ]
+  },
+  {
+    "file": "screens/monthybillentry/Multiple_bill_entry.dart",
+    "lines": 2393,
+    "sha256": "b43da038b5bbcc2ace8c732a25ede93c33f25cd917935916cc92574100a48713",
+    "classes": [
+      "to",
+      "BillFormData",
+      "MultipleBillEntry",
+      "_MultipleBillEntryState"
+    ],
+    "collections": [
+      "bills",
+      "customer",
+      "formulas",
+      "payments",
+      "routes"
+    ],
+    "imports": [
+      "dart:async",
+      "dart:convert",
+      "dart:io",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:collection/collection.dart",
+      "package:connectivity_plus/connectivity_plus.dart",
+      "package:flutter/material.dart",
+      "package:intl/intl.dart",
+      "package:path_provider/path_provider.dart",
+      "package:share_plus/share_plus.dart",
+      "package:vibration/vibration.dart",
+      "package:flutter/services.dart",
+      "../../utils/merge_pdf.dart",
+      "../../utils/pdf_generation.dart",
+      "../add_edit_customer_screen.dart",
+      "../formula_editor.dart",
+      "../in_app_pdf_viewer.dart",
+      "../../widgets/editable_calculator.dart",
+      "../../widgets/universal_suggestion_field.dart"
+    ]
+  },
+  {
+    "file": "screens/monthybillentry/multiple_bill_entry_v2.dart",
+    "lines": 728,
+    "sha256": "a770cd671e698f9810187b36aa9a0244726d0a83891823997f21185eecf87830",
+    "classes": [
+      "_KeepAlive",
+      "_KeepAliveState",
+      "MultipleBillEntryV2",
+      "_MultipleBillEntryV2State"
+    ],
+    "collections": [
+      "customer"
+    ],
+    "imports": [
+      "dart:async",
+      "dart:io",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/gestures.dart",
+      "package:flutter/material.dart",
+      "package:intl/intl.dart",
+      "package:share_plus/share_plus.dart",
+      "package:rna_bill_app/models/bill_form_data.dart",
+      "package:rna_bill_app/services/bill_number_service.dart",
+      "package:rna_bill_app/services/formula_service.dart",
+      "package:rna_bill_app/services/multi_bill_draft_service.dart",
+      "package:rna_bill_app/services/multi_bill_save_service.dart",
+      "package:rna_bill_app/services/suggestion_cache.dart",
+      "package:rna_bill_app/utils/merge_pdf.dart",
+      "package:rna_bill_app/utils/pdf_generation.dart",
+      "package:rna_bill_app/screens/add_edit_customer_screen.dart",
+      "package:rna_bill_app/screens/formula_editor.dart",
+      "package:rna_bill_app/widgets/bill_row.dart",
+      "package:rna_bill_app/widgets/ms_selector.dart"
+    ]
+  },
+  {
+    "file": "screens/Party_Section/details_updater.dart",
+    "lines": 876,
+    "sha256": "ec446d134c9f2eb5e95c2bbec58f857c359b244b78ccfe77a1b4d451286a04c3",
+    "classes": [
+      "UpperCaseTextFormatter",
+      "TripPair",
+      "TripData",
+      "DetailsUpdater",
+      "_DetailsUpdaterState"
+    ],
+    "collections": [
+      "customer"
+    ],
+    "imports": [
+      "dart:async",
+      "dart:convert",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "package:flutter/services.dart",
+      "package:intl/intl.dart",
+      "package:shared_preferences/shared_preferences.dart",
+      "../../utils/firestore_helpers.dart",
+      "../add_edit_customer_screen.dart"
+    ]
+  },
+  {
+    "file": "screens/Party_Section/party_data_table_screen.dart",
+    "lines": 1253,
+    "sha256": "4671532ad4eb32a1fe31a760ae1055e6fd619f07995931087302a48eda4ee636",
+    "classes": [
+      "PartyDataTableScreen",
+      "_PartyDataTableScreenState"
+    ],
+    "collections": [
+      "parties"
+    ],
+    "imports": [
+      "dart:io",
+      "dart:math",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:excel/excel.dart",
+      "package:flutter/material.dart",
+      "package:intl/intl.dart",
+      "package:open_file/open_file.dart",
+      "package:path_provider/path_provider.dart",
+      "package:pdf/pdf.dart",
+      "package:pdf/widgets.dart",
+      "package:share_plus/share_plus.dart",
+      "../../utils/firestore_helpers.dart",
+      "party_projection.dart"
+    ]
+  },
+  {
+    "file": "screens/Party_Section/party_details_screen.dart",
+    "lines": 230,
+    "sha256": "8a96c34b4ca7d26339773fa230dd9fda217b64f580c86f3f081b2f6579a514af",
+    "classes": [
+      "PartyDetailsScreen",
+      "_PartyDetailsScreenState"
+    ],
+    "collections": [
+      "meta",
+      "parties"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "package:animate_do/animate_do.dart",
+      "party_month_screen.dart"
+    ]
+  },
+  {
+    "file": "screens/Party_Section/party_month_screen.dart",
+    "lines": 221,
+    "sha256": "0269d7eec59791ce4b64ecc4f2301de1e314dde0c1588810c913aae76e9960d0",
+    "classes": [
+      "PartyMonthScreen",
+      "_PartyMonthScreenState",
+      "_MonthGroup"
+    ],
+    "collections": [
+      "parties"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "package:intl/intl.dart",
+      "package:animate_do/animate_do.dart",
+      "party_data_table_screen.dart",
+      "party_projection.dart"
+    ]
+  },
+  {
+    "file": "screens/Party_Section/party_projection.dart",
+    "lines": 48,
+    "sha256": "ab065b5951edc3a7862a928738514d3dbf08e3b4b9fd40faae8f68dca4f4c0c2",
+    "classes": [],
+    "collections": [],
+    "imports": []
+  },
+  {
+    "file": "screens/Party_Section/party_screen.dart",
+    "lines": 124,
+    "sha256": "cda70c6a5056a2c532017ba188c1a221ddefc4045fc9af3e244b19683c02f05b",
+    "classes": [
+      "PartyScreen",
+      "_PartyScreenState"
+    ],
+    "collections": [],
+    "imports": [
+      "package:flutter/material.dart",
+      "details_updater.dart",
+      "vehicle_details_screen.dart",
+      "party_details_screen.dart"
+    ]
+  },
+  {
+    "file": "screens/Party_Section/vehicle_data_table_screen.dart",
+    "lines": 1291,
+    "sha256": "e3605aa65bf8fa1d5711a5e23ab25ffce9dbe7619d72a287eb34abf23e3f20e6",
+    "classes": [
+      "VehicleDataTableScreen",
+      "_VehicleDataTableScreenState"
+    ],
+    "collections": [],
+    "imports": [
+      "dart:io",
+      "dart:math",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:excel/excel.dart",
+      "package:flutter/material.dart",
+      "package:intl/intl.dart",
+      "package:open_file/open_file.dart",
+      "package:path_provider/path_provider.dart",
+      "package:pdf/pdf.dart",
+      "package:pdf/widgets.dart",
+      "package:share_plus/share_plus.dart",
+      "../edit_partydetail.dart",
+      "../../utils/firestore_helpers.dart"
+    ]
+  },
+  {
+    "file": "screens/Party_Section/vehicle_details_screen.dart",
+    "lines": 370,
+    "sha256": "847ae310b91e4a81a5e4c1f515ccf13277f9b3f1c60fe2b145bcb1ed84d3770b",
+    "classes": [
+      "VehicleDetailsScreen",
+      "_VehicleDetailsScreenState"
+    ],
+    "collections": [
+      "meta",
+      "parties"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "package:flutter/foundation.dart",
+      "package:animate_do/animate_do.dart",
+      "vehicle_data_table_screen.dart",
+      "vehicle_month_list_screen.dart"
+    ]
+  },
+  {
+    "file": "screens/Party_Section/vehicle_month_list_screen.dart",
+    "lines": 206,
+    "sha256": "08aa2f395ce8e6e097ad81ec5eadc55263d951c8288f65c49e1d626e3d720ec9",
+    "classes": [
+      "VehicleMonthListScreen",
+      "_VehicleMonthListScreenState"
+    ],
+    "collections": [
+      "parties"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "package:intl/intl.dart",
+      "vehicle_data_table_screen.dart"
+    ]
+  },
+  {
+    "file": "screens/payment_batches_screen.dart",
+    "lines": 230,
+    "sha256": "800c5fb5381e7fa789c52ebc6b23ec08c13060fbd5f31c249390e8e48e04bd31",
+    "classes": [
+      "PaymentBatchesScreen"
+    ],
+    "collections": [
+      "batches",
+      "bills",
+      "customer"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "../screens/Bill_Records/home_record_screen.dart",
+      "../screens/customer_detail_screen.dart"
+    ]
+  },
+  {
+    "file": "screens/payment_details_screen.dart",
+    "lines": 138,
+    "sha256": "e348b4604f17dc2989c8a83f798752954ea210c1e82a7dce4ac876d0f589cc9e",
+    "classes": [
+      "PartyDetailsScreen",
+      "_PartyDetailsScreenState"
+    ],
+    "collections": [
+      "meta",
+      "parties"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "package:intl/intl.dart",
+      "package:animate_do/animate_do.dart"
+    ]
+  },
+  {
+    "file": "screens/payment_service.dart",
+    "lines": 55,
+    "sha256": "9de0533a0a6020aabb831ea57a48ef7c0bec166f3f8c11a791fa93d6ddd5a352",
+    "classes": [
+      "PaymentService"
+    ],
+    "collections": [
+      "customers",
+      "payments"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart"
+    ]
+  },
+  {
+    "file": "screens/payment_tracking_screen.dart",
+    "lines": 323,
+    "sha256": "4e2fdedfb18b7e314a120476577c09564ff27066c615c5aba6943de0f13936dd",
+    "classes": [
+      "PaymentTrackScreen",
+      "_PaymentTrackScreenState"
+    ],
+    "collections": [
+      "batches",
+      "customer",
+      "payments"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "package:intl/intl.dart",
+      "package:lottie/lottie.dart",
+      "package:url_launcher/url_launcher.dart",
+      "../widgets/truck_progress_bar.dart",
+      "../screens/Bill_Records/home_record_screen.dart",
+      "payment_update_screen.dart",
+      "../screens/customer_detail_screen.dart",
+      "../screens/payment_batches_screen.dart"
+    ]
+  },
+  {
+    "file": "screens/payment_update_dialog.dart",
+    "lines": 231,
+    "sha256": "e64e4fcac0d1bb32e046a2b43e3d41f7c1f7ad28b1c6e593590dcf1539cbcdd0",
+    "classes": [
+      "PaymentUpdateDialog",
+      "_PaymentUpdateDialogState"
+    ],
+    "collections": [
+      "customers",
+      "payments"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "package:intl/intl.dart"
+    ]
+  },
+  {
+    "file": "screens/payment_update_screen.dart",
+    "lines": 404,
+    "sha256": "a73c26471013a4615bd7c951ebfa94a477c49ab6b14415be68643c7c8fb6bc86",
+    "classes": [
+      "PaymentUpdateScreen",
+      "_PaymentUpdateScreenState"
+    ],
+    "collections": [
+      "batches",
+      "customer",
+      "updates"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "package:intl/intl.dart",
+      "package:lottie/lottie.dart",
+      "../utils/firestore_stats_updater.dart"
+    ]
+  },
+  {
+    "file": "screens/recent/recent_screen.dart",
+    "lines": 1644,
+    "sha256": "fd039c21ea971c313bd5d3535d69b23622774f2b421f54e537a55dead2d1c1ca",
+    "classes": [
+      "BillVM",
+      "RecentScreen",
+      "_RecentScreenState"
+    ],
+    "collections": [
+      "bills",
+      "customer"
+    ],
+    "imports": [
+      "dart:async",
+      "dart:io",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/foundation.dart",
+      "package:flutter/material.dart",
+      "package:flutter/services.dart",
+      "package:intl/intl.dart",
+      "package:share_plus/share_plus.dart",
+      "package:url_launcher/url_launcher.dart",
+      "../../utils/device_info_helper.dart",
+      "../../utils/pdf_generation.dart",
+      "package:shimmer/shimmer.dart",
+      "../Daily_Bill/daily_bill_screen.dart",
+      "../in_app_pdf_viewer.dart"
+    ]
+  },
+  {
+    "file": "screens/recent_screen.dart",
+    "lines": 1544,
+    "sha256": "4b30efffaf682875525d0db7f429f716269be82cd0a4439a8d0fabd9b080dec0",
+    "classes": [
+      "BillVM",
+      "RecentScreen",
+      "_RecentScreenState"
+    ],
+    "collections": [
+      "bills",
+      "customer"
+    ],
+    "imports": [
+      "dart:async",
+      "dart:io",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/foundation.dart",
+      "package:flutter/material.dart",
+      "package:flutter/services.dart",
+      "package:intl/intl.dart",
+      "package:share_plus/share_plus.dart",
+      "package:url_launcher/url_launcher.dart",
+      "../utils/device_info_helper.dart",
+      "../utils/pdf_generation.dart",
+      "../utils/merge_pdf.dart",
+      "package:shimmer/shimmer.dart",
+      "../screens/Daily_Bill/daily_bill_screen.dart",
+      "in_app_pdf_viewer.dart"
+    ]
+  },
+  {
+    "file": "screens/sign_up_screen.dart",
+    "lines": 106,
+    "sha256": "a147a9e099fe714bc4e613deeb700a6e0bef35fd6563b69b46659865536b0158",
+    "classes": [
+      "SignUpScreen",
+      "_SignUpScreenState"
+    ],
+    "collections": [],
+    "imports": [
+      "package:flutter/material.dart",
+      "package:firebase_auth/firebase_auth.dart",
+      "home_screen.dart"
+    ]
+  },
+  {
+    "file": "services/bill_number_service.dart",
+    "lines": 75,
+    "sha256": "80451350364d378d10b153642ebf707f5ddc88688ff0216923b89495996dc8d0",
+    "classes": [
+      "BillNumberService"
+    ],
+    "collections": [
+      "bills",
+      "payments"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart"
+    ]
+  },
+  {
+    "file": "services/formula_service.dart",
+    "lines": 64,
+    "sha256": "fdb984721d75c9f47b07d9747fa0565e353af616e66711fb93ce1b7e2f4c5fe4",
+    "classes": [
+      "FormulaService"
+    ],
+    "collections": [
+      "formulas",
+      "routes"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart",
+      "../models/bill_form_data.dart"
+    ]
+  },
+  {
+    "file": "services/multi_bill_draft_service.dart",
+    "lines": 84,
+    "sha256": "786891adcc08ee7cc83d086bdfeb3346398f9f0808a0d92b4333b55230597d9c",
+    "classes": [
+      "MultiBillDraftData",
+      "MultiBillDraftService"
+    ],
+    "collections": [],
+    "imports": [
+      "dart:convert",
+      "dart:io",
+      "package:intl/intl.dart",
+      "package:path_provider/path_provider.dart",
+      "../models/bill_form_data.dart"
+    ]
+  },
+  {
+    "file": "services/multi_bill_save_service.dart",
+    "lines": 385,
+    "sha256": "4fa8895da140b803d002628f2995dbbd9672eb14bb122879f8d04b460eeb49de",
+    "classes": [
+      "DuplicateInvoiceException",
+      "BillNumberCollisionException",
+      "MultiBillSaveResult",
+      "MultiBillSaveService",
+      "_PreparedBill"
+    ],
+    "collections": [
+      "bills"
+    ],
+    "imports": [
+      "dart:async",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:connectivity_plus/connectivity_plus.dart",
+      "../models/bill_form_data.dart",
+      "bill_number_service.dart"
+    ]
+  },
+  {
+    "file": "services/single_bill_save_service.dart",
+    "lines": 395,
+    "sha256": "4e62a612b8a582e138b84290ad738d7621478b875c7751260c6d7767755d25c6",
+    "classes": [
+      "DuplicateInvoiceException",
+      "BillAlreadyExistsException",
+      "InvalidBillNumberException",
+      "SingleBillSaveOutcome",
+      "SingleBillSaveService"
+    ],
+    "collections": [
+      "bills",
+      "payments"
+    ],
+    "imports": [
+      "dart:math",
+      "package:cloud_firestore/cloud_firestore.dart"
+    ]
+  },
+  {
+    "file": "services/suggestion_cache.dart",
+    "lines": 268,
+    "sha256": "3397761125b80dec9aee13917cf9930fe635b5e807dd6ab7a5e32ae4d74ecb88",
+    "classes": [
+      "SuggestionCache"
+    ],
+    "collections": [
+      "bills",
+      "customer"
+    ],
+    "imports": [
+      "dart:async",
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/foundation.dart"
+    ]
+  },
+  {
+    "file": "utils/batchgetter.dart",
+    "lines": 30,
+    "sha256": "b9cd08dd2500464fcef974f99d32949d09840ced271d8c0ed9af374c942ebe5d",
+    "classes": [
+      "FirestoreHelper"
+    ],
+    "collections": [
+      "batches",
+      "customer"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart"
+    ]
+  },
+  {
+    "file": "utils/device_info_helper.dart",
+    "lines": 25,
+    "sha256": "9f49d5e32b15585c5564bdeee5dc7b79ed3925b682414b85c845cdbc8cb93e3c",
+    "classes": [],
+    "collections": [],
+    "imports": [
+      "dart:io",
+      "package:mobile_device_identifier/mobile_device_identifier.dart"
+    ]
+  },
+  {
+    "file": "utils/firestore_helpers.dart",
+    "lines": 701,
+    "sha256": "1c96d42dfb8098dc874f844828df18405de76d286b18c95a761fb50289f5b8fe",
+    "classes": [
+      "ToWithFroms",
+      "FirestoreHelper"
+    ],
+    "collections": [
+      "meta",
+      "parties",
+      "vehicles-all"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:intl/intl.dart"
+    ]
+  },
+  {
+    "file": "utils/firestore_stats_updater.dart",
+    "lines": 55,
+    "sha256": "f3bd6f45ea89ae0ff1d2849bd8fc31658b306568e2f740d32269cdc06e6bfea3",
+    "classes": [],
+    "collections": [
+      "batches",
+      "customer",
+      "payments"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart"
+    ]
+  },
+  {
+    "file": "utils/fix_bill_numbers.dart",
+    "lines": 167,
+    "sha256": "e5624bfe9dc0296dd7ce1f277e5c4f05e83f8a2e91f7f7669c4575c6e50c852a",
+    "classes": [],
+    "collections": [
+      "batches",
+      "bills",
+      "customer",
+      "payments"
+    ],
+    "imports": [
+      "package:flutter/material.dart",
+      "package:cloud_firestore/cloud_firestore.dart"
+    ]
+  },
+  {
+    "file": "utils/merge_pdf.dart",
+    "lines": 56,
+    "sha256": "4af3194e42a7bb02bfa421744579e030b4e044a59664888855a29a1c1493e0e3",
+    "classes": [],
+    "collections": [],
+    "imports": [
+      "dart:io",
+      "package:path_provider/path_provider.dart",
+      "package:pdf_combiner/pdf_combiner.dart",
+      "package:pdf_combiner/responses/merge_multiple_pdf_response.dart",
+      "package:pdf_combiner/responses/pdf_combiner_status.dart",
+      "../utils/device_info_helper.dart"
+    ]
+  },
+  {
+    "file": "utils/monthly_billno_service.dart",
+    "lines": 50,
+    "sha256": "084b9b9629c6e357658bdcf5b6a6f2a278555ff6cca7fba567be7f3008636703",
+    "classes": [
+      "MonthlyBillNoService"
+    ],
+    "collections": [],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart"
+    ]
+  },
+  {
+    "file": "utils/monthly_excel_generator.dart",
+    "lines": 82,
+    "sha256": "436c0dae90c89ec24d1583868f504e73c042b74052a117bea5450a24cf41ab22",
+    "classes": [],
+    "collections": [],
+    "imports": [
+      "dart:io",
+      "package:excel/excel.dart",
+      "package:intl/intl.dart",
+      "package:path_provider/path_provider.dart"
+    ]
+  },
+  {
+    "file": "utils/monthly_pdf_generator.dart",
+    "lines": 611,
+    "sha256": "2246335e591eb9de3b68e9568aefbefc24eedd4bd08962b835a49631a6920940",
+    "classes": [],
+    "collections": [],
+    "imports": [
+      "dart:io",
+      "dart:typed_data",
+      "package:flutter/services.dart",
+      "package:intl/intl.dart",
+      "package:path_provider/path_provider.dart",
+      "package:pdf/pdf.dart",
+      "package:pdf/widgets.dart",
+      "package:number_to_words/number_to_words.dart"
+    ]
+  },
+  {
+    "file": "utils/pdf_generation.dart",
+    "lines": 1821,
+    "sha256": "94e4c49195bfb4625dd73b7fc2f2c9f7c5e0e4ff94863285406c6d16d7dfbcf8",
+    "classes": [
+      "_BillPdfAssets",
+      "_PdfJobSingle",
+      "_PdfJobMerged",
+      "_Jitter",
+      "_Fonts",
+      "_FontCache",
+      "_MeasureCache",
+      "_MeasureKey",
+      "_Layout"
+    ],
+    "collections": [],
+    "imports": [
+      "dart:io",
+      "dart:isolate",
+      "dart:math",
+      "dart:typed_data",
+      "dart:ui",
+      "package:flutter/foundation.dart",
+      "package:flutter/services.dart",
+      "package:intl/intl.dart",
+      "package:path_provider/path_provider.dart",
+      "package:syncfusion_flutter_pdf/pdf.dart",
+      "../utils/device_info_helper.dart"
+    ]
+  },
+  {
+    "file": "utils/pdf_generation_in_memory.dart",
+    "lines": 32,
+    "sha256": "6b6f65fec594e988d922a52f85f74fd0308cbdfe88ea27a1684285e5c51a1c85",
+    "classes": [],
+    "collections": [],
+    "imports": [
+      "dart:io",
+      "package:path_provider/path_provider.dart",
+      "package:pdf_combiner/pdf_combiner.dart",
+      "package:pdf_combiner/responses/merge_multiple_pdf_response.dart",
+      "package:pdf_combiner/responses/pdf_combiner_status.dart"
+    ]
+  },
+  {
+    "file": "utils/phoneno_handler.dart",
+    "lines": 31,
+    "sha256": "e16204af1b4dd4e0e228ef033f942df38af89ba0d5114e9deceee9a6c7133437",
+    "classes": [],
+    "collections": [],
+    "imports": [
+      "dart:io",
+      "package:flutter/material.dart",
+      "package:flutter/services.dart",
+      "package:url_launcher/url_launcher.dart"
+    ]
+  },
+  {
+    "file": "utils/platform_utils.dart",
+    "lines": 15,
+    "sha256": "aeed8d8123b5a95783e7062a1fb18617947a5d9c434a702ea8ba0bcd32858fb3",
+    "classes": [
+      "PlatformUtils"
+    ],
+    "collections": [],
+    "imports": [
+      "package:flutter/foundation.dart",
+      "dart:io"
+    ]
+  },
+  {
+    "file": "utils/shimmer_loader.dart",
+    "lines": 23,
+    "sha256": "5678306010355796e8ffbb4297f4390e6716b20430ad2cdbfc78cd35145e1e9f",
+    "classes": [],
+    "collections": [],
+    "imports": [
+      "package:flutter/material.dart",
+      "package:shimmer/shimmer.dart"
+    ]
+  },
+  {
+    "file": "widgets/app_autocomplete_field.dart",
+    "lines": 329,
+    "sha256": "9982c33d8df3fe2dcc700ce51e03145583fd73902c44f8a09b3aa22806f1983a",
+    "classes": [
+      "UpperCaseTextFormatter",
+      "AppAutocompleteField",
+      "_AppAutocompleteFieldState"
+    ],
+    "collections": [],
+    "imports": [
+      "package:flutter/material.dart",
+      "package:flutter/services.dart"
+    ]
+  },
+  {
+    "file": "widgets/bill_row.dart",
+    "lines": 691,
+    "sha256": "845fa6a992b59c0ab3fe36b8eeffe07e1a783c8dd16f9e968a98c8d225e310f8",
+    "classes": [
+      "UpperCaseTextFormatter",
+      "BillRow"
+    ],
+    "collections": [],
+    "imports": [
+      "dart:io",
+      "dart:ui",
+      "package:flutter/material.dart",
+      "package:flutter/services.dart",
+      "package:intl/intl.dart",
+      "package:share_plus/share_plus.dart",
+      "../models/bill_form_data.dart",
+      "../services/suggestion_cache.dart",
+      "app_autocomplete_field.dart",
+      "../widgets/editable_calculator.dart",
+      "../utils/pdf_generation.dart",
+      "../screens/in_app_pdf_viewer.dart"
+    ]
+  },
+  {
+    "file": "widgets/customer_summary_card.dart",
+    "lines": 134,
+    "sha256": "bcb601f796e39e9f66f3719daad91498758b9d9236bd93dec1a49e8fc22e8827",
+    "classes": [
+      "CustomerSummaryCard"
+    ],
+    "collections": [
+      "customers",
+      "payments"
+    ],
+    "imports": [
+      "package:cloud_firestore/cloud_firestore.dart",
+      "package:flutter/material.dart",
+      "../widgets/truck_progress_bar.dart"
+    ]
+  },
+  {
+    "file": "widgets/editable_calculator.dart",
+    "lines": 368,
+    "sha256": "9e2eecb565c2016492e4ee261475dcf5878347daf562e097ebf897d36b926e7d",
+    "classes": [
+      "_Tok",
+      "EditableCalculator",
+      "_EditableCalculatorState"
+    ],
+    "collections": [],
+    "imports": [
+      "dart:async",
+      "package:flutter/material.dart",
+      "package:flutter/services.dart"
+    ]
+  },
+  {
+    "file": "widgets/ms_selector.dart",
+    "lines": 114,
+    "sha256": "f9eaf0c4ea8478f0e081846c4a8cc2f18bafd4ce12383d90ab3bb15184c78db2",
+    "classes": [
+      "MsSelector"
+    ],
+    "collections": [],
+    "imports": [
+      "package:flutter/material.dart",
+      "../services/suggestion_cache.dart",
+      "app_autocomplete_field.dart"
+    ]
+  },
+  {
+    "file": "widgets/truck_progress_bar.dart",
+    "lines": 44,
+    "sha256": "00bb8f5adbba0ff0b5e5f9bae48c453d950c9600f95c8049ff4a2f6d284565b8",
+    "classes": [
+      "TruckProgressBar"
+    ],
+    "collections": [],
+    "imports": [
+      "package:flutter/material.dart"
+    ]
+  },
+  {
+    "file": "widgets/universal_suggestion_field.dart",
+    "lines": 356,
+    "sha256": "780db2018d8d88f202b57f498b6ef26abcd88c45896ea57842dfd866b2d48356",
+    "classes": [
+      "UniversalSuggestionField",
+      "_UniversalSuggestionFieldState"
+    ],
+    "collections": [],
+    "imports": [
+      "dart:async",
+      "package:flutter/material.dart",
+      "package:flutter/services.dart"
+    ]
+  }
+]

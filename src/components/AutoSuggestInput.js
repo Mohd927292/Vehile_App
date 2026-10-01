@@ -30,6 +30,7 @@ const AutoSuggestInput = ({
   useEffect(() => {
     let active = true;
     if (!debouncedValue?.trim() || debouncedValue === lastSelectedValue) {
+      setLoading(false);
       setSuggestions([]);
       setShowSuggestions(false);
       return () => { active = false; };
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
   loadingIndicator: { position: 'absolute', right: 16, top: 18 },
   suggestionsContainer: {
     position: 'absolute',
-    top: 56,
+    top: '100%',
     left: 0,
     right: 0,
     zIndex: 99999,

@@ -22,7 +22,7 @@ function Export-Collection([string]$CollectionPath) {
   $manifest.Add(@{path=$CollectionPath;count=$documents.Count;file=$filename})
   return @($documents.ToArray())
 }
-$business = @('customers','drivers','fromcustomers','parties','tripEntries','vehicles','archivedTrips')
+$business = @('customers','drivers','fromcustomers','parties','tripEntries','vehicles','archivedTrips','loads')
 foreach ($collection in $business) { $null = Export-Collection $collection }
 $staff = @(Export-Collection 'staff')
 foreach ($profile in $staff) {

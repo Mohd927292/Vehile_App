@@ -1,6 +1,8 @@
+> Current update (2026-09-30): the pair-table implementation and workspace recovery described in `WORKSPACES.md` supersede earlier planned items and preview limitations below. Earlier dated sections are retained as investigation history. See `RELEASE_1_2.md` for current verification and remaining limits.
+
 # TripTrack project audit and modernization plan
 
-## Current status — user workspaces (2026-09-30)
+## Historical status — user workspaces (2026-09-30)
 
 This section supersedes the historical access model described below. Five existing Firebase accounts now have staff profiles, with one confirmed administrator. Roles are bound to Firebase UIDs in trusted profiles; client code cannot assign an administrator role. See `docs/WORKSPACES.md` for the current schema and deployment procedure.
 

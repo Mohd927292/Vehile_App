@@ -12,7 +12,7 @@ service cloud.firestore {
     }
 
     function businessCollection(name) {
-      return name in ['tripEntries', 'vehicles', 'parties', 'customers', 'drivers', 'fromcustomers', 'archivedTrips'];
+      return name in ['tripEntries', 'vehicles', 'parties', 'customers', 'drivers', 'fromcustomers', 'archivedTrips', 'loads'];
     }
 
     // New accounts can create only their own ordinary-user profile.

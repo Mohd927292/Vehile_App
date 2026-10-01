@@ -3,6 +3,6 @@ import { useRoute } from '@react-navigation/native';
 import PagedTripHistory from '../../components/PagedTripHistory';
 
 export default function Vehicle_list_Screen() {
-  const { vehicleNo } = useRoute().params || {};
-  return <PagedTripHistory title={vehicleNo || 'Vehicle trips'} vehicleNo={vehicleNo} />;
+  const { vehicleNo, month } = useRoute().params || {};
+  return <PagedTripHistory title={vehicleNo || 'Vehicle trips'} vehicleNo={vehicleNo} month={month} />;
 }

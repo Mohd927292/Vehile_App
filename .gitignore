@@ -83,3 +83,6 @@ android/build-*.log
 # Local emulator output
 firestore-debug.log
 firebase-debug.log
+
+release-signing.properties
+*.p12

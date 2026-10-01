@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "92315082747",
+    "project_id": "demo-triptrack",
+    "storage_bucket": "vehicle2-79fd6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:92315082747:android:60afbbc4d5aa3a1f76355e",
+        "android_client_info": {
+          "package_name": "com.rna.vehicle_details_v2.qa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlQk9o4q_mLWesLkyXEuk__EbEd4qWIbI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

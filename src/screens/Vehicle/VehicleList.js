@@ -54,6 +54,7 @@ const VehicleList = () => {
       </View>
       
       <Text style={[styles.vehicleInfo, { color: colors.textSecondary }]}>Trip Count: {item.loadCount}</Text>
+      <TouchableOpacity accessibilityLabel={`Browse months for ${item.vehicleNo}`} onPress={() => navigation.navigate('PartyMonths', { vehicleNo: item.vehicleNo })} style={{ paddingVertical: 12 }}><Text style={{ color: colors.primary }}>Browse by month</Text></TouchableOpacity>
       <Text style={[styles.vehicleInfo, { color: colors.textSecondary }]}>Last Trip: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
     </TouchableOpacity>
   );
@@ -86,6 +87,7 @@ const VehicleList = () => {
         <View style={styles.headerRight} />
       </View>
 
+      <TouchableOpacity onPress={() => navigation.navigate('TripList')} style={{ padding: 16 }} accessibilityRole="button"><Text style={{ color: colors.primary, fontWeight: '700' }}>All vehicles — complete table</Text></TouchableOpacity>
       <View style={styles.searchContainer}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.text }]}

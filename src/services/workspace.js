@@ -1,6 +1,6 @@
 import { collection, getFirestore } from '@react-native-firebase/firestore';
 
-export const BUSINESS_COLLECTIONS = ['tripEntries', 'vehicles', 'parties', 'customers', 'drivers', 'fromcustomers', 'archivedTrips'];
+export const BUSINESS_COLLECTIONS = ['tripEntries', 'vehicles', 'parties', 'customers', 'drivers', 'fromcustomers', 'archivedTrips', 'loads'];
 export const LEGACY_WORKSPACE = 'legacy';
 let activeWorkspace = null;
 

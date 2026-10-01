@@ -8,6 +8,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   Dimensions,
+  AppState,
   TouchableOpacity,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -27,8 +28,19 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { auth, tripService } from '../../config/firebase';
 import AutoSuggestInput from '../../components/AutoSuggestInput';
-import { getVehicleSuggestions, getCustomerSuggestions, getDriverSuggestions, getFromLocationSuggestions } from '../../services/firestoreService';
-import { query, where, limit, getDocs, Timestamp } from '@react-native-firebase/firestore';
+import {
+  getVehicleSuggestions,
+  getCustomerSuggestions,
+  getDriverSuggestions,
+  getFromLocationSuggestions,
+} from '../../services/firestoreService';
+import {
+  query,
+  where,
+  limit,
+  getDocs,
+  Timestamp,
+} from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -39,12 +51,16 @@ export const saveDraft = async (data, workspaceId) => {
     await AsyncStorage.setItem(draftKey(workspaceId), JSON.stringify(data));
   } catch (e) {
     console.warn('Failed to save trip draft:', e);
+    throw e;
   }
 };
 
 export const loadDraft = async workspaceId => {
   try {
-    const value = await AsyncStorage.getItem(draftKey(workspaceId));
+    let value = await AsyncStorage.getItem(draftKey(workspaceId));
+    const [actor, owner] = workspaceId.split(':');
+    if (!value && actor === owner)
+      value = await AsyncStorage.getItem(draftKey(actor));
     if (value) {
       return JSON.parse(value);
     }
@@ -69,35 +85,68 @@ const TripEntryScreen = () => {
   const navigation = useNavigation();
   const screenWidth = Dimensions.get('window').width;
   const [hydrated, setHydrated] = useState(false);
-  const [trips, setTrips] = useState([{
-    vehicleNo: '',
-    driverName: '',
-    amount: '',
-    locations: [{ from: '', to: '' }],
-    date: new Date(),
-  }]);
+  const [trips, setTrips] = useState([
+    {
+      clientId: tripService.newTripId(),
+      vehicleNo: '',
+      driverName: '',
+      amount: '',
+      locations: [{ from: '', to: '' }],
+      date: new Date(),
+    },
+  ]);
   const [loading, setLoading] = useState(false);
-  const [datePickerState, setDatePickerState] = useState({ show: false, tripIndex: -1 });
+  const [datePickerState, setDatePickerState] = useState({
+    show: false,
+    tripIndex: -1,
+  });
   const [currentTripIndex, setCurrentTripIndex] = useState(0);
-  const [customerDialog, setCustomerDialog] = useState({ visible: false, field: '', tripIndex: -1, locationIndex: -1 });
+  const [customerDialog, setCustomerDialog] = useState({
+    visible: false,
+    field: '',
+    tripIndex: -1,
+    locationIndex: -1,
+  });
   const tripsScrollRef = useRef(null);
   const [pendingScrollIndex, setPendingScrollIndex] = useState(null);
 
-  // Step 3: Debounced auto-save logic
-  const draftSaveTimeout = useRef();
+  // Ordered local draft persistence.
   const submittingRef = useRef(false);
   const completedRef = useRef(false);
 
+  const [draftStatus, setDraftStatus] = useState('');
+  const latestDraft = useRef(null);
+  const draftQueue = useRef(Promise.resolve());
+  const persistDraft = () => {
+    if (!latestDraft.current || completedRef.current) return;
+    const data = latestDraft.current;
+    setDraftStatus('Saving draft…');
+    draftQueue.current = draftQueue.current
+      .then(() => saveDraft(data, draftScope))
+      .then(() => setDraftStatus('Draft saved on this device'))
+      .catch(() =>
+        setDraftStatus(
+          'Draft could not be saved. Keep this screen open and try again.',
+        ),
+      );
+  };
   useEffect(() => {
     if (!hydrated || completedRef.current) return;
-    if (draftSaveTimeout.current) clearTimeout(draftSaveTimeout.current);
-
-    draftSaveTimeout.current = setTimeout(() => {
-      saveDraft({ trips, currentTripIndex }, draftScope);
-    }, 800); // 800ms debounce
-
-    return () => clearTimeout(draftSaveTimeout.current);
-  }, [trips, currentTripIndex, hydrated, draftScope]);
+    latestDraft.current = { trips, currentTripIndex };
+    persistDraft();
+    // Persist each committed change; no debounce is cancelled on leaving the screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trips, currentTripIndex, hydrated]);
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', state => {
+      if (state !== 'active') persistDraft();
+    });
+    return () => {
+      persistDraft();
+      subscription.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Step 2: Restore draft trips on mount
   useEffect(() => {
@@ -105,23 +154,31 @@ const TripEntryScreen = () => {
       const data = await loadDraft(draftScope);
       if (
         data &&
-        Array.isArray(data.trips) && data.trips.length > 0 &&
+        Array.isArray(data.trips) &&
+        data.trips.length > 0 &&
         typeof data.currentTripIndex === 'number'
       ) {
         // Fix: convert date field back to Date (if restored as string)
         const tripsWithDateObjs = data.trips.map(trip => ({
           ...trip,
-          date: trip.date && !isNaN(new Date(trip.date).getTime()) ? new Date(trip.date) : new Date(),
+          clientId: trip.clientId || tripService.newTripId(),
+          date:
+            trip.date && !isNaN(new Date(trip.date).getTime())
+              ? new Date(trip.date)
+              : new Date(),
         }));
         setTrips(tripsWithDateObjs);
         setCurrentTripIndex(
-          Math.min(data.currentTripIndex, Math.max(data.trips.length - 1, 0))
+          Math.min(data.currentTripIndex, Math.max(data.trips.length - 1, 0)),
         );
-        // Wait for state to apply, then scroll to the last trip
+        // Wait for layout, then restore the selected vehicle tab
         setTimeout(() => {
           if (tripsScrollRef.current) {
-            const idx = Math.max(data.trips.length - 1, 0);
-            tripsScrollRef.current.scrollTo?.({ x: idx * screenWidth, animated: false });
+            const idx = Math.min(data.currentTripIndex, data.trips.length - 1);
+            tripsScrollRef.current.scrollTo?.({
+              x: idx * screenWidth,
+              animated: false,
+            });
           }
         }, 200);
       }
@@ -129,8 +186,7 @@ const TripEntryScreen = () => {
     })();
   }, [screenWidth, draftScope]);
 
-   
-  const formatDate = (date) => {
+  const formatDate = date => {
     const d = new Date(date);
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -138,32 +194,40 @@ const TripEntryScreen = () => {
     return `${day}-${month}-${year}`; // DD-MM-YYYY format
   };
 
-  const formatDateForDisplay = (date) => {
+  const formatDateForDisplay = date => {
     return date.toLocaleDateString('en-GB'); // DD/MM/YYYY for UI display
   };
 
-  const showDatePicker = (tripIndex) => {
+  const showDatePicker = tripIndex => {
     setDatePickerState({ show: true, tripIndex });
   };
 
   const onDateChange = (event, selectedDate) => {
     setDatePickerState({ show: false, tripIndex: -1 });
     if (selectedDate && datePickerState.tripIndex >= 0) {
-      setTrips(previous => previous.map((trip, index) =>
-        index === datePickerState.tripIndex ? { ...trip, date: selectedDate } : trip
-      ));
+      setTrips(previous =>
+        previous.map((trip, index) =>
+          index === datePickerState.tripIndex
+            ? { ...trip, date: selectedDate }
+            : trip,
+        ),
+      );
     }
   };
 
   const addTrip = () => {
     const newIndex = trips.length; // index of the trip we are going to add
-    setTrips([...trips, {
-      vehicleNo: '',
-      driverName: '',
-      amount: '',
-      locations: [{ from: '', to: '' }],
-      date: new Date(),
-    }]);
+    setTrips([
+      ...trips,
+      {
+        clientId: tripService.newTripId(),
+        vehicleNo: '',
+        driverName: '',
+        amount: '',
+        locations: [{ from: '', to: '' }],
+        date: new Date(),
+      },
+    ]);
     setPendingScrollIndex(newIndex);
   };
 
@@ -180,11 +244,12 @@ const TripEntryScreen = () => {
     }
   }, [pendingScrollIndex, trips.length, screenWidth]);
 
-  const removeTrip = (tripIndex) => {
+  const removeTrip = tripIndex => {
     if (trips.length > 1) {
-      const nextIndex = currentTripIndex > tripIndex
-        ? currentTripIndex - 1
-        : Math.min(currentTripIndex, trips.length - 2);
+      const nextIndex =
+        currentTripIndex > tripIndex
+          ? currentTripIndex - 1
+          : Math.min(currentTripIndex, trips.length - 2);
       setTrips(previous => previous.filter((_, i) => i !== tripIndex));
       setCurrentTripIndex(nextIndex);
       setPendingScrollIndex(nextIndex);
@@ -192,63 +257,90 @@ const TripEntryScreen = () => {
   };
 
   const updateTrip = (tripIndex, field, value) => {
-    setTrips(previous => previous.map((trip, index) =>
-      index === tripIndex ? { ...trip, [field]: value } : trip
-    ));
+    setTrips(previous =>
+      previous.map((trip, index) =>
+        index === tripIndex ? { ...trip, [field]: value } : trip,
+      ),
+    );
   };
 
-  const addLocationPair = (tripIndex) => {
-    setTrips(previous => previous.map((trip, index) =>
-      index === tripIndex
-        ? { ...trip, locations: [...trip.locations, { from: '', to: '' }] }
-        : trip
-    ));
+  const addLocationPair = tripIndex => {
+    setTrips(previous =>
+      previous.map((trip, index) =>
+        index === tripIndex
+          ? { ...trip, locations: [...trip.locations, { from: '', to: '' }] }
+          : trip,
+      ),
+    );
   };
 
   const removeLocationPair = (tripIndex, locationIndex) => {
-    setTrips(previous => previous.map((trip, index) =>
-      index === tripIndex && trip.locations.length > 1
-        ? { ...trip, locations: trip.locations.filter((_, i) => i !== locationIndex) }
-        : trip
-    ));
+    setTrips(previous =>
+      previous.map((trip, index) =>
+        index === tripIndex && trip.locations.length > 1
+          ? {
+              ...trip,
+              locations: trip.locations.filter((_, i) => i !== locationIndex),
+            }
+          : trip,
+      ),
+    );
   };
 
   const updateLocation = (tripIndex, locationIndex, field, value) => {
-    setTrips(previous => previous.map((trip, index) =>
-      index === tripIndex
-        ? { ...trip, locations: trip.locations.map((location, i) =>
-          i === locationIndex ? { ...location, [field]: value } : location
-        ) }
-        : trip
-    ));
+    setTrips(previous =>
+      previous.map((trip, index) =>
+        index === tripIndex
+          ? {
+              ...trip,
+              locations: trip.locations.map((location, i) =>
+                i === locationIndex
+                  ? { ...location, [field]: value }
+                  : location,
+              ),
+            }
+          : trip,
+      ),
+    );
   };
 
   const handleDriverSuggestion = (tripIndex, suggestion) => {
     const rawValue = suggestion.driverName || suggestion.label || '';
-    const value = rawValue.replace(/\s+/g, ' ').trim();
+    const value = rawValue.trim();
     updateTrip(tripIndex, 'driverName', value);
   };
 
   const handleVehicleSuggestion = (tripIndex, suggestion) => {
-    const rawValue = suggestion.vehicleNo || suggestion.name || suggestion.label || '';
-    const value = rawValue.replace(/\s+/g, ' ').trim();
+    const rawValue =
+      suggestion.vehicleNo || suggestion.name || suggestion.label || '';
+    const value = rawValue.trim();
     updateTrip(tripIndex, 'vehicleNo', value);
   };
 
-  const handleLocationSuggestion = (tripIndex, locationIndex, field, suggestion) => {
-    const rawValue = suggestion.label || suggestion.name || suggestion.vehicleNo || '';
-    const value = rawValue.replace(/\s+/g, ' ').trim();
+  const handleLocationSuggestion = (
+    tripIndex,
+    locationIndex,
+    field,
+    suggestion,
+  ) => {
+    const rawValue =
+      suggestion.label || suggestion.name || suggestion.vehicleNo || '';
+    const value = rawValue.trim();
     updateLocation(tripIndex, locationIndex, field, value);
   };
 
   // Validate customer exists in Firestore
-  const validateCustomer = async (customerName) => {
+  const validateCustomer = async customerName => {
     try {
       const trimmedName = customerName.replace(/\s+/g, ' ').trim();
       if (!trimmedName) return false;
-      
-            const customersRef = workspaceCollection('customers', workspaceId);
-      const q = query(customersRef, where('msnamelower', '==', trimmedName.toLowerCase()), limit(1));
+
+      const customersRef = workspaceCollection('customers', workspaceId);
+      const q = query(
+        customersRef,
+        where('msnamelower', '==', trimmedName.toLowerCase()),
+        limit(1),
+      );
       const snapshot = await getDocs(q);
       return !snapshot.empty;
     } catch (error) {
@@ -274,7 +366,7 @@ const TripEntryScreen = () => {
           field,
           tripIndex,
           locationIndex,
-          customerName: trimmedValue
+          customerName: trimmedValue,
         });
       }
     }
@@ -282,12 +374,22 @@ const TripEntryScreen = () => {
 
   // Handle customer not found dialog
   const handleCustomerNotFound = () => {
-    setCustomerDialog({ visible: false, field: '', tripIndex: -1, locationIndex: -1 });
+    setCustomerDialog({
+      visible: false,
+      field: '',
+      tripIndex: -1,
+      locationIndex: -1,
+    });
   };
 
   const navigateToAddCustomer = () => {
     const { customerName } = customerDialog;
-    setCustomerDialog({ visible: false, field: '', tripIndex: -1, locationIndex: -1 });
+    setCustomerDialog({
+      visible: false,
+      field: '',
+      tripIndex: -1,
+      locationIndex: -1,
+    });
     navigation.navigate('AddCustomer', { customerName });
   };
 
@@ -299,7 +401,10 @@ const TripEntryScreen = () => {
       return `Driver name is required for trip ${tripIndex + 1}`;
     }
     const amountText = String(trip.amount ?? '').trim();
-    if (amountText && (!Number.isFinite(Number(amountText)) || Number(amountText) < 0)) {
+    if (
+      amountText &&
+      (!Number.isFinite(Number(amountText)) || Number(amountText) < 0)
+    ) {
       return `Enter a valid amount for trip ${tripIndex + 1}`;
     }
     if (isNaN(new Date(trip.date).getTime())) {
@@ -310,10 +415,14 @@ const TripEntryScreen = () => {
     }
     for (let i = 0; i < trip.locations.length; i++) {
       if (!trip.locations[i]?.from?.trim()) {
-        return `From location is required for trip ${tripIndex + 1}, pair ${i + 1}`;
+        return `From location is required for trip ${tripIndex + 1}, pair ${
+          i + 1
+        }`;
       }
       if (!trip.locations[i]?.to?.trim()) {
-        return `To location is required for trip ${tripIndex + 1}, pair ${i + 1}`;
+        return `To location is required for trip ${tripIndex + 1}, pair ${
+          i + 1
+        }`;
       }
     }
     return null;
@@ -343,7 +452,12 @@ const TripEntryScreen = () => {
         if (trimmedTo) {
           const isValid = await validateCustomer(trimmedTo);
           if (!isValid) {
-            Alert.alert('Customer Not Found', `Customer "${trimmedTo}" in trip ${i + 1} not found. Please add customer first.`);
+            Alert.alert(
+              'Customer Not Found',
+              `Customer "${trimmedTo}" in trip ${
+                i + 1
+              } not found. Please add customer first.`,
+            );
             submittingRef.current = false;
             setLoading(false);
             return;
@@ -358,13 +472,17 @@ const TripEntryScreen = () => {
       for (let i = 0; i < trips.length; i++) {
         try {
           const tripData = {
+            clientId: trips[i].clientId,
             vehicleNo: trips[i].vehicleNo.toUpperCase().trim(),
             driverName: trips[i].driverName.trim(),
-            amount: String(trips[i].amount ?? '').trim() ? Number(trips[i].amount.trim()) : null,
-            locations: trips[i].locations?.map(loc => ({
-              from: loc?.from?.replace(/\s+/g, ' ').trim() || '',
-              to: loc?.to?.replace(/\s+/g, ' ').trim() || ''
-            })) || [],
+            amount: String(trips[i].amount ?? '').trim()
+              ? Number(trips[i].amount.trim())
+              : null,
+            locations:
+              trips[i].locations?.map(loc => ({
+                from: loc?.from?.trim() || '',
+                to: loc?.to?.trim() || '',
+              })) || [],
             date: formatDate(trips[i].date), // YYYY-MM-DD format
             dateTimestamp: Timestamp.fromDate(trips[i].date), // For optimal sorting
           };
@@ -381,16 +499,24 @@ const TripEntryScreen = () => {
 
       if (results.success === trips.length) {
         completedRef.current = true;
-        if (draftSaveTimeout.current) clearTimeout(draftSaveTimeout.current);
+        await draftQueue.current;
         await clearDraft(draftScope);
-        Alert.alert('Success', `All ${results.success} trips added successfully!`, [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+        Alert.alert(
+          'Success',
+          `All ${results.success} trips added successfully!`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
+        );
       } else {
         setTrips(failedTrips);
         setCurrentTripIndex(0);
-        await saveDraft({ trips: failedTrips, currentTripIndex: 0 });
-        const message = `${results.success} trips saved, ${results.failed} failed.\n${results.errors.join('\n')}`;
+        await saveDraft(
+          { trips: failedTrips, currentTripIndex: 0 },
+          draftScope,
+        );
+        setPendingScrollIndex(0);
+        const message = `${results.success} trips saved, ${
+          results.failed
+        } failed.\n${results.errors.join('\n')}`;
         Alert.alert('Partial Success', message);
       }
     } catch (error) {
@@ -412,14 +538,17 @@ const TripEntryScreen = () => {
       >
         <Appbar.Header style={{ backgroundColor: colors.primary }}>
           <TouchableOpacity
-          onPress={() => navigation.goBack()}
-           style={styles.backButtonContainer}
+            onPress={() => navigation.goBack()}
+            style={styles.backButtonContainer}
           >
-             <Icon name="chevron-left" size={28} color="#fff" />
+            <Icon name="chevron-left" size={28} color="#fff" />
           </TouchableOpacity>
-          <Appbar.Content title={`Trip ${currentTripIndex + 1} of ${trips.length}`} titleStyle={{ color: '#fff' }} />
+          <Appbar.Content
+            title={`Trip ${currentTripIndex + 1} of ${trips.length}`}
+            titleStyle={{ color: '#fff' }}
+          />
           <View style={styles.headerButtons}>
-             <Button
+            <Button
               mode="contained"
               compact
               onPress={addTrip}
@@ -445,10 +574,20 @@ const TripEntryScreen = () => {
                 −
               </Button>
             )}
-           
-
           </View>
         </Appbar.Header>
+        {!!draftStatus && (
+          <Paragraph
+            style={{
+              color: colors.textSecondary,
+              backgroundColor: colors.background,
+              margin: 0,
+              padding: 8,
+            }}
+          >
+            {draftStatus}
+          </Paragraph>
+        )}
 
         <ScrollView
           style={[styles.container, { backgroundColor: colors.background }]}
@@ -464,27 +603,43 @@ const TripEntryScreen = () => {
             snapToInterval={screenWidth}
             decelerationRate="fast"
             keyboardShouldPersistTaps="handled"
-            onScroll={(event) => {
+            onScroll={event => {
               const scrollX = event.nativeEvent.contentOffset.x;
               const index = Math.round(scrollX / screenWidth);
-              setCurrentTripIndex(Math.min(index, trips.length - 1));
+              setCurrentTripIndex(Math.max(0, Math.min(index, trips.length - 1)));
             }}
             scrollEventThrottle={16}
           >
             <View style={styles.tripsContainer}>
               {trips.map((trip, tripIndex) => (
-                <Card key={tripIndex} style={[styles.tripCard, { backgroundColor: colors.surface }]}>
+                <Card
+                  key={trip.clientId}
+                  style={[styles.tripCard, { backgroundColor: colors.surface }]}
+                >
                   <Card.Content>
-
-
                     <TextInput
                       label="Date *"
                       value={formatDateForDisplay(trip.date)}
                       mode="outlined"
-                      style={[styles.input, { backgroundColor: colors.surface }]}
-                      theme={{ colors: { onSurfaceVariant: colors.text, color: colors.text, outline: colors.border } }}
+                      style={[
+                        styles.input,
+                        { backgroundColor: colors.surface },
+                      ]}
+                      theme={{
+                        colors: {
+                          onSurfaceVariant: colors.text,
+                          color: colors.text,
+                          outline: colors.border,
+                        },
+                      }}
                       editable={false}
-                      right={<TextInput.Icon icon="calendar" color={colors.primary} onPress={() => showDatePicker(tripIndex)} />}
+                      right={
+                        <TextInput.Icon
+                          icon="calendar"
+                          color={colors.primary}
+                          onPress={() => showDatePicker(tripIndex)}
+                        />
+                      }
                       outlineColor={colors.border}
                       activeOutlineColor={colors.primary}
                       selectionColor={colors.primary}
@@ -495,13 +650,25 @@ const TripEntryScreen = () => {
                     <AutoSuggestInput
                       label="Vehicle Number *"
                       value={trip.vehicleNo}
-                      onChangeText={(text) => updateTrip(tripIndex, 'vehicleNo', text)}
-                      onSuggestionSelect={(suggestion) => handleVehicleSuggestion(tripIndex, suggestion)}
+                      onChangeText={text =>
+                        updateTrip(tripIndex, 'vehicleNo', text)
+                      }
+                      onSuggestionSelect={suggestion =>
+                        handleVehicleSuggestion(tripIndex, suggestion)
+                      }
                       getSuggestions={getVehicleSuggestions}
                       placeholder="Enter vehicle number"
                       autoCapitalize="characters"
-                      style={[styles.input, { zIndex: 30, backgroundColor: colors.surface }]}
-                      theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                      style={[
+                        styles.input,
+                        { zIndex: 30, backgroundColor: colors.surface },
+                      ]}
+                      theme={{
+                        colors: {
+                          onSurfaceVariant: colors.text,
+                          outline: colors.border,
+                        },
+                      }}
                       outlineColor={colors.border}
                       activeOutlineColor={colors.primary}
                       selectionColor={colors.primary}
@@ -511,14 +678,29 @@ const TripEntryScreen = () => {
 
                     <AutoSuggestInput
                       label="Driver Name *"
+                      multiline
+                      submitBehavior="newline"
+                      blurOnSubmit={false}
                       value={trip.driverName}
-                      onChangeText={(text) => updateTrip(tripIndex, 'driverName', text)}
-                      onSuggestionSelect={(suggestion) => handleDriverSuggestion(tripIndex, suggestion)}
+                      onChangeText={text =>
+                        updateTrip(tripIndex, 'driverName', text)
+                      }
+                      onSuggestionSelect={suggestion =>
+                        handleDriverSuggestion(tripIndex, suggestion)
+                      }
                       getSuggestions={getDriverSuggestions}
                       placeholder="Enter driver name"
                       autoCapitalize="characters"
-                      style={[styles.input, { zIndex: 20, backgroundColor: colors.surface }]}
-                      theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                      style={[
+                        styles.input,
+                        { zIndex: 20, backgroundColor: colors.surface },
+                      ]}
+                      theme={{
+                        colors: {
+                          onSurfaceVariant: colors.text,
+                          outline: colors.border,
+                        },
+                      }}
                       outlineColor={colors.border}
                       activeOutlineColor={colors.primary}
                       selectionColor={colors.primary}
@@ -529,12 +711,22 @@ const TripEntryScreen = () => {
                     <TextInput
                       label="Amount"
                       value={trip.amount}
-                      onChangeText={(text) => updateTrip(tripIndex, 'amount', text)}
+                      onChangeText={text =>
+                        updateTrip(tripIndex, 'amount', text)
+                      }
                       placeholder="Enter amount (optional)"
                       keyboardType="numeric"
                       mode="outlined"
-                      style={[styles.input, { zIndex: 1, backgroundColor: colors.surface }]}
-                      theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                      style={[
+                        styles.input,
+                        { zIndex: 1, backgroundColor: colors.surface },
+                      ]}
+                      theme={{
+                        colors: {
+                          onSurfaceVariant: colors.text,
+                          outline: colors.border,
+                        },
+                      }}
                       outlineColor={colors.border}
                       activeOutlineColor={colors.primary}
                       selectionColor={colors.primary}
@@ -543,10 +735,29 @@ const TripEntryScreen = () => {
                     />
 
                     {trip.locations.map((location, locationIndex) => (
-                      <Card key={locationIndex} style={[styles.locationCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      <Card
+                        key={locationIndex}
+                        style={[
+                          styles.locationCard,
+                          {
+                            backgroundColor: colors.surface,
+                            borderColor: colors.border,
+                          },
+                        ]}
+                      >
                         <Card.Content>
                           <View style={styles.locationHeader}>
-                            <Title style={[styles.locationTitle, { color: colors.onPrimary, backgroundColor: colors.primary }]}>{locationIndex + 1}</Title>
+                            <Title
+                              style={[
+                                styles.locationTitle,
+                                {
+                                  color: colors.onPrimary,
+                                  backgroundColor: colors.primary,
+                                },
+                              ]}
+                            >
+                              {locationIndex + 1}
+                            </Title>
                             <View style={styles.locationActions}>
                               <Button
                                 mode="contained"
@@ -564,7 +775,9 @@ const TripEntryScreen = () => {
                                 <Button
                                   mode="contained"
                                   compact
-                                  onPress={() => removeLocationPair(tripIndex, locationIndex)}
+                                  onPress={() =>
+                                    removeLocationPair(tripIndex, locationIndex)
+                                  }
                                   buttonColor="#b91c1c"
                                   textColor="#ffffff"
                                   contentStyle={styles.locationButtonContent}
@@ -574,21 +787,45 @@ const TripEntryScreen = () => {
                                   -
                                 </Button>
                               )}
-
-
                             </View>
                           </View>
 
                           <AutoSuggestInput
+                            multiline
+                            submitBehavior="newline"
+                            blurOnSubmit={false}
+                            textAlignVertical="top"
                             label="From Location *"
                             value={location.from}
-                            onChangeText={(text) => handleLocationChange(tripIndex, locationIndex, 'from', text)}
-                            onSuggestionSelect={(suggestion) => handleLocationSuggestion(tripIndex, locationIndex, 'from', suggestion)}
+                            onChangeText={text =>
+                              handleLocationChange(
+                                tripIndex,
+                                locationIndex,
+                                'from',
+                                text,
+                              )
+                            }
+                            onSuggestionSelect={suggestion =>
+                              handleLocationSuggestion(
+                                tripIndex,
+                                locationIndex,
+                                'from',
+                                suggestion,
+                              )
+                            }
                             getSuggestions={getFromLocationSuggestions}
                             placeholder="Enter from location"
                             autoCapitalize="characters"
-                            style={[styles.input, { zIndex: 20, backgroundColor: colors.surface }]}
-                            theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                            style={[
+                              styles.input,
+                              { zIndex: 20, backgroundColor: colors.surface },
+                            ]}
+                            theme={{
+                              colors: {
+                                onSurfaceVariant: colors.text,
+                                outline: colors.border,
+                              },
+                            }}
                             outlineColor={colors.border}
                             activeOutlineColor={colors.primary}
                             selectionColor={colors.primary}
@@ -597,16 +834,49 @@ const TripEntryScreen = () => {
                           />
 
                           <AutoSuggestInput
+                            multiline
+                            submitBehavior="newline"
+                            blurOnSubmit={false}
+                            textAlignVertical="top"
                             label="To Location *"
                             value={location.to}
-                            onChangeText={(text) => handleLocationChange(tripIndex, locationIndex, 'to', text)}
-                            onSuggestionSelect={(suggestion) => handleLocationSuggestion(tripIndex, locationIndex, 'to', suggestion)}
-                            onBlur={(value) => handleLocationBlur(tripIndex, locationIndex, 'to', value)}
+                            onChangeText={text =>
+                              handleLocationChange(
+                                tripIndex,
+                                locationIndex,
+                                'to',
+                                text,
+                              )
+                            }
+                            onSuggestionSelect={suggestion =>
+                              handleLocationSuggestion(
+                                tripIndex,
+                                locationIndex,
+                                'to',
+                                suggestion,
+                              )
+                            }
+                            onBlur={value =>
+                              handleLocationBlur(
+                                tripIndex,
+                                locationIndex,
+                                'to',
+                                value,
+                              )
+                            }
                             getSuggestions={getCustomerSuggestions}
                             placeholder="Enter to location"
                             autoCapitalize="characters"
-                            style={[styles.input, { zIndex: 10, backgroundColor: colors.surface }]}
-                            theme={{ colors: { onSurfaceVariant: colors.text, outline: colors.border } }}
+                            style={[
+                              styles.input,
+                              { zIndex: 10, backgroundColor: colors.surface },
+                            ]}
+                            theme={{
+                              colors: {
+                                onSurfaceVariant: colors.text,
+                                outline: colors.border,
+                              },
+                            }}
                             outlineColor={colors.border}
                             activeOutlineColor={colors.primary}
                             selectionColor={colors.primary}
@@ -616,15 +886,21 @@ const TripEntryScreen = () => {
                         </Card.Content>
                       </Card>
                     ))}
-
-
                   </Card.Content>
                 </Card>
               ))}
             </View>
           </ScrollView>
 
-          <View style={[styles.submitContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <View
+            style={[
+              styles.submitContainer,
+              {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+              },
+            ]}
+          >
             <Button
               mode="contained"
               onPress={handleSubmit}
@@ -647,11 +923,15 @@ const TripEntryScreen = () => {
         )}
 
         <Portal>
-          <Dialog visible={customerDialog.visible} onDismiss={handleCustomerNotFound}>
+          <Dialog
+            visible={customerDialog.visible}
+            onDismiss={handleCustomerNotFound}
+          >
             <Dialog.Title>Customer Not Found</Dialog.Title>
             <Dialog.Content>
               <Paragraph>
-                Customer "{customerDialog.customerName}" not found. Please add customer first.
+                Customer "{customerDialog.customerName}" not found. Please add
+                customer first.
               </Paragraph>
             </Dialog.Content>
             <Dialog.Actions>
@@ -689,13 +969,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tripCard: {
-    width:  Dimensions.get('window').width - 8,   
+    width: Dimensions.get('window').width - 8,
     elevation: 3,
     shadowColor: '#334155',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
-
   },
   submitContainer: {
     padding: 16,
@@ -721,12 +1000,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   locationCard: {
-   
     borderColor: '#d1d5db',
     marginBottom: 16,
     borderWidth: 1,
-
-
   },
   locationHeader: {
     flexDirection: 'row',

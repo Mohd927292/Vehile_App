@@ -48,12 +48,13 @@ const PartyListScreen = () => {
   const renderParty = ({ item }) => (
     <TouchableOpacity 
       style={[styles.partyCard, { backgroundColor: colors.surface }]}
-      onPress={() => navigation.navigate('PartyMonths', { partyId: item.id, to: item.to })}
+      onPress={() => navigation.navigate('PartyDetails', { partyId: item.id, to: item.to })}
     >
       <View style={styles.partyHeader}>
         <Text style={[styles.partyName, { color: colors.text }]}>{item.to || 'N/A'}</Text>
       </View>
       <Text style={[styles.partyInfo, { color: colors.textSecondary }]}>Load: {item.loadCount }</Text>
+      <TouchableOpacity accessibilityLabel={`Browse months for ${item.to}`} onPress={() => navigation.navigate('PartyMonths', { partyId: item.id, to: item.to })} style={{ paddingVertical: 12 }}><Text style={{ color: colors.primary }}>Browse by month</Text></TouchableOpacity>
       <Text style={[styles.partyInfo, { color: colors.textSecondary }]}>Last Trip: {item.createdAt ? item.createdAt.toLocaleString() : 'N/A'}</Text>
     </TouchableOpacity>
   );
@@ -85,6 +86,7 @@ const PartyListScreen = () => {
         <View style={styles.headerRight} />
       </View>
 
+      <TouchableOpacity onPress={() => navigation.navigate('PartyDetails', { to: 'All parties' })} style={{ padding: 16 }} accessibilityRole="button"><Text style={{ color: colors.primary, fontWeight: '700' }}>All parties — complete table</Text></TouchableOpacity>
       <View style={styles.searchContainer}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.text }]}
